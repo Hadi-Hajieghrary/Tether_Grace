@@ -1,0 +1,14 @@
+{
+  "model": "scalar_per_axis",
+  "kp": 8,
+  "kd": 8,
+  "ki": 0.15,
+  "gamma_ISS_scalar": 0.125315,
+  "omega_peak": 0.147034,
+  "gamma_FT_05s": 0.0418642,
+  "predicted_peak_cm": 18.4203,
+  "dc_gain": 0,
+  "num_quads": 3,
+  "full_plant_states": 120,
+  "note": "Full-plant linearization requires refactoring plant-building code into shared library. Scalar model verification is complete."
+}

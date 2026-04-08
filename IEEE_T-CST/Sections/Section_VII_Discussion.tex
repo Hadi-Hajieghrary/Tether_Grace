@@ -1,0 +1,75 @@
+% Section VII: Discussion
+% Style: IEEE Transactions on Control Systems Technology
+
+This section interprets the results around four questions: what the results demonstrate, what mechanism explains them, where the evidence reaches its limits, and what remains open.
+
+% ============================================================
+\subsection{Emergent Fault Tolerance Is Real and Reproducible}
+% ============================================================
+
+The full-Drake results (Tables~\ref{tab:scenario_summary}--\ref{tab:matched_single_fault}) confirm that the GPAC-based architecture absorbs one to three abrupt cable-snap faults without explicit fault detection or reconfiguration, with RMSE decreasing monotonically with team size. Relative to the Tether\_Lift baseline~\cite{hajieghrary2026tetherlift}, this is Tether\_Grace's central novelty: the same N-agnostic local-sensing architecture that enabled decentralized cooperative lift also absorbs topology changes. Proposition~\ref{thm:topology_invariance} explains this structurally: topology changes affect only the disturbance input, not the system matrices.
+
+% ============================================================
+\subsection{PID and Gravity Feedforward---Not Cable Tension---Are the Core Mechanism}
+% ============================================================
+
+The tension feedforward ablation (Table~\ref{tab:tension_ablation}) confirms PID feedback combined with gravity feedforward as the primary fault-absorption mechanism, consistent with Proposition~\ref{thm:topology_invariance}: gravity feedforward provides the baseline hover thrust requiring no knowledge of other agents, while PID feedback corrects the tracking-error displacement and the integral term compensates the increased load share (subject to the anti-windup saturation discussed in Section~\ref{sec:layer1_control}).
+
+% ============================================================
+\subsection{Why the Result Is Non-Trivial}
+\label{sec:nontrivial}
+% ============================================================
+
+The gap between the scalar-model prediction (${\sim}18$~cm) and full-plant observation (${\sim}107$~cm)---a factor $\alpha \approx 5.8$---quantifies the aggregate contribution of effects the scalar model omits: elastic cable coupling, attitude-loop delay (${\sim}37\%$ bandwidth overlap), and multi-axis interaction through $R_i$. A proper multivariable treatment is needed to close this gap formally. The ablation result (cable-tension feedforward $<1\%$ RMSE change) was counter-intuitive; the $f_{\max}$ phase transition provides actionable design criteria: $f_{\max} > (N m_Q + m_L)g/(N{-}k) + f_{\mathrm{track}}$.
+
+% ============================================================
+\subsection{Thrust Saturation and Geometric Coverage}
+% ============================================================
+
+The $f_{\max}$ boundary sweep (Table~\ref{tab:fmax_boundary}) validates the thrust-margin screen (Table~\ref{tab:topology_margin}) by quantifying the exact failure boundary at ${\sim}45$~N, coinciding with the theoretical minimum~\eqref{eq:fmax_critical}. The default $f_{\max} = 150$~N provides $3\times$ headroom. The matched single-fault data (Table~\ref{tab:matched_single_fault}) further shows that peak error is nearly constant across team sizes (${\sim}107$--$112$~cm), while RMSE improves because larger teams recover faster during mid-trajectory tracking.
+
+% ============================================================
+\subsection{Topology-Invariance: From Hypothesis to Structural Property}
+% ============================================================
+
+Proposition~\ref{thm:topology_invariance} identifies topology-independent error dynamics for a simplified model; the calibrated transient prediction and closed-form $\rho_{\mathrm{FT}}$ provide operationally useful design criteria (Table~\ref{tab:claim_status}). Four lines of empirical evidence support qualitative extension to the full plant: thrust margins ($1.75$--$2.33$ capacity ratios), monotonically decreasing RMSE with~$N$, a quantified thrust boundary at the theoretical minimum, and fault-count isolation at $N{=}7$. Three formal gaps remain (Section~\ref{sec:topology_invariance_theorem}): impulsive slack-to-taut forces, attitude-loop delay under fast transients, and the cable-force small-gain condition. Closing these---particularly the $\mathcal{H}_\infty$-based small-gain verification---remains the primary theoretical open problem.
+
+% ============================================================
+\subsection{Freed-Agent Clearance: An Identified Limit}
+% ============================================================
+
+The escape maneuver was revised during evaluation: the original parameters required ${\sim}60$\textdegree\ tilt (below-gravity vertical thrust). The revised two-waypoint design is conservative but reliable. A systematic parametric study falls outside this paper's scope.
+
+% ============================================================
+\subsection{Anti-Swing Behavior During Cable-Snap Transient}
+% ============================================================
+
+The anti-swing force ($k_{\mathrm{sw}} = 0.5$) is small compared to PID forces during the fast cable-snap impulse, but becomes relevant during the slower ($1$--$2$~s) post-fault pendular oscillation, attenuating swing accumulation between trajectory direction changes.
+
+% ============================================================
+\subsection{Sensitivity to Cable Stiffness}
+% ============================================================
+
+Cable stiffness $k_s$ affects transient duration and wave speed ($v_{\mathrm{wave}} \propto \sqrt{k_s}$) but not impulse magnitude, which is set by $T_j \approx m_L g / N$. Higher stiffness produces a sharper but not larger transient; the integrated impulse is approximately constant. The finite-time bound~\eqref{eq:tracking_bound} accommodates stiffness variation through $\tau_{\mathrm{fault}}$.
+
+% ============================================================
+\subsection{Comparison with Prior Work}
+% ============================================================
+
+Liang~et~al.~\cite{liang2021fault} address suspension failure via centralized reconfiguration with known failure identity. The present work shows neither assumption is necessary: GPAC achieves stable tracking ($44$--$49$~cm RMSE) without failure identification or communication. Zeng~et~al.~\cite{zeng2025decentralized} observed implicit resilience in MARL-based cable transport; Proposition~\ref{thm:topology_invariance} provides the explanation: the N-agnostic constraint ensures no control law depends on information that changes at fault time. This predicts that any N-agnostic architecture with adequate thrust margin should behave similarly.
+
+The centralized oracle (Table~\ref{tab:baseline_comparison}) achieves comparable performance ($+0.7\%$), demonstrating that local cable sensing already captures nearly all fault-relevant information. The $\mathcal{L}_1$ augmentation head-to-head evaluation is planned as near-term future work.
+
+% ============================================================
+\subsection{Remaining Open Problems}
+% ============================================================
+
+\emph{Adaptive residual integration.} An $\mathcal{L}_1$ adaptive controller~\cite{cao2010l1book,cao2010stability} is implemented in the codebase as an optional residual-adaptation path. Its key property for topology invariance is that the disturbance estimate $\hat{d}$ carries no pre-fault history (unlike CL's buffer of $M = 50$ regressor-measurement pairs). Head-to-head comparison with the PID-only baseline under ESKF+wind conditions is the natural next step, providing a stronger baseline than the threshold-triggered reactive controller (Table~\ref{tab:baseline_comparison}).
+
+\emph{Integral gain sensitivity.} The integral time constant $1/k_i \approx 6.7$~s sets the post-fault recovery timescale and thereby determines $\rho_{\mathrm{FT}}$. A sweep of $k_i$ would characterize the tradeoff between faster recovery (higher $k_i$) and transient overshoot, yielding a design curve complementary to the $f_{\max}$ boundary sweep.
+
+\emph{Formal extension to the full plant.} Proposition~\ref{thm:topology_invariance} identifies topology-invariant error structure for a simplified model. Three gaps remain (Section~\ref{sec:topology_invariance_theorem}): bounding the impulsive component of slack-to-taut cable forces, analyzing the cascaded position/attitude-loop stability under fast force transients, and verifying the small-gain condition for the state-dependent cable-force feedback. Each is a self-contained technical problem amenable to existing tools (impulse-response analysis, singular perturbation theory, and numerical small-gain verification, respectively).
+
+\emph{Cable pendulum management.} The figure-eight trajectory excites cable pendulum near-resonance (${\sim}2$~s period vs.\ ${\sim}3$~s corner interval). Trajectory shaping with pendulum frequency avoidance may be needed for sustained aggressive maneuvering.
+
+\emph{Hardware validation.} All results are simulation-based. Physical multi-quadrotor cable transport with actual cable-snap events remains the ultimate test.

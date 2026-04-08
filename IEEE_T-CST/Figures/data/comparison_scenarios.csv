@@ -1,0 +1,4 @@
+scenario,num_agents,num_faults,load_rmse_m,post_first_fault_peak_error_m,final_load_error_m,load_peak_speed_mps
+three_drones,3,1,0.538605741,1.060747445,0.417399835,2.694165151
+five_drones,5,2,0.435961159,1.147020199,0.606219208,2.690119781
+seven_drones,7,3,0.407648266,1.155397694,0.620199927,2.973141507

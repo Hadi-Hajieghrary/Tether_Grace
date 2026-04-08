@@ -1,0 +1,70 @@
+% Section II: Related Work
+% Style: IEEE Transactions on Control Systems Technology
+
+This section reviews three research areas whose intersection defines the paper's contribution: cooperative cable-suspended aerial transport (Section~\ref{sec:rw_transport}), fault-tolerant control for UAVs (Section~\ref{sec:rw_ftc}), and adaptive control relevant to topology-change resilience (Section~\ref{sec:rw_adaptive}). Section~\ref{sec:rw_safety} reviews safety-critical control tools, Section~\ref{sec:rw_emergent} reviews emergent resilience in multi-agent systems, and Section~\ref{sec:rw_gap} synthesizes the gap.
+
+% ============================================================
+\subsection{Cooperative Cable-Suspended Aerial Transport}
+\label{sec:rw_transport}
+% ============================================================
+
+The geometric control framework originates with Lee, Leok, and McClamroch~\cite{lee2010geometric}, who developed singularity-free tracking on $\SOthree$. Sreenath, Lee, and Kumar~\cite{sreenath2013geometric} extended this to cooperative cable-suspended payload manipulation on $\SEthree \times (\Sph^2)^N$. Sreenath and Kumar~\cite{sreenath2013dynamics} established differential flatness for single-quadrotor cable-suspended loads. Lee~\cite{lee2018geometric} proved almost-global exponential stability on $\SEthree \times \Sph^2$ for cable-suspended rigid body transport. Dai, Lee, and Bernstein~\cite{wu2014geometric} introduced adaptive load mass estimation, and Goodarzi, Lee, and Lee~\cite{goodarzi2014geometric} extended geometric stabilization to flexible cables.
+
+Recent advances include Sun~et~al.~\cite{sun2025agile}, who demonstrated agile cooperative aerial manipulation with INDI-based control and centralized NMPC, achieving $8\times$ greater acceleration than prior methods (Science Robotics, 2025). Wahba and H\"onig~\cite{wahba2024efficient} developed efficient QP-based cable force allocation for embedded microcontrollers. Li, Liu, and Loianno~\cite{li2024rotortm} created RotorTM, a validated flexible simulator. Costantini, de~Angelis, and Giulietti~\cite{deangelis2025twotimescale} used two-time-scale singular perturbation for trajectory-swing separation. Additional contributions include cooperative transport via monocular vision~\cite{li2021cooperative}, hierarchical control via the attractive ellipsoid method~\cite{oliva2024aerial}, adaptive RISE control~\cite{villa2024cooperative}, and a comprehensive field survey~\cite{estevez2024review}.
+
+Every published controller assumes all cables remain intact. No result addresses tracking guarantees under cable loss, no design criterion exists for sizing margins against cable-loss disturbances, and no simulation study characterizes fault-tolerance behavior in this system class.
+
+% ============================================================
+\subsection{Fault-Tolerant Control and Fault Detection for UAVs}
+\label{sec:rw_ftc}
+% ============================================================
+
+The UAV fault-tolerant control (FTC) literature is extensive for actuator and sensor faults. Sun~et~al.~\cite{sun2020incremental} demonstrated INDI-based flight surviving complete loss of two opposing rotors. Zhang~et~al.~\cite{zhang2024fault} proposed fault-tolerant neural CBFs for sensor faults. Chen~et~al.~\cite{chen2025passive} trained a single RL policy handling arbitrary single-rotor failures without detection. Adaika~et~al.~\cite{adaika2025fdd} surveyed 32~publications on fault detection and diagnosis for UAVs. Yu~et~al.~\cite{yu2022review} reviewed fault-tolerant cooperative control of multiple UAVs.
+
+\emph{Critical observation:} All studied fault modes are actuator faults (rotor degradation/loss) or sensor faults (IMU bias, GPS dropout). Cable faults---which change the mechanical coupling between agents and payload---are entirely absent.
+
+The only paper addressing cable-related failure in multi-UAV transport is Liang~et~al.~\cite{liang2021fault}, who propose dynamic load reassignment with sliding-mode observers. However, this work assumes known failure identity, requires centralized reconfiguration, provides no detection mechanism, and includes no experimental validation---all incompatible with the N-agnostic setting.
+
+In cable-driven parallel robots, Raman~et~al.~\cite{raman2023cable} addressed cable failure using multiple-model estimation, Boschetti, Minto, and Trevisani~\cite{boschetti2024sensorless} proposed sensorless failure detection via digital twins, and Zhu~et~al.~\cite{zhu2024interval} developed interval observers for a single quadrotor with a cable-suspended load. None addresses cooperative multi-UAV transport or satisfies the N-agnostic constraint.
+
+% ============================================================
+\subsection{Adaptive Control and Disturbance Estimation}
+\label{sec:rw_adaptive}
+% ============================================================
+
+Two adaptive paradigms are directly relevant to topology-change resilience. Concurrent learning (CL)~\cite{chowdhary2010concurrent,chowdhary2013exponentially,chowdhary2015concurrent} replays stored regressor-measurement pairs to achieve parameter convergence without persistent excitation, but its data buffer becomes a liability after abrupt parameter changes as pre-change data biases the estimate during buffer turnover. $\mathcal{L}_1$ adaptive control~\cite{cao2010l1book,cao2010stability} provides uniform transient guarantees with memoryless piecewise-constant adaptation, making it structurally suited to topology-change scenarios; Wu~et~al.~\cite{wu2025l1quad} demonstrated $\mathcal{L}_1$ augmentation of geometric quadrotor control at $>$200~Hz. In decentralized adaptive transport, Barawkar~et~al.~\cite{barawkar2024decentralized} used fuzzy logic, Bai and Wen~\cite{bai2019cooperative} developed force-consensus control, Gao~et~al.~\cite{gao2024decentralized} demonstrated adaptation to robot departure, and Wang~et~al.~\cite{wang2024automultilift} introduced Auto-Multilift.
+
+Neither CL nor $\mathcal{L}_1$ has been applied to cooperative cable transport, and neither theory has been analyzed under abrupt topology changes where the system structure---not just parameter values---changes instantaneously.
+
+% ============================================================
+\subsection{Safety-Critical Control}
+\label{sec:rw_safety}
+% ============================================================
+
+Control barrier functions (CBFs)~\cite{ames2017control,ames2019control} provide forward-invariance via QP-based control modification, with Input-to-State Safety (ISSf)~\cite{kolathaya2019input} extending CBF guarantees under bounded disturbances and high-order extensions~\cite{xiao2022control} handling relative-degree constraints. Yang~et~al.~\cite{yang2025robust} combined CBFs with disturbance estimators for cable-suspended payload safety. Complementary tracking-error bounds from contraction theory~\cite{manchester2017control,tsukamoto2021contraction} and tube-based motion planning~\cite{singh2021safe} provide relevant tools. Neither CBF nor contraction-based methods have been applied to post-fault topology-change scenarios in multi-vehicle cable transport.
+
+% ============================================================
+\subsection{Emergent Resilience and Switched Systems}
+\label{sec:rw_emergent}
+% ============================================================
+
+The theoretical foundations for analyzing topology changes include stability of switched systems under average dwell-time~\cite{hespanha1999stability}, ISS under switching~\cite{vu2007iss}, mode-dependent average dwell time~\cite{zhao2012mode}, and the hybrid dynamical systems framework~\cite{goebel2012hybrid} for continuous flow interrupted by discrete jumps---the natural setting for cable-snap events.
+
+Two empirical observations of emergent fault tolerance are closest to this work. Zeng~et~al.~\cite{zeng2025decentralized} demonstrated implicit resilience to MAV loss in multi-agent RL for cable-suspended transport with zero-shot sim-to-real transfer, but did not formalize the mechanism. Gao~et~al.~\cite{gao2024decentralized} showed adaptation to robot departure, but used fully actuated hexarotors with commanded departure rather than spontaneous cable faults.
+
+No work formalizes the mechanism by which N-agnostic control provides implicit cable-fault tolerance. The switched systems literature provides relevant tools but has not been applied to N-agnostic cable-suspended transport with instantaneous, undetected topology changes.
+
+% ============================================================
+\subsection{Summary of the Identified Gap}
+\label{sec:rw_gap}
+% ============================================================
+
+The contribution lies at the intersection of three well-populated but previously unconnected areas:
+
+\begin{enumerate}[label=(\roman*),nosep]
+  \item \emph{Cooperative cable-suspended transport}~\cite{lee2010geometric,sreenath2013geometric,lee2018geometric,wu2014geometric,sun2025agile,wahba2024efficient,li2024rotortm,estevez2024review}: mature geometric control with no cable-fault handling.
+  \item \emph{UAV fault-tolerant control}~\cite{sun2020incremental,adaika2025fdd,yu2022review,zhang2024fault,chen2025passive}: extensive actuator/sensor fault work, but cable faults are absent.
+  \item \emph{Adaptive decentralized control}~\cite{chowdhary2010concurrent,cao2010l1book,cao2010stability,wu2025l1quad,barawkar2024decentralized}: rich theory not analyzed for topology-change resilience in cable transport.
+\end{enumerate}
+
+No prior work provides tracking bounds or design criteria for cable-fault tolerance in decentralized cooperative aerial transport. The present paper addresses this gap.

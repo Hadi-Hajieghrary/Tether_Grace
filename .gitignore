@@ -416,3 +416,23 @@ FodyWeavers.xsd
 *.msix
 *.msm
 *.msp
+
+# ============================================
+# Project-specific ignores (Tether_Grace)
+# ============================================
+
+# CMake build directory
+build/
+
+# Python virtual environment
+.venv/
+
+# LaTeX compilation artifacts
+IEEE_T-CST/*.aux
+IEEE_T-CST/*.bbl
+IEEE_T-CST/*.blg
+IEEE_T-CST/*.fdb_latexmk
+IEEE_T-CST/*.fls
+IEEE_T-CST/*.out
+IEEE_T-CST/*.synctex.gz
+IEEE_T-CST/*.pdf

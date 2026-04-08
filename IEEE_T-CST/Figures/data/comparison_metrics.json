@@ -1,0 +1,318 @@
+{
+  "generator": "experiments/python/analyze_full_drake_batch.py",
+  "batch_dir": "/workspaces/Tether_Grace/outputs/full_drake_fault_batch",
+  "manifest_alignment": {
+    "manifest_path": "/workspaces/Tether_Grace/experiments/manifests/full_drake_reference_batch.json",
+    "matched": true,
+    "missing_scenarios": [],
+    "unexpected_scenarios": []
+  },
+  "scenario_summaries": [
+    {
+      "scenario": "three_drones",
+      "num_agents": 3,
+      "duration": 30.0,
+      "fault_cables": [
+        0
+      ],
+      "fault_times": [
+        7.0
+      ],
+      "meshcat_html": "/workspaces/Tether_Grace/outputs/full_drake_fault_batch/three_drones/full_drake_meshcat_replay.html",
+      "artifacts": {
+        "meshcat_replay_html": "/workspaces/Tether_Grace/outputs/full_drake_fault_batch/three_drones/full_drake_meshcat_replay.html",
+        "full_drake_recording_npz": "/workspaces/Tether_Grace/outputs/full_drake_fault_batch/three_drones/full_drake_recording.npz",
+        "figure_paths": {
+          "payload_x_tracking": "/workspaces/Tether_Grace/outputs/full_drake_fault_batch/three_drones/figures/payload_x_tracking.png",
+          "payload_y_tracking": "/workspaces/Tether_Grace/outputs/full_drake_fault_batch/three_drones/figures/payload_y_tracking.png",
+          "payload_z_tracking": "/workspaces/Tether_Grace/outputs/full_drake_fault_batch/three_drones/figures/payload_z_tracking.png",
+          "payload_tracking_error": "/workspaces/Tether_Grace/outputs/full_drake_fault_batch/three_drones/figures/payload_tracking_error.png",
+          "payload_z_offset": "/workspaces/Tether_Grace/outputs/full_drake_fault_batch/three_drones/figures/payload_z_offset.png",
+          "cable_tensions": "/workspaces/Tether_Grace/outputs/full_drake_fault_batch/three_drones/figures/cable_tensions.png",
+          "cable_health_schedule": "/workspaces/Tether_Grace/outputs/full_drake_fault_batch/three_drones/figures/cable_health_schedule.png",
+          "quad_formation_deviation": "/workspaces/Tether_Grace/outputs/full_drake_fault_batch/three_drones/figures/quad_formation_deviation.png",
+          "quad_speed_norm": "/workspaces/Tether_Grace/outputs/full_drake_fault_batch/three_drones/figures/quad_speed_norm.png",
+          "quad_tilt_magnitude": "/workspaces/Tether_Grace/outputs/full_drake_fault_batch/three_drones/figures/quad_tilt_magnitude.png",
+          "quad_altitude": "/workspaces/Tether_Grace/outputs/full_drake_fault_batch/three_drones/figures/quad_altitude.png",
+          "quad_force_norm": "/workspaces/Tether_Grace/outputs/full_drake_fault_batch/three_drones/figures/quad_force_norm.png",
+          "quad_lateral_force_norm": "/workspaces/Tether_Grace/outputs/full_drake_fault_batch/three_drones/figures/quad_lateral_force_norm.png",
+          "quad_torque_norm": "/workspaces/Tether_Grace/outputs/full_drake_fault_batch/three_drones/figures/quad_torque_norm.png",
+          "load_speed_and_total_vertical_force": "/workspaces/Tether_Grace/outputs/full_drake_fault_batch/three_drones/figures/load_speed_and_total_vertical_force.png",
+          "payload_xy_trajectory": "/workspaces/Tether_Grace/outputs/full_drake_fault_batch/three_drones/figures/payload_xy_trajectory.png",
+          "final_quad_positions": "/workspaces/Tether_Grace/outputs/full_drake_fault_batch/three_drones/figures/final_quad_positions.png",
+          "vertical_motion": "/workspaces/Tether_Grace/outputs/full_drake_fault_batch/three_drones/figures/vertical_motion.png",
+          "xy_trajectories": "/workspaces/Tether_Grace/outputs/full_drake_fault_batch/three_drones/figures/xy_trajectories.png"
+        }
+      },
+      "inferred_payload_z_offset_m": 0.05976719230769212,
+      "inferred_payload_liftoff_time_s": 0.78,
+      "run_manifest": {
+        "num_quadcopters": 3,
+        "duration": 30.0,
+        "output_dir": "/workspaces/Tether_Grace/outputs/full_drake_fault_batch/three_drones",
+        "log_dir": "/workspaces/Tether_Grace/outputs/full_drake_fault_batch/three_drones/logs/20260404_094421",
+        "meshcat_html": "/workspaces/Tether_Grace/outputs/full_drake_fault_batch/three_drones/full_drake_meshcat_replay.html",
+        "cable_lengths": [
+          1.0,
+          1.08,
+          1.16
+        ],
+        "fault_cables": [
+          0
+        ],
+        "fault_times": [
+          7.0
+        ]
+      },
+      "load_rmse_m": 0.5386057405168756,
+      "load_peak_error_m": 1.0607474453946806,
+      "post_first_fault_peak_error_m": 1.0607474453946806,
+      "final_load_error_m": 0.41739983479830556,
+      "load_peak_speed_mps": 2.694165151353755,
+      "fault_events": [
+        {
+          "faulted_drone": 0,
+          "fault_time": 7.0,
+          "pickup_time": 0.03,
+          "armed_time": 0.78,
+          "low_tension_start": 7.0,
+          "inferred_detection_time": 7.12,
+          "detection_latency_s": 0.1200000000000001,
+          "tension_threshold_n": 1.4715,
+          "nearest_separation_at_fault_m": 0.9048935395116933,
+          "nearest_separation_2s_m": 1.269282557764424,
+          "nearest_separation_final_m": 2.2565713195345722,
+          "nearest_healthy_separation_at_fault_m": 0.9048935395116933,
+          "nearest_healthy_separation_2s_m": 1.269282557764424,
+          "nearest_healthy_separation_final_m": 2.2565713195345722
+        }
+      ]
+    },
+    {
+      "scenario": "five_drones",
+      "num_agents": 5,
+      "duration": 30.0,
+      "fault_cables": [
+        1,
+        3
+      ],
+      "fault_times": [
+        7.0,
+        12.0
+      ],
+      "meshcat_html": "/workspaces/Tether_Grace/outputs/full_drake_fault_batch/five_drones/full_drake_meshcat_replay.html",
+      "artifacts": {
+        "meshcat_replay_html": "/workspaces/Tether_Grace/outputs/full_drake_fault_batch/five_drones/full_drake_meshcat_replay.html",
+        "full_drake_recording_npz": "/workspaces/Tether_Grace/outputs/full_drake_fault_batch/five_drones/full_drake_recording.npz",
+        "figure_paths": {
+          "payload_x_tracking": "/workspaces/Tether_Grace/outputs/full_drake_fault_batch/five_drones/figures/payload_x_tracking.png",
+          "payload_y_tracking": "/workspaces/Tether_Grace/outputs/full_drake_fault_batch/five_drones/figures/payload_y_tracking.png",
+          "payload_z_tracking": "/workspaces/Tether_Grace/outputs/full_drake_fault_batch/five_drones/figures/payload_z_tracking.png",
+          "payload_tracking_error": "/workspaces/Tether_Grace/outputs/full_drake_fault_batch/five_drones/figures/payload_tracking_error.png",
+          "payload_z_offset": "/workspaces/Tether_Grace/outputs/full_drake_fault_batch/five_drones/figures/payload_z_offset.png",
+          "cable_tensions": "/workspaces/Tether_Grace/outputs/full_drake_fault_batch/five_drones/figures/cable_tensions.png",
+          "cable_health_schedule": "/workspaces/Tether_Grace/outputs/full_drake_fault_batch/five_drones/figures/cable_health_schedule.png",
+          "quad_formation_deviation": "/workspaces/Tether_Grace/outputs/full_drake_fault_batch/five_drones/figures/quad_formation_deviation.png",
+          "quad_speed_norm": "/workspaces/Tether_Grace/outputs/full_drake_fault_batch/five_drones/figures/quad_speed_norm.png",
+          "quad_tilt_magnitude": "/workspaces/Tether_Grace/outputs/full_drake_fault_batch/five_drones/figures/quad_tilt_magnitude.png",
+          "quad_altitude": "/workspaces/Tether_Grace/outputs/full_drake_fault_batch/five_drones/figures/quad_altitude.png",
+          "quad_force_norm": "/workspaces/Tether_Grace/outputs/full_drake_fault_batch/five_drones/figures/quad_force_norm.png",
+          "quad_lateral_force_norm": "/workspaces/Tether_Grace/outputs/full_drake_fault_batch/five_drones/figures/quad_lateral_force_norm.png",
+          "quad_torque_norm": "/workspaces/Tether_Grace/outputs/full_drake_fault_batch/five_drones/figures/quad_torque_norm.png",
+          "load_speed_and_total_vertical_force": "/workspaces/Tether_Grace/outputs/full_drake_fault_batch/five_drones/figures/load_speed_and_total_vertical_force.png",
+          "payload_xy_trajectory": "/workspaces/Tether_Grace/outputs/full_drake_fault_batch/five_drones/figures/payload_xy_trajectory.png",
+          "final_quad_positions": "/workspaces/Tether_Grace/outputs/full_drake_fault_batch/five_drones/figures/final_quad_positions.png",
+          "vertical_motion": "/workspaces/Tether_Grace/outputs/full_drake_fault_batch/five_drones/figures/vertical_motion.png",
+          "xy_trajectories": "/workspaces/Tether_Grace/outputs/full_drake_fault_batch/five_drones/figures/xy_trajectories.png"
+        }
+      },
+      "inferred_payload_z_offset_m": 0.04990299999999981,
+      "inferred_payload_liftoff_time_s": 0.68,
+      "run_manifest": {
+        "num_quadcopters": 5,
+        "duration": 30.0,
+        "output_dir": "/workspaces/Tether_Grace/outputs/full_drake_fault_batch/five_drones",
+        "log_dir": "/workspaces/Tether_Grace/outputs/full_drake_fault_batch/five_drones/logs/20260404_095037",
+        "meshcat_html": "/workspaces/Tether_Grace/outputs/full_drake_fault_batch/five_drones/full_drake_meshcat_replay.html",
+        "cable_lengths": [
+          1.0,
+          1.05,
+          1.1,
+          1.14,
+          1.18
+        ],
+        "fault_cables": [
+          1,
+          3
+        ],
+        "fault_times": [
+          7.0,
+          12.0
+        ]
+      },
+      "load_rmse_m": 0.43596115929114093,
+      "load_peak_error_m": 1.1470201989735345,
+      "post_first_fault_peak_error_m": 1.1470201989735345,
+      "final_load_error_m": 0.6062192082984506,
+      "load_peak_speed_mps": 2.690119781182429,
+      "fault_events": [
+        {
+          "faulted_drone": 1,
+          "fault_time": 7.0,
+          "pickup_time": 0.04,
+          "armed_time": 0.79,
+          "low_tension_start": 7.0,
+          "inferred_detection_time": 7.12,
+          "detection_latency_s": 0.1200000000000001,
+          "tension_threshold_n": 0.8829,
+          "nearest_separation_at_fault_m": 0.6607576742702276,
+          "nearest_separation_2s_m": 1.073419620143493,
+          "nearest_separation_final_m": 2.6923637415360506,
+          "nearest_healthy_separation_at_fault_m": 0.6607576742702276,
+          "nearest_healthy_separation_2s_m": 1.073419620143493,
+          "nearest_healthy_separation_final_m": 2.6923637415360506
+        },
+        {
+          "faulted_drone": 3,
+          "fault_time": 12.0,
+          "pickup_time": 0.05,
+          "armed_time": 0.8,
+          "low_tension_start": 12.0,
+          "inferred_detection_time": 12.12,
+          "detection_latency_s": 0.11999999999999922,
+          "tension_threshold_n": 0.8829,
+          "nearest_separation_at_fault_m": 0.6487248175382224,
+          "nearest_separation_2s_m": 1.958327083943589,
+          "nearest_separation_final_m": 4.680684822421075,
+          "nearest_healthy_separation_at_fault_m": 0.6487248175382224,
+          "nearest_healthy_separation_2s_m": 1.958327083943589,
+          "nearest_healthy_separation_final_m": 4.680684822421075
+        }
+      ]
+    },
+    {
+      "scenario": "seven_drones",
+      "num_agents": 7,
+      "duration": 30.0,
+      "fault_cables": [
+        1,
+        3,
+        5
+      ],
+      "fault_times": [
+        7.0,
+        12.0,
+        14.0
+      ],
+      "meshcat_html": "/workspaces/Tether_Grace/outputs/full_drake_fault_batch/seven_drones/full_drake_meshcat_replay.html",
+      "artifacts": {
+        "meshcat_replay_html": "/workspaces/Tether_Grace/outputs/full_drake_fault_batch/seven_drones/full_drake_meshcat_replay.html",
+        "full_drake_recording_npz": "/workspaces/Tether_Grace/outputs/full_drake_fault_batch/seven_drones/full_drake_recording.npz",
+        "figure_paths": {
+          "payload_x_tracking": "/workspaces/Tether_Grace/outputs/full_drake_fault_batch/seven_drones/figures/payload_x_tracking.png",
+          "payload_y_tracking": "/workspaces/Tether_Grace/outputs/full_drake_fault_batch/seven_drones/figures/payload_y_tracking.png",
+          "payload_z_tracking": "/workspaces/Tether_Grace/outputs/full_drake_fault_batch/seven_drones/figures/payload_z_tracking.png",
+          "payload_tracking_error": "/workspaces/Tether_Grace/outputs/full_drake_fault_batch/seven_drones/figures/payload_tracking_error.png",
+          "payload_z_offset": "/workspaces/Tether_Grace/outputs/full_drake_fault_batch/seven_drones/figures/payload_z_offset.png",
+          "cable_tensions": "/workspaces/Tether_Grace/outputs/full_drake_fault_batch/seven_drones/figures/cable_tensions.png",
+          "cable_health_schedule": "/workspaces/Tether_Grace/outputs/full_drake_fault_batch/seven_drones/figures/cable_health_schedule.png",
+          "quad_formation_deviation": "/workspaces/Tether_Grace/outputs/full_drake_fault_batch/seven_drones/figures/quad_formation_deviation.png",
+          "quad_speed_norm": "/workspaces/Tether_Grace/outputs/full_drake_fault_batch/seven_drones/figures/quad_speed_norm.png",
+          "quad_tilt_magnitude": "/workspaces/Tether_Grace/outputs/full_drake_fault_batch/seven_drones/figures/quad_tilt_magnitude.png",
+          "quad_altitude": "/workspaces/Tether_Grace/outputs/full_drake_fault_batch/seven_drones/figures/quad_altitude.png",
+          "quad_force_norm": "/workspaces/Tether_Grace/outputs/full_drake_fault_batch/seven_drones/figures/quad_force_norm.png",
+          "quad_lateral_force_norm": "/workspaces/Tether_Grace/outputs/full_drake_fault_batch/seven_drones/figures/quad_lateral_force_norm.png",
+          "quad_torque_norm": "/workspaces/Tether_Grace/outputs/full_drake_fault_batch/seven_drones/figures/quad_torque_norm.png",
+          "load_speed_and_total_vertical_force": "/workspaces/Tether_Grace/outputs/full_drake_fault_batch/seven_drones/figures/load_speed_and_total_vertical_force.png",
+          "payload_xy_trajectory": "/workspaces/Tether_Grace/outputs/full_drake_fault_batch/seven_drones/figures/payload_xy_trajectory.png",
+          "final_quad_positions": "/workspaces/Tether_Grace/outputs/full_drake_fault_batch/seven_drones/figures/final_quad_positions.png",
+          "vertical_motion": "/workspaces/Tether_Grace/outputs/full_drake_fault_batch/seven_drones/figures/vertical_motion.png",
+          "xy_trajectories": "/workspaces/Tether_Grace/outputs/full_drake_fault_batch/seven_drones/figures/xy_trajectories.png"
+        }
+      },
+      "inferred_payload_z_offset_m": 0.04314773076923073,
+      "inferred_payload_liftoff_time_s": 0.64,
+      "run_manifest": {
+        "num_quadcopters": 7,
+        "duration": 30.0,
+        "output_dir": "/workspaces/Tether_Grace/outputs/full_drake_fault_batch/seven_drones",
+        "log_dir": "/workspaces/Tether_Grace/outputs/full_drake_fault_batch/seven_drones/logs/20260404_100625",
+        "meshcat_html": "/workspaces/Tether_Grace/outputs/full_drake_fault_batch/seven_drones/full_drake_meshcat_replay.html",
+        "cable_lengths": [
+          0.98,
+          1.01,
+          1.04,
+          1.07,
+          1.1,
+          1.13,
+          1.16
+        ],
+        "fault_cables": [
+          1,
+          3,
+          5
+        ],
+        "fault_times": [
+          7.0,
+          12.0,
+          14.0
+        ]
+      },
+      "load_rmse_m": 0.4076482663249977,
+      "load_peak_error_m": 1.155397694206444,
+      "post_first_fault_peak_error_m": 1.155397694206444,
+      "final_load_error_m": 0.6201999268877828,
+      "load_peak_speed_mps": 2.9731415070105562,
+      "fault_events": [
+        {
+          "faulted_drone": 1,
+          "fault_time": 7.0,
+          "pickup_time": 0.04,
+          "armed_time": 0.79,
+          "low_tension_start": 7.0,
+          "inferred_detection_time": 7.12,
+          "detection_latency_s": 0.1200000000000001,
+          "tension_threshold_n": 0.6306428571428572,
+          "nearest_separation_at_fault_m": 0.5027136349563238,
+          "nearest_separation_2s_m": 1.0491401986402964,
+          "nearest_separation_final_m": 2.0599538997679048,
+          "nearest_healthy_separation_at_fault_m": 0.5027136349563238,
+          "nearest_healthy_separation_2s_m": 1.0491401986402964,
+          "nearest_healthy_separation_final_m": 2.0599538997679048
+        },
+        {
+          "faulted_drone": 3,
+          "fault_time": 12.0,
+          "pickup_time": 0.05,
+          "armed_time": 0.8,
+          "low_tension_start": 12.0,
+          "inferred_detection_time": 12.12,
+          "detection_latency_s": 0.11999999999999922,
+          "tension_threshold_n": 0.6306428571428572,
+          "nearest_separation_at_fault_m": 0.49707795772594854,
+          "nearest_separation_2s_m": 1.901218256530796,
+          "nearest_separation_final_m": 4.727563821308709,
+          "nearest_healthy_separation_at_fault_m": 0.49707795772594854,
+          "nearest_healthy_separation_2s_m": 1.901218256530796,
+          "nearest_healthy_separation_final_m": 4.727563821308709
+        },
+        {
+          "faulted_drone": 5,
+          "fault_time": 14.0,
+          "pickup_time": 0.05,
+          "armed_time": 0.8,
+          "low_tension_start": 14.0,
+          "inferred_detection_time": 14.12,
+          "detection_latency_s": 0.11999999999999922,
+          "tension_threshold_n": 0.6306428571428572,
+          "nearest_separation_at_fault_m": 0.49806157421848973,
+          "nearest_separation_2s_m": 1.6902781677919172,
+          "nearest_separation_final_m": 3.820241257787262,
+          "nearest_healthy_separation_at_fault_m": 0.49806157421848973,
+          "nearest_healthy_separation_2s_m": 1.6902781677919172,
+          "nearest_healthy_separation_final_m": 3.820241257787262
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,4 @@
+scenario,faulted_drone,fault_time_s,detection_latency_s,nearest_healthy_separation_at_fault_m,nearest_healthy_separation_2s_m,nearest_healthy_separation_final_m
+matched_n3_1fault,0,7.000000000,0.120000000,0.918161211,1.308094242,2.240890942
+matched_n5_1fault,0,7.000000000,0.120000000,0.667996484,1.053932512,2.287125608
+matched_n7_1fault,0,7.000000000,0.120000000,0.507295983,0.956342907,2.150356291

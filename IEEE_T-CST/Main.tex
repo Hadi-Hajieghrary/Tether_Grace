@@ -1,0 +1,105 @@
+% !TEX root = Main.tex
+\documentclass[lettersize,journal]{IEEEtran}
+
+% ======================== PACKAGES ==============================
+\usepackage[utf8]{inputenc}
+\usepackage{subfiles}
+\usepackage{subcaption}
+\usepackage[T1]{fontenc}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{amsthm}
+\usepackage{mathtools}
+\newtheorem{theorem}{Theorem}
+\newtheorem{proposition}{Proposition}
+\newtheorem{definition}{Definition}
+\newtheorem{corollary}{Corollary}
+\newtheorem{remark}{Remark}
+\usepackage{bm}
+\usepackage{booktabs}
+\usepackage{enumitem}
+\usepackage{cite}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{xcolor}
+\usepackage{tikz}
+\usepackage{pgfplots}
+\usetikzlibrary{arrows.meta, positioning, fit, calc}
+\pgfplotsset{compat=1.18}
+
+
+% ======================== FLOAT SPACING ========================
+\setlength{\textfloatsep}{10pt plus 2pt minus 2pt}   % between float and text
+\setlength{\floatsep}{8pt plus 2pt minus 2pt}        % between consecutive floats
+\setlength{\intextsep}{8pt plus 2pt minus 2pt}       % for in-text floats
+\setlength{\belowcaptionskip}{-2pt}                  % below caption (inside float)
+\setlength{\abovecaptionskip}{8pt}                   % above caption
+
+% ======================== CUSTOM MACROS =========================
+% Lie groups and manifolds
+\newcommand{\SOthree}{\mathrm{SO}(3)}
+\newcommand{\SEthree}{\mathrm{SE}(3)}
+\newcommand{\sothree}{\mathfrak{so}(3)}
+\newcommand{\Sph}{\mathbb{S}}
+
+% Linear algebra
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\norm}[1]{\lVert #1 \rVert}
+\newcommand{\abs}[1]{\lvert #1 \rvert}
+\newcommand{\diag}{\mathrm{diag}}
+\newcommand{\tr}{\mathrm{tr}}
+\newcommand{\argmin}{\operatornamewithlimits{argmin}}
+
+% Hat and vee maps
+\newcommand{\hatmap}[1]{\widehat{#1}}
+% ======================== TITLE =================================
+\title{Cable-Fault Tolerance in Decentralized Cooperative Aerial Transport: N-Agnostic Architecture, Evidence, and Open Bounds}
+
+\author{Author Names Omitted for Review}
+
+% ================================================================
+\begin{document}
+
+\maketitle
+
+% ======================== ABSTRACT ==============================
+\begin{abstract}
+When a cable snaps during multi-quadrotor cooperative payload transport, the payload drops, the freed agent accelerates away, and every surviving agent faces an instantaneous load-share jump---a~$50\%$ increase for $N{=}3$. This paper shows that a decentralized, communication-free architecture absorbs such faults with no detection, no reconfiguration, and no inter-agent communication.
+
+The mechanism is a structural property of N-agnostic GPAC (Geometric Position and Attitude Control): because each agent's PID-plus-gravity-feedforward law uses only local measurements with fixed gains, the per-agent error dynamics share the same system matrices regardless of cable topology (Proposition~1). Cable snaps change the disturbance input but not the system. This topology invariance yields two closed-form design tools: a fault-tolerance cost ratio $\rho_{\mathrm{FT}} = N/(N{-}k)$ for actuator sizing and a finite-time transient bound whose scaling is confirmed to be topology-independent across scenarios. Ablation identifies PID feedback with gravity feedforward---not cable-tension feedforward ($<\!1\%$ RMSE contribution)---as the primary fault-absorption mechanism.
+
+Full-Drake multibody simulations across $N \in \{3, 5, 7\}$ with up to three cascading cable snaps demonstrate payload RMSE of $43.6$--$48.8$\,cm, \emph{decreasing} with team size despite absorbing proportionally more faults. A centralized oracle with perfect fault knowledge improves over the passive architecture by only~$0.7\%$, showing that the price of decentralization under cable faults is effectively zero. Results are validated under sensor-realistic conditions (ESKF~+~Dryden wind), Monte Carlo campaigns ($30$~runs, $<\!3\%$ RMSE variation), and a thrust-saturation boundary sweep identifying a sharp phase transition at the theoretical minimum with~$3\times$ headroom.
+
+The topology-invariant error structure is proven for a simplified per-agent model. Extension to the full nonlinear bead-chain plant is supported by simulation evidence and the ISS switched-system framework; the formal stability proof remains an open problem.
+\end{abstract}
+
+\begin{IEEEkeywords}
+    Cooperative aerial transport, cable-fault tolerance, N-agnostic control, PID fault tolerance, topology invariance, multi-quadrotor systems
+\end{IEEEkeywords}
+
+% ======================== SECTIONS ==============================
+\section{Introduction}
+\input{./Sections/Section_I_Introduction.tex}
+
+\section{Related Works}\label{Section_II:Related_Works}
+\input{./Sections/Section_II_Related_Works.tex}
+
+\section{Problem Statement}\label{Section_III:Problem_Statement}
+\input{./Sections/Section_III_Problem_Statement.tex}
+
+\section{Fault-Tolerant Architecture and Integration Boundaries}\label{Section_IV:Fault-Tolerant_Control_Architecture}
+\input{./Sections/Section_IV_Fault-Tolerant_Control_Architecture.tex}
+
+\section{Experimental Methodology and Evidence Sources}\label{Section_V:Experimental_Methodology}
+\input{./Sections/Section_V_Experimental_Methodology.tex}
+
+\section{Simulation Results}\label{Section_VI:Simulation_Results}
+\input{./Sections/Section_VI_Simulation_Results.tex}
+
+\section{Discussion}\label{Section_VII:Discussion}
+\input{./Sections/Section_VII_Discussion.tex}
+
+% ======================== REFERENCES ============================
+\bibliographystyle{IEEEtran}
+\bibliography{References/References}
+
+\end{document}

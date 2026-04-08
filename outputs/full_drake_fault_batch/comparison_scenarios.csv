@@ -1,0 +1,4 @@
+scenario,num_agents,num_faults,load_rmse_m,post_first_fault_peak_error_m,final_load_error_m,load_peak_speed_mps
+matched_n3_1fault,3,1,0.488428380,1.074433996,0.423606685,2.662638031
+matched_n5_1fault,5,1,0.403743145,1.120930093,0.532531276,2.929615212
+matched_n7_1fault,7,1,0.383810675,1.111477477,0.498524937,3.197676863

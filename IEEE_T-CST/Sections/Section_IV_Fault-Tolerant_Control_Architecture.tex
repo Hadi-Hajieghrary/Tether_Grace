@@ -1,0 +1,206 @@
+% Section IV: Fault-Tolerant Control Architecture
+% Style: IEEE Transactions on Control Systems Technology
+
+This section presents the fault-tolerant architecture addressing problems \textbf{P1}--\textbf{P2}. The primary fault-absorption mechanism is PID feedback with gravity feedforward in the GPAC hierarchy, supplemented by locally measured cable-tension feedforward and anti-swing damping. A post-fault geometry redistribution path is additionally described. The analytical core of this section is the identification of a topology-invariant error structure (Proposition~\ref{thm:topology_invariance}): the N-agnostic design makes the per-agent error dynamics independent of cable topology, addressing the tracking envelope~\eqref{eq:problem_bound} and the cost ratio~\eqref{eq:problem_rho}.
+
+% ============================================================
+\subsection{Layer~1 Control Law: PID with Model-Based Feedforward}
+\label{sec:layer1_control}
+% ============================================================
+
+Each agent~$i$ computes a desired force in the world frame:
+\begin{equation}\label{eq:layer1_force_ft}
+  \bm{F}_i^{\mathrm{des}} = \bm{F}_{\mathrm{grav}} + \bm{F}_{\mathrm{fb}} + \bm{F}_{\mathrm{cable}} + \bm{F}_{\mathrm{swing}},
+\end{equation}
+where
+\begin{align}
+  \bm{F}_{\mathrm{grav}} &= m_Q\, g\, \bm{e}_3, \label{eq:grav_ff} \\
+  \bm{F}_{\mathrm{fb}} &= m_Q\bigl(k_p \bm{e}_p + k_d \bm{e}_v + k_i \textstyle\int \bm{e}_p\,\mathrm{d}t\bigr), \label{eq:pid_fb} \\
+  \bm{F}_{\mathrm{cable}} &= \kappa_T\, T_i\, \bm{q}_i, \label{eq:cable_ff} \\
+  \bm{F}_{\mathrm{swing}} &= -k_{\mathrm{sw}}\, \bm{\omega}_{\mathrm{cable},i}^{\perp}, \label{eq:antiswing}
+\end{align}
+with $\bm{e}_p = \bm{p}_i^{\mathrm{ref}} - \bm{p}_i$, $\bm{e}_v = \bm{v}_i^{\mathrm{ref}} - \bm{v}_i$, and gains $k_p = 8.0$, $k_d = 8.0$, $k_i = 0.15$, $\kappa_T = 0.5$, $k_{\mathrm{sw}} = 0.5$~N$\cdot$s/rad.\footnote{The general GPAC baseline (Section~\ref{Section_III:Problem_Statement}) uses a time-varying cable-tension ramp $\kappa_T(t) = \min(1, (t - t_{\mathrm{taut}})/\Delta_{\mathrm{ramp}})$ and a two-term anti-swing law $\bm{F}_{\mathrm{swing}} = k_q \bm{e}_q - k_\omega \bm{\omega}_q$ ($k_q = 4.0$~N/rad, $k_\omega = 2.0$~N$\cdot$s/rad). For the fault-tolerance evaluation, these are simplified to a constant $\kappa_T = 0.5$ and a single cable-angular-velocity damping term $-k_{\mathrm{sw}} \bm{\omega}_{\mathrm{cable},i}^{\perp}$ ($k_{\mathrm{sw}} = 0.5$~N$\cdot$s/rad).}
+
+The critical property for fault tolerance is that \emph{every term is a function of agent~$i$'s local measurements only}. When cable~$j$ snaps, each surviving agent~$i \neq j$ experiences an automatic increase in trajectory error $\bm{e}_p$ (as the payload deviates) and cable tension $T_i$ (as load redistributes). Both signals update instantaneously through the physics, requiring no adaptation or re-convergence delay. Ablation (Section~\ref{sec:tension_ablation}) confirms that cable-tension feedforward contributes less than $1\%$ RMSE change; the primary fault-absorption mechanism is PID feedback with gravity feedforward.
+
+The integral state is clamped to $\pm 2$~m$\cdot$s per axis (anti-windup). During the initial cable-snap transient (${\sim}0.5$~s at ${\sim}1$~m peak error), the integral accumulates $\int k_i \cdot e\,\mathrm{d}t \approx 0.075$~m$\cdot$s, well within the clamp. However, the post-fault load-share step $\Delta d_{\mathrm{step}} \approx 3.27$~m/s$^2$ ($N{=}3$, $k{=}1$, from~\eqref{eq:delta_step}) requires a steady-state integral of $\eta_{\mathrm{ss}} = \Delta d_{\mathrm{step}} / k_i \approx 21.8$~m$\cdot$s to fully compensate, far exceeding the $\pm 2$~m$\cdot$s clamp. The integral therefore saturates, and the residual uncompensated acceleration $\Delta d_{\mathrm{res}} = \Delta d_{\mathrm{step}} - k_i \cdot \eta_{\max} = 3.27 - 0.30 = 2.97$~m/s$^2$ is absorbed by the proportional term operating at a nonzero steady-state error $e_{\mathrm{ss}} \approx \Delta d_{\mathrm{res}} / k_p \approx 0.37$~m. This persistent offset is the dominant contributor to the post-fault RMSE increase and to $\rho_{\mathrm{FT}}$. Cable-tension feedforward partially compensates this offset (the measured $T_i$ increases post-fault), but the ablation (Section~\ref{sec:tension_ablation}) shows its contribution is ${<}1\%$.
+
+The desired force is decomposed into thrust magnitude and desired body-$z$ direction:
+\begin{equation}\label{eq:thrust_decomp}
+  f_i = \bm{F}_i^{\mathrm{des}} \cdot \bm{R}_i \bm{e}_3, \quad \bm{b}_{3,i}^{\mathrm{des}} = \frac{\bm{F}_i^{\mathrm{des}}}{\norm{\bm{F}_i^{\mathrm{des}}}}.
+\end{equation}
+
+% NOTE: The $\mathcal{L}_1$ adaptive controller is implemented in the codebase
+% but is not active in the reported results. It is discussed in
+% Section~VII (Future Work) rather than here, to maintain clarity
+% about the tested architecture.
+
+% ============================================================
+\subsection{Topology-Invariance: Formal Result for the Simplified Model}
+\label{sec:topology_invariance_theorem}
+% ============================================================
+
+The central architectural insight is that the N-agnostic control law~\eqref{eq:layer1_force_ft} produces per-agent error dynamics that are \emph{structurally independent of cable topology}. We formalize this as a structural property, then derive an operationally useful transient prediction.
+
+\subsubsection{Topology-Independent Error Dynamics}
+
+Consider agent~$i$'s translational dynamics under the lumped formulation~\eqref{eq:lumped_dynamics}. Under the PID law~\eqref{eq:pid_fb} with gravity feedforward~\eqref{eq:grav_ff} and ideal attitude tracking, the per-axis scalar projection of $\bm{e}_p$ (denoted $e$ in what follows) satisfies
+\begin{equation}\label{eq:error_state_space}
+  \dot{\bm{z}} = A \bm{z} + B d_i(t),
+\end{equation}
+where $\bm{z} = [e,\, \dot{e},\, \eta]^\top$ with $\eta = \int_0^t e\,\mathrm{d}\tau$, and
+\begin{equation}\label{eq:AB_matrices}
+  A = \begin{bmatrix} 0 & 1 & 0 \\ -k_p & -k_d & -k_i \\ 1 & 0 & 0 \end{bmatrix}, \quad
+  B = \begin{bmatrix} 0 \\ 1 \\ 0 \end{bmatrix}.
+\end{equation}
+$A$ is Hurwitz for $k_p k_d > k_i > 0$ (Routh--Hurwitz; satisfied with margin $k_p k_d = 64 \gg 0.15 = k_i$).
+
+\begin{proposition}[Topology-Independent Error Structure]\label{thm:topology_invariance}
+Under the N-agnostic PID-plus-feedforward law~\eqref{eq:layer1_force_ft} with ideal attitude tracking and no actuator saturation, every agent's closed-loop error dynamics~\eqref{eq:error_state_space} are governed by the \emph{same} $(A, B)$ pair regardless of which cables are intact, the team size~$N$, or the payload mass~$m_L$.
+
+A cable snap changes the \emph{input} $d_i(t)$ (through modified cable forces propagated via the payload) but not the \emph{system} $(A, B)$, because every element of $A$ and $B$ depends only on the PID gains $(k_p, k_d, k_i)$---none of which is a function of $N$, $m_L$, cable stiffness, or cable identity.
+\end{proposition}
+
+This follows directly from the N-agnostic design choice. The contribution is not the observation itself but its formal consequences: the common Lyapunov function (Corollary~\ref{cor:common_lyapunov}), the finite-time transient prediction, and the precise identification of what remains to be proven (Gap~3). These provide the analytical framework explaining the simulation-validated fault tolerance.
+
+\begin{corollary}[Common Lyapunov Function Across Topologies]\label{cor:common_lyapunov}
+Let $P \succ 0$ satisfy $A^\top P + PA = -Q$ for some $Q \succ 0$ (guaranteed by $A$ Hurwitz). Then $V(\bm{z}) = \bm{z}^\top P \bm{z}$ serves as a common ISS-Lyapunov function for the error dynamics~\eqref{eq:error_state_space} under \emph{every} cable topology. No switching between Lyapunov functions is required at cable-snap events, and no dwell-time constraint applies to the sequence of topology changes.
+\end{corollary}
+
+This is immediate from Proposition~\ref{thm:topology_invariance} ($A$ is shared across topologies) but worth stating separately: it connects directly to the ISS switched-systems framework~\cite{vu2007iss,hespanha1999stability} and establishes that cascading faults do not require dwell-time analysis.
+
+\begin{remark}[Hybrid System Formulation]
+In the framework of Goebel, Sanfelice, and Teel~\cite{goebel2012hybrid}, each cable-snap event defines a jump map $g: \bm{x} \to \bm{x}^+$ in which $T_j$ is set to zero. The continuous flow in each mode is governed by the same $(A, B)$ (Proposition~\ref{thm:topology_invariance}), with a common Lyapunov function (Corollary~\ref{cor:common_lyapunov}). Stability of the hybrid system requires three conditions: (i)~each flow mode is ISS---established by $A$ Hurwitz; (ii)~the jump map does not increase $V$ beyond recoverable bounds---requires bounding the state excursion from the cable-snap impulse (the finite-time bound below provides a partial answer, but a tight bound on $V(\bm{z}^+) - V(\bm{z}^-)$ from the elastic transient remains open); (iii)~an average dwell-time condition holds for multiple jumps---the cascading-fault schedule (minimum inter-jump interval $2$~s) far exceeds the ${\sim}0.5$~s transient settling time, satisfying this condition with margin. Conditions (i) and (iii) are verified; condition (ii) is the remaining open verification.
+\end{remark}
+
+\subsubsection{Finite-Time Transient Prediction}
+
+The standard steady-state ISS gain $\gamma_{\mathrm{ss}} = \norm{A^{-1}B}\bar{d} = \bar{d}/k_i$~\cite{sontag2008iss} is operationally vacuous ($80$~m for this system). The cable-break transient is brief, so a \emph{finite-time} bound is far more informative. Model the fault disturbance as a pulse:
+\begin{equation}\label{eq:pulse_model}
+  d_i^{\mathrm{fault}}(t) = \begin{cases}
+    \Delta d, & t_f \leq t < t_f + \tau_{\mathrm{fault}}, \\
+    0, & \text{otherwise},
+  \end{cases}
+\end{equation}
+where $\Delta d \approx 4.4$~m/s$^2$ is the cable-break impulse and $\tau_{\mathrm{fault}} < 0.5$~s is the transient duration. The impulse response of~\eqref{eq:error_state_space} gives the transient peak:
+\begin{equation}\label{eq:tracking_bound}
+  \norm{e_{\mathrm{peak}}} \leq \underbrace{\norm{\int_0^{\tau_{\mathrm{fault}}} e^{A\tau} B\,\mathrm{d}\tau}}_{\text{finite-time gain}} \cdot \Delta d.
+\end{equation}
+For the system gains ($k_p{=}8$, $k_d{=}8$, $k_i{=}0.15$), the eigenvalues of~$A$ are $\lambda \approx \{-6.83,\, -1.15,\, -0.019\}$, all real and negative. The fast mode ($|\lambda_1| = 6.83$) decays in ${\sim}0.15$~s; the intermediate mode ($|\lambda_2| = 1.15$) in ${\sim}0.87$~s; the slow mode ($|\lambda_3| = 0.019$) governs integral wind-up with time constant ${\sim}52$~s. The $\mathcal{H}_\infty$ norm of the scalar transfer function $G(s) = C(sI{-}A)^{-1}B$ is $\gamma_{\mathrm{ISS}} \approx 0.125$, peaked at $\omega \approx 0.15$~rad/s. Numerical evaluation of the finite-time gain matrix for $\tau_{\mathrm{fault}} = 0.5$~s gives
+\begin{equation}\label{eq:gamma1_explicit}
+  \gamma_{\mathrm{FT}}(\Delta d, \tau_{\mathrm{fault}}) \approx 0.042 \cdot \Delta d \approx 0.042 \times 4.4 \approx 0.18\;\text{m},
+\end{equation}
+predicting a peak position error of ${\sim}18$~cm from a single cable snap---$5.8\times$ below the observed ${\sim}107$~cm in full Drake. The ratio $\alpha = e_{\mathrm{peak}}^{\mathrm{obs}} / \gamma_{\mathrm{FT}}$ is remarkably stable across \emph{topologies}: $107/18.4 = 5.8$ ($N{=}3$, $k{=}1$), $112/18.4 = 6.1$ ($N{=}5$, $k{=}2$), $117/18.4 = 6.4$ ($N{=}7$, $k{=}3$)---varying $<10\%$. The consistency confirms that the unmodeled effects (elastic cable coupling, attitude-loop dynamics, multi-axis interaction) contribute a topology-independent aggregate correction.
+
+The prediction captures the correct \emph{topology-scaling}: since $(A, B)$ are topology-independent (Proposition~\ref{thm:topology_invariance}), the predicted peak is invariant to cable identity, and the full-Drake results confirm this (${\sim}107$--$117$~cm across $N \in \{3,5,7\}$ with $1$--$3$ faults, $\alpha$ varies $<10\%$). However, $\alpha$ does \emph{not} transfer across operating points: at higher PID gains ($k_p{=}12$, $k_d{=}12$, $k_i{=}0.3$), the observed peak increases to $116$~cm despite the scalar model predicting a decrease, because the higher gains excite cable dynamics the scalar model omits. With heavier payload ($m_L = 5$~kg), the observed peak \emph{decreases} to $100$~cm despite the scalar model predicting $266$~cm, because the additional payload inertia filters the transient. The scalar prediction is therefore a topology-invariant qualitative tool---it correctly predicts that peak error is cable-identity-independent and scales with $\Delta d$---but it is not a standalone predictor across different plant configurations. The paper's primary design tools ($\rho_{\mathrm{FT}}$, $f_{\max}^*$, and the thrust-margin screen) do not depend on $\alpha$.
+
+\subsubsection{Fault-Tolerance Cost Ratio}
+
+From the topology-independent structure, $\rho_{\mathrm{FT}}$ depends only on the disturbance ratio. Using the closed-form expression~\eqref{eq:rho_closed_form} from the cable-dominated regime:
+\begin{equation}\label{eq:rho_corollary}
+  \rho_{\mathrm{FT}} \approx \frac{N}{N{-}k},
+\end{equation}
+which gives $1.5$ for $N{=}3$, $k{=}1$. This is a conservative steady-state upper bound; the empirical values ($1.26$--$1.39$, Table~\ref{tab:scenario_summary}) are lower because the fault disturbance is transient, not sustained---consistent with the finite-time analysis above.
+
+\subsubsection{Gap Analysis: Simplified Model vs.\ Full Plant}
+
+Proposition~\ref{thm:topology_invariance} establishes topology-invariance for a scalar LTI model with exogenous bounded input. Three substantive gaps separate this from the full bead-chain Drake plant; we state each explicitly.
+
+\emph{Gap~1: Impulsive disturbance from slack-to-taut transitions.}
+The piecewise cable law~\eqref{eq:cable_tension} produces impulsive forces when a slack segment snaps taut. During the ${\sim}10$--$50$~ms elastic transient, $d_i(t)$ may momentarily exceed $\bar{d}_{\mathrm{FT}}$, violating assumption~(A2). The finite-time bound~\eqref{eq:tracking_bound} partially accommodates this (it integrates the actual disturbance waveform, not just its peak), but a rigorous treatment requires bounding the impulse magnitude from the cable stiffness ($k_s$) and segment strain ($\varepsilon_{\max} = 0.15$) and verifying that the resulting state excursion remains within the region of attraction. This is not done here.
+
+\emph{Gap~2: Attitude-loop delay during fast force transients.}
+Assumption~(A1) requires that $R_i \bm{e}_3 \approx \bm{b}_{3,i}^{\mathrm{des}}$ instantaneously. The SO(3) inner loop runs at 200~Hz ($5$~ms period), but the cable-snap force transmission occurs at ${\sim}7.9$~ms (rigid-body path). During this interval, the position-loop model assumes the attitude has already aligned with the new desired force direction; in reality, the attitude lags, creating an unanalyzed residual coupling. Quantifying the resulting tracking-error increment requires a cascaded stability analysis of the two-timescale system under impulsive disturbance---a nontrivial extension beyond the scope of this work.
+
+\emph{Gap~3: State-dependent disturbance (small-gain condition).}
+In the full plant, $d_i(t)$ is not purely exogenous: cable forces depend on agent position relative to the payload, creating a feedback loop from $\bm{z}$ to $d_i$through the elastic cable dynamics. The ISS argument in Proposition~\ref{thm:topology_invariance} treats $d_i$as an external input. Rigorously, the interconnection of the position-loop ISS system with the cable-dynamics subsystem requires a small-gain condition~\cite{sontag2008iss}: the product of the position-loop ISS gain ($\gamma_{\mathrm{ISS}} = \norm{G(s)}_{\mathcal{H}_\infty}$) and the cable-dynamics input-output gain ($\gamma_{\mathrm{cable}}$) must be less than unity. A scalar (per-axis) reduction is insufficient because cable forces act along specific directions ($\bm{q}_i \in \mathbb{S}^2$), the payload inertia filters force transmission, and multiple cables distribute the coupling---all of which reduce the effective interconnection gain below the conservative scalar product. For the scalar per-axis model, the position-loop $\mathcal{H}_\infty$ gain is $\gamma_{\mathrm{ISS}} = \norm{G(s)}_{\mathcal{H}_\infty} \approx 0.125$ (peaked at $\omega \approx 0.15$~rad/s), so the small-gain condition requires $\gamma_{\mathrm{cable}} < 1/\gamma_{\mathrm{ISS}} \approx 8.0$. This is a generous margin: a cable-dynamics gain of~$8$ would require the cable-force perturbation (in m/s$^2$) to exceed $8\times$ the position error (in m), which is inconsistent with the observed bounded tracking. The full multivariable verification---computing $\gamma_{\mathrm{ISS}}$ and $\gamma_{\mathrm{cable}}$ from the linearized $6{+}8N$-dimensional plant at the taut equilibrium via Drake's \texttt{Linearize()}---is feasible with the existing infrastructure and is planned as near-term future work.
+
+Three lines of empirical evidence support the small-gain condition indirectly: (i)~the $f_{\max}$ boundary sweep shows RMSE insensitivity for $f_{\max} \geq 45$~N ($3\times$ headroom); (ii)~Monte Carlo shows ${<}3\%$ RMSE variation across $30$ runs with randomized cable parameters; (iii)~stability is maintained across all $N \in \{3, 5, 7\}$ scenarios with up to three cascading faults. None constitutes formal verification of $\gamma_{\mathrm{ISS}} \cdot \gamma_{\mathrm{cable}} < 1$, but together they make a strong empirical case.
+
+\emph{What is established.} The shared $(A, B)$ structure, common Lyapunov function, and hybrid-system analysis provide a coherent partial framework. Full-Drake results confirm bounded, topology-insensitive tracking degradation across $N \in \{3, 5, 7\}$ with up to three cascading faults, even though formal closure of Gap~2 remains open. Table~\ref{tab:claim_status} summarizes the evidence level supporting each claim.
+
+\begin{table}[t]
+\centering
+\caption{Claim-status summary: evidence level for each result.}
+\label{tab:claim_status}
+\small
+\begin{tabular}{@{}p{4.8cm}l@{}}
+\toprule
+Claim & Evidence level \\
+\midrule
+Topology-independent error dynamics $(A,B)$ for simplified per-agent model & Proven (Prop.~\ref{thm:topology_invariance}) \\
+Finite-time transient prediction ($\alpha \approx 5.8$, topology-invariant) & Analytical + empirical \\
+Cost ratio $\rho_{\mathrm{FT}} = N/(N{-}k)$ (cable-dominated) & Derived, validated \\
+Bounded tracking under faults in full nonlinear Drake plant & Empirically supported \\
+Small-gain condition for cable-force feedback & Scalar $\gamma_{\mathrm{ISS}}{=}0.125$ verified; full-plant open \\
+Formal stability for full bead-chain plant & Open \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+% ============================================================
+\subsection{Fault-Tolerance Cost}
+% ============================================================
+
+Designing for $\mathcal{W}_{\mathrm{FT}}$ rather than $\mathcal{W}_{\mathrm{nom}}$ widens the tracking tube. From~\eqref{eq:rho_closed_form}, the steady-state ratio $\rho_{\mathrm{ss}} = N/(N{-}k)$ is conservative because it assumes the fault disturbance is sustained indefinitely.
+
+\begin{definition}[Fault-Tolerance Cost Ratio]\label{def:ft_cost}
+The steady-state cost ratio is $\rho_{\mathrm{ss}} = N/(N{-}k)$ (from~\eqref{eq:rho_closed_form}). A tighter \emph{transient-aware} ratio accounts for the actual fault disturbance profile.
+\end{definition}
+
+\subsubsection{Transient-Aware $\rho_{\mathrm{FT}}$}
+
+A cable snap at $t_f$ produces two superposed disturbances: (i)~a brief impulse $\Delta d_{\mathrm{imp}} \approx 4.4$~m/s$^2$ lasting $\tau_{\mathrm{imp}} < 0.5$~s (the cable-break transient), and (ii)~a sustained step $\Delta d_{\mathrm{step}}$ (the increased load share) that the integral term must compensate. For $N$ agents losing $k$ cables:
+\begin{equation}\label{eq:delta_step}
+  \Delta d_{\mathrm{step}} = \frac{m_L g}{m_Q}\!\left(\frac{1}{N{-}k} - \frac{1}{N}\right).
+\end{equation}
+The step persists until the integral term converges, with effective time constant $\tau_{\mathrm{int}} \approx 1/k_i \approx 6.7$~s for these gains.
+
+The transient RMSE increase is computed from the error dynamics~\eqref{eq:error_state_space} driven by the combined input $d_{\mathrm{fault}}(t) = \Delta d_{\mathrm{imp}} \cdot \bm{1}_{[0,\tau_{\mathrm{imp}}]} + \Delta d_{\mathrm{step}}$. Since this is additive to the nominal disturbance and approximately uncorrelated (the dominant contribution is the load-share step $\Delta d_{\mathrm{step}}$, which is approximately constant during the integral recovery period and therefore weakly correlated with the trajectory-phase-dependent nominal disturbance), the post-fault RMSE satisfies
+\begin{equation}\label{eq:rho_transient}
+  \rho_{\mathrm{FT}} \approx \sqrt{1 + \frac{\mathrm{RMSE}_{\mathrm{fault\text{-}response}}^2}{\mathrm{RMSE}_{\mathrm{nominal}}^2}},
+\end{equation}
+where $\mathrm{RMSE}_{\mathrm{fault\text{-}response}}$ is computed by numerically integrating~\eqref{eq:error_state_space} with $d_{\mathrm{fault}}(t)$ over the post-fault horizon ($T - t_f = 23$~s). For this system:
+
+\begin{center}
+\small
+\begin{tabular}{@{}lccccc@{}}
+\toprule
+& $\Delta d_{\mathrm{step}}$ & Fault resp.\ & $\rho_{\mathrm{FT}}$ & $\rho_{\mathrm{FT}}$ & \\
+& [m/s$^2$] & RMSE [cm] & (predicted) & (empirical) & \\
+\midrule
+$N{=}3$, $k{=}1$ & 3.27 & 33.7 & 1.39 & 1.39 \\
+$N{=}5$, $k{=}2$ & 2.62 & 27.2 & 1.27 & 1.33 \\
+$N{=}7$, $k{=}3$ & 2.10 & 22.0 & 1.18 & 1.26 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+The transient-aware prediction matches the empirical $\rho_{\mathrm{FT}}$ closely for $N{=}3$ ($1.39$ vs.\ $1.39$) and underpredicts for larger $N$ because the scalar model omits multi-fault interaction effects (the second and third cable snaps occur during the recovery transient from the first). The key insight is that $\rho_{\mathrm{FT}}$ is governed by the \emph{transient energy} of the fault response---primarily the sustained step until the integral converges---not the steady-state disturbance bound. The integral time constant $1/k_i \approx 6.7$~s sets the recovery timescale and thereby determines the cost ratio.
+
+For actuator sizing, the conservative $\rho_{\mathrm{ss}} = 1.5$ remains appropriate (it bounds the worst case). For performance prediction, the transient-aware~\eqref{eq:rho_transient} is the operationally relevant metric.
+
+% ============================================================
+\subsection{Relationship to Adaptive Estimation}
+% ============================================================
+
+The topology-invariance property (Proposition~\ref{thm:topology_invariance}) applies to the PID-plus-feedforward law without adaptive estimation. The GPAC baseline includes a Concurrent Learning (CL) mass estimator (Layer~3) and an Extended State Observer (ESO, Layer~4), both of which are \emph{disabled} in the reported full-Drake runs. This choice is deliberate: the topology-invariant error structure explains why PID feedback with gravity feedforward already suffices (Section~\ref{sec:tension_ablation}).
+
+With CL active, the feedforward includes an adaptive term $\hat{m}_L \cdot g$ that depends on the regressor history. After a cable snap, pre-fault data in the $M{=}50$ regressor buffer biases $\hat{m}_L$ toward the pre-fault load share, temporarily injecting incorrect feedforward for $2$--$5$~s of buffer turnover. The per-agent error dynamics are no longer topology-independent in the sense of Proposition~\ref{thm:topology_invariance}: the system matrix acquires an implicit dependence on cable topology through the history-dependent estimate. Topology invariance holds strictly only for the PID-plus-gravity-feedforward path. Adaptive estimation (CL, ESO, or $\mathcal{L}_1$) remains a candidate residual channel for scenarios requiring tighter steady-state tracking; its integration is discussed in Section~\ref{Section_VII:Discussion}.
+
+% ============================================================
+\subsection{Signal Flow Summary}
+% ============================================================
+
+\begin{remark}[Geometry Redistribution]
+The codebase includes a post-fault geometry redistribution module that re-centers surviving agents' formation offsets when a cable fault is detected locally. This module operates upstream at the reference level and does not modify the GPAC control law. All reported results use fixed formation offsets throughout, demonstrating that PID-plus-gravity-feedforward alone suffices for fault tolerance. Ablation of the redistribution path is deferred to future work.
+\end{remark}
+
+The fault-tolerant architecture is summarized in Fig.~\ref{fig:control_signal_flow}. The PID-plus-feedforward control law~\eqref{eq:layer1_force_ft}, whose topology-invariance is established by Proposition~\ref{thm:topology_invariance}, is the sole active mechanism in the reported runs. It does not modify the baseline GPAC internals.
+
+\begin{figure*}
+\centering
+\input{./Figures/control_signal_flow.tex}
+\caption{Fault-tolerant signal flow. PID-plus-feedforward control (Proposition~\ref{thm:topology_invariance}) with load-tracking integral on payload GPS closes the loop on actual payload position. Geometry redistribution (dashed) is implemented but not active in the reported runs.}
+\label{fig:control_signal_flow}
+\end{figure*}

@@ -1,0 +1,3 @@
+[submodule "Tether_Lift"]
+	path = Tether_Lift
+	url = git@github.com:Hadi-Hajieghrary/Tether_Lift.git

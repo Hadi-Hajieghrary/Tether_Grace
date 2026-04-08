@@ -1,0 +1,14 @@
+\begin{tikzpicture}[
+  node distance=3.5mm,
+  item/.style={draw, rounded corners, thick, minimum width=7.8cm, minimum height=0.72cm, align=left, inner sep=3pt},
+  good/.style={item, fill=green!14},
+  mixed/.style={item, fill=yellow!22},
+  gap/.style={item, fill=red!14}
+]
+\node[gap]   (u1) {U1: reduced-order/full-Drake gap remains open};
+\node[mixed, below=of u1] (u2) {U2: topology condition has numeric support only};
+\node[mixed, below=of u2] (u3) {U3: CL history bias detected, with mitigation signal};
+\node[mixed, below=of u3] (u4) {U4: reduced-order scaling supported, Drake trend mixed};
+\node[good,  below=of u4] (u5) {U5: gradual degradation support extended in replayable runs};
+\node[gap,   below=of u5] (u6) {U6: non-CL alternatives thoroughly tested, none robustly better};
+\end{tikzpicture}

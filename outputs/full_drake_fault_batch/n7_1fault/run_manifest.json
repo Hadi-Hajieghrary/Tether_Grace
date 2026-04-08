@@ -1,0 +1,48 @@
+{
+  "num_quadcopters": 7,
+  "duration": 30.0,
+  "output_dir": "/workspaces/Tether_Grace/outputs/full_drake_fault_batch/n7_1fault",
+  "log_dir": "/workspaces/Tether_Grace/outputs/full_drake_fault_batch/n7_1fault/logs/20260405_210036",
+  "meshcat_html": "/workspaces/Tether_Grace/outputs/full_drake_fault_batch/n7_1fault/full_drake_meshcat_replay.html",
+  "cable_lengths": [
+    0.98,
+    1.01,
+    1.04,
+    1.07,
+    1.1,
+    1.13,
+    1.16
+  ],
+  "fault_cables": [
+    1
+  ],
+  "fault_times": [
+    7.0
+  ],
+  "max_thrust": 150.0,
+  "payload_mass": 3.0,
+  "tension_kp": 0.5,
+  "disable_tension_ff": false,
+  "position_kp": 8.0,
+  "position_kd": 8.0,
+  "position_ki": 0.15,
+  "enable_eso": false,
+  "seed": -1,
+  "enable_wind": false,
+  "wind_mean": [
+    1.0,
+    0.5,
+    0.0
+  ],
+  "wind_sigma": 0.5,
+  "enable_eskf": false,
+  "imu_rate": 200.0,
+  "gps_noise": 0.02,
+  "baro_noise": 0.3,
+  "gps_rate": 10.0,
+  "baro_rate": 25.0,
+  "enable_load_tracking": true,
+  "load_kp": 6.0,
+  "load_kd": 8.0,
+  "load_ki": 1.2
+}

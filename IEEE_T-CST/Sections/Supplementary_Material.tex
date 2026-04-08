@@ -1,0 +1,137 @@
+% These subsections report reduced-order (non-Drake) evidence that
+% complements the full-Drake results in the main text. They are
+% provided as supplementary material for completeness.
+
+% ============================================================
+\subsection{Scaling Behavior (Reduced-Order)}
+\label{supp:scaling}
+% ============================================================
+
+\begin{table}[t]
+\centering
+\caption{Reduced-order CL post-fault RMSE scaling with team size.}
+\label{tab:scaling}
+\begin{tabular}{lcccc}
+\toprule
+Scenario & $N$ & Post-fault RMSE & Peak deviation & Load-share \\
+         &     & [cm]            & [cm]           & increase   \\
+\midrule
+Single snap & 3  & 37.11 & 40.96 & 50\% \\
+Single snap & 5  & 28.96 & 42.50 & 25\% \\
+Single snap & 7  & 23.72 & 39.84 & 17\% \\
+Single snap & 9  & 20.87 & 36.07 & 13\% \\
+Single snap & 11 & 20.19 & 35.37 & 10\% \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Post-fault RMSE decreases monotonically from $37.11$~cm ($N{=}3$) to $20.19$~cm ($N{=}11$), consistent with smaller parameter jumps for larger teams. These reduced-order CL results complement rather than directly predict the $41$--$54$~cm full-Drake values.
+
+% ============================================================
+\subsection{CL History Corruption Analysis}
+\label{supp:cl_corruption}
+% ============================================================
+
+\begin{table}[t]
+\centering
+\caption{CL history-stack bias duration after cable snap.}
+\label{tab:cl_corruption}
+\begin{tabular}{lcc}
+\toprule
+Strategy & Mean bias duration [s] & Relative to baseline \\
+\midrule
+Baseline CL              & 12.46 & 1.00$\times$ \\
+CL + forgetting          & 3.95  & 0.32$\times$ \\
+CL + forgetting + flush  & 3.46  & 0.28$\times$ \\
+\midrule
+\multicolumn{2}{l}{History refill time after flush} & 4.93~s \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The baseline CL remains biased toward the pre-fault value for $12.46$~s. Forgetting reduces this to $3.95$~s ($68\%$ reduction); combining forgetting with fault-triggered flush yields $3.46$~s ($72\%$). This confirms the structural limitation: CL's history buffer introduces a multi-second bias that mitigation strategies reduce but cannot eliminate.
+
+% ============================================================
+\subsection{Gradual Cable Degradation}
+\label{supp:degradation}
+% ============================================================
+
+\begin{table}[t]
+\centering
+\caption{Post-fault RMSE under gradual cable degradation: CL vs.\ $\mathcal{L}_1$.}
+\label{tab:degradation}
+\begin{tabular}{lccccc}
+\toprule
+Scenario & $N$ & \multicolumn{2}{c}{RMSE [cm]} & \multicolumn{2}{c}{Peak [cm]} \\
+         &     & CL   & $\mathcal{L}_1$ & CL   & $\mathcal{L}_1$ \\
+\midrule
+Linear fray        & 3 & 29.63 & 60.91  & 42.69 & 102.02 \\
+Exponential weaken & 3 & 29.40 & 61.06  & 42.53 & 102.02 \\
+\midrule
+Linear fray        & 5 & 22.42 & 95.09  & 36.27 & 153.67 \\
+Exponential weaken & 5 & 21.84 & 93.58  & 36.19 & 153.35 \\
+\midrule
+Linear fray        & 7 & 19.39 & 73.94  & 34.40 & 89.25 \\
+Exponential weaken & 7 & 19.10 & 73.17  & 34.23 & 89.25 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+CL achieves $2.1\times$--$4.3\times$ lower RMSE and $2.3\times$--$4.2\times$ lower peak deviation across all degradation scenarios. This is expected: under gradual degradation, CL's history buffer tracks the slow parameter change rather than biasing the estimate. The $\mathcal{L}_1$ lumped treatment offers no structural advantage when disturbance evolution is smooth.
+
+% ============================================================
+\subsection{Non-CL Adaptive Law Search}
+\label{supp:noncl_search}
+% ============================================================
+
+\begin{table}[t]
+\centering
+\caption{Structured non-CL adaptive law search results.}
+\label{tab:noncl_search}
+\begin{tabular}{lcc}
+\toprule
+Quantity & Value \\
+\midrule
+Controller families tested       & 6 \\
+Total candidate parameterizations & 12 \\
+Scenarios per candidate          & 5 ($N = 3, 5, 7, 9, 11$) \\
+Robust winners against CL        & 0 \\
+\midrule
+Best candidate                   & shared-$z$ weighted \\
+Mean $\Delta$ RMSE vs.\ CL      & $+3.10$~cm (worse) \\
+Mean $\Delta$ peak vs.\ CL      & $+18.91$~cm (worse) \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+No tested alternative ($12$ candidates, $6$ families) consistently outperformed CL. The gap was largest at $N = 3$ ($+4.44$~cm RMSE) and smallest at $N = 7$ ($+0.21$~cm), suggesting CL's advantage is most pronounced when load-share jumps are largest. This does not prove no non-CL law can outperform CL, but establishes CL as a strong benchmark.
+
+% ============================================================
+\subsection{Trajectory Generalization (Full-Drake)}
+\label{supp:trajectory_generalization}
+% ============================================================
+
+The figure-eight trajectory excites cable pendulum near-resonance (${\sim}2$~s period vs.\ ${\sim}3$~s corner interval). To confirm that results are not trajectory-limited, two additional reference trajectories are evaluated:
+\begin{enumerate}[label=(\roman*),nosep]
+  \item \emph{Hover with station-keeping:} $\bm{p}_d(t) = [0, 0, z_0]$ for $t \in [0, 30]$~s. Eliminates resonance contamination and isolates the pure fault response.
+  \item \emph{Point-to-point straight-line:} $\bm{p}_d(t)$ ramps from $[-2, 0, z_0]$ to $[2, 0, z_0]$ over $10$~s, then holds. Different frequency content from the figure-eight.
+\end{enumerate}
+Both trajectories are evaluated for $N{=}3$ (single fault) and $N{=}7$ (three faults).
+
+\begin{table}[t]
+\centering
+\caption{Trajectory generalization: RMSE across reference trajectories (full-Drake).}
+\label{tab:trajectory_generalization}
+\begin{tabular}{lcccc}
+\toprule
+Trajectory & \multicolumn{2}{c}{RMSE [cm]} & \multicolumn{2}{c}{Peak error [cm]} \\
+           & $N{=}3$, 1 fault & $N{=}7$, 3 faults & $N{=}3$ & $N{=}7$ \\
+\midrule
+Figure-eight       & 48.84 & 43.60 & 107.44 & 117.45 \\
+Hover              & 39.75 & 30.88 & 64.39 & 38.04 \\
+Point-to-point     & 44.98 & 37.66 & 71.48 & 50.78 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Hover RMSE ($39.75$~cm for $N{=}3$) is $19\%$ lower than figure-eight ($48.84$~cm), confirming that the figure-eight trajectory amplifies post-fault tracking error through direction changes that excite cable pendulum modes. Peak errors are substantially lower for hover ($64$~cm vs.\ $107$~cm). The point-to-point trajectory ($44.98$~cm) falls between hover and figure-eight, with lower peak errors ($71$~cm) reflecting the absence of sustained oscillatory excitation. Across all three trajectories, the fault-absorption mechanism operates consistently: RMSE decreases with team size and remains bounded.

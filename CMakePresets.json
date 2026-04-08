@@ -1,0 +1,55 @@
+{
+    "version": 3,
+    "cmakeMinimumRequired": {
+        "major": 3,
+        "minor": 16,
+        "patch": 0
+    },
+    "configurePresets": [
+        {
+            "name": "default",
+            "displayName": "Default (core only)",
+            "binaryDir": "${sourceDir}/build",
+            "cacheVariables": {
+                "CMAKE_CXX_STANDARD": "17",
+                "ENABLE_GPAC_DRAKE_WRAPPERS": "OFF"
+            }
+        },
+        {
+            "name": "drake",
+            "displayName": "Drake wrappers enabled",
+            "binaryDir": "${sourceDir}/build",
+            "cacheVariables": {
+                "CMAKE_CXX_STANDARD": "17",
+                "ENABLE_GPAC_DRAKE_WRAPPERS": "ON",
+                "CMAKE_PREFIX_PATH": "/opt/drake"
+            }
+        }
+    ],
+    "buildPresets": [
+        {
+            "name": "default",
+            "configurePreset": "default"
+        },
+        {
+            "name": "drake",
+            "configurePreset": "drake"
+        }
+    ],
+    "testPresets": [
+        {
+            "name": "default",
+            "configurePreset": "default",
+            "output": {
+                "outputOnFailure": true
+            }
+        },
+        {
+            "name": "drake",
+            "configurePreset": "drake",
+            "output": {
+                "outputOnFailure": true
+            }
+        }
+    ]
+}

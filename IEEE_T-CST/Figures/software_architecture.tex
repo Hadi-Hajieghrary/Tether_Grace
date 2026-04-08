@@ -1,0 +1,25 @@
+\begin{tikzpicture}[
+  node distance=6mm and 8mm,
+  box/.style={draw, rounded corners, thick, minimum width=3.0cm, minimum height=0.95cm, align=center},
+  contracts/.style={box, fill=blue!10},
+  core/.style={box, fill=green!10},
+  adapter/.style={box, fill=orange!12},
+  drake/.style={box, fill=red!10},
+  arrow/.style={-{Latex[length=2.5mm]}, thick}
+]
+\node[contracts] (contracts) {Contracts\\signal vocabulary};
+\node[core, below=of contracts] (core1) {Core\\L1 adaptation};
+\node[core, below=of core1] (core2) {Core\\fault metrics and cable profiles};
+\node[core, below=of core2] (core3) {Core\\geometry redistribution\\and reference mapping};
+\node[adapter, right=18mm of core2] (adapter) {Adapter layer\\GPAC seam translation};
+\node[drake, above right=8mm and 18mm of adapter] (drake1) {Drake wrappers\\L1 and references};
+\node[drake, below right=8mm and 18mm of adapter] (drake2) {Drake helpers\\wiring and health sources};
+
+\draw[arrow] (contracts) -- (core1);
+\draw[arrow] (core1) -- (core2);
+\draw[arrow] (core2) -- (core3);
+\draw[arrow] (core2) -- (adapter);
+\draw[arrow] (core3) -- (adapter);
+\draw[arrow] (adapter) -- (drake1);
+\draw[arrow] (adapter) -- (drake2);
+\end{tikzpicture}

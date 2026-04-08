@@ -1,0 +1,63 @@
+{
+  "scenario": "n7_1fault",
+  "num_agents": 7,
+  "duration": 30.0,
+  "fault_cables": [
+    1
+  ],
+  "fault_times": [
+    7.0
+  ],
+  "cable_lengths": [
+    0.98,
+    1.01,
+    1.04,
+    1.07,
+    1.1,
+    1.13,
+    1.16
+  ],
+  "log_dir": "/workspaces/Tether_Grace/outputs/full_drake_fault_batch/n7_1fault/logs/20260405_210036",
+  "meshcat_html": "/workspaces/Tether_Grace/outputs/full_drake_fault_batch/n7_1fault/full_drake_meshcat_replay.html",
+  "sample_count": 3001,
+  "load_final_position": [
+    -0.205023,
+    -0.469648,
+    2.584542
+  ],
+  "load_peak_speed": 3.2640160856924405,
+  "peak_tensions": {
+    "rope0_mag": 13.553772,
+    "rope1_mag": 9.771858,
+    "rope2_mag": 14.211496,
+    "rope3_mag": 14.080197,
+    "rope4_mag": 11.67821,
+    "rope5_mag": 14.355775,
+    "rope6_mag": 15.415752
+  },
+  "artifacts": {
+    "meshcat_replay_html": "/workspaces/Tether_Grace/outputs/full_drake_fault_batch/n7_1fault/full_drake_meshcat_replay.html",
+    "full_drake_recording_npz": "/workspaces/Tether_Grace/outputs/full_drake_fault_batch/n7_1fault/full_drake_recording.npz",
+    "figure_paths": {
+      "payload_x_tracking": "/workspaces/Tether_Grace/outputs/full_drake_fault_batch/n7_1fault/figures/payload_x_tracking.png",
+      "payload_y_tracking": "/workspaces/Tether_Grace/outputs/full_drake_fault_batch/n7_1fault/figures/payload_y_tracking.png",
+      "payload_z_tracking": "/workspaces/Tether_Grace/outputs/full_drake_fault_batch/n7_1fault/figures/payload_z_tracking.png",
+      "payload_tracking_error": "/workspaces/Tether_Grace/outputs/full_drake_fault_batch/n7_1fault/figures/payload_tracking_error.png",
+      "payload_z_offset": "/workspaces/Tether_Grace/outputs/full_drake_fault_batch/n7_1fault/figures/payload_z_offset.png",
+      "cable_tensions": "/workspaces/Tether_Grace/outputs/full_drake_fault_batch/n7_1fault/figures/cable_tensions.png",
+      "cable_health_schedule": "/workspaces/Tether_Grace/outputs/full_drake_fault_batch/n7_1fault/figures/cable_health_schedule.png",
+      "quad_formation_deviation": "/workspaces/Tether_Grace/outputs/full_drake_fault_batch/n7_1fault/figures/quad_formation_deviation.png",
+      "quad_speed_norm": "/workspaces/Tether_Grace/outputs/full_drake_fault_batch/n7_1fault/figures/quad_speed_norm.png",
+      "quad_tilt_magnitude": "/workspaces/Tether_Grace/outputs/full_drake_fault_batch/n7_1fault/figures/quad_tilt_magnitude.png",
+      "quad_altitude": "/workspaces/Tether_Grace/outputs/full_drake_fault_batch/n7_1fault/figures/quad_altitude.png",
+      "quad_force_norm": "/workspaces/Tether_Grace/outputs/full_drake_fault_batch/n7_1fault/figures/quad_force_norm.png",
+      "quad_lateral_force_norm": "/workspaces/Tether_Grace/outputs/full_drake_fault_batch/n7_1fault/figures/quad_lateral_force_norm.png",
+      "quad_torque_norm": "/workspaces/Tether_Grace/outputs/full_drake_fault_batch/n7_1fault/figures/quad_torque_norm.png",
+      "load_speed_and_total_vertical_force": "/workspaces/Tether_Grace/outputs/full_drake_fault_batch/n7_1fault/figures/load_speed_and_total_vertical_force.png",
+      "payload_xy_trajectory": "/workspaces/Tether_Grace/outputs/full_drake_fault_batch/n7_1fault/figures/payload_xy_trajectory.png",
+      "final_quad_positions": "/workspaces/Tether_Grace/outputs/full_drake_fault_batch/n7_1fault/figures/final_quad_positions.png",
+      "vertical_motion": "/workspaces/Tether_Grace/outputs/full_drake_fault_batch/n7_1fault/figures/vertical_motion.png",
+      "xy_trajectories": "/workspaces/Tether_Grace/outputs/full_drake_fault_batch/n7_1fault/figures/xy_trajectories.png"
+    }
+  }
+}
