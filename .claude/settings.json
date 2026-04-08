@@ -42,7 +42,10 @@
       "Bash(head -1 /workspaces/Tether_Grace/experiments/python/*.py)",
       "Bash(ls -d /workspaces/Tether_Grace/outputs/full_drake_fault_batch/*/)",
       "Bash(ls -d /workspaces/Tether_Grace/outputs/monte_carlo/*/)",
-      "Bash(head -1 /workspaces/Tether_Grace/docs/*.md)"
+      "Bash(head -1 /workspaces/Tether_Grace/docs/*.md)",
+      "Bash(ffmpeg -version)",
+      "Bash(sudo apt-get:*)",
+      "Bash(pip install:*)"
     ]
   }
 }

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Broadened Monte Carlo campaign: randomizes cable lengths, fault timing,
-payload mass, and PID gains to address reviewer m3 (narrow randomization).
+payload mass, and PID gains.
 
 Extends run_monte_carlo.py with additional parameter perturbations.
 Supports two modes:

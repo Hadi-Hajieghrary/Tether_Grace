@@ -65,7 +65,7 @@ class ExperimentScenario:
     wind_mean: list[float] | None = None  # [x, y, z] m/s
     wind_sigma: float | None = None       # turbulence intensity scale
 
-    # ESKF + sensor noise overrides (reviewer M3)
+    # ESKF + sensor noise overrides
     enable_eskf: bool | None = None
     imu_rate: float | None = None      # Hz
     gps_noise: float | None = None     # position noise stddev [m]

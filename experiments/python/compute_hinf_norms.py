@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Compute H∞ norms for small-gain verification (reviewer M5).
+"""Compute H∞ norms for small-gain verification.
 
 Reads A, B, C, D matrices from CSV (output by linearize_plant) and computes:
   - γ_ISS: H∞ norm of position-loop transfer function

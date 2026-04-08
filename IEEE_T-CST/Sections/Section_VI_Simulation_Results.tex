@@ -1,7 +1,4 @@
-% Section VI: Simulation Results
-% Style: IEEE Transactions on Control Systems Technology
-
-This section reports full-Drake multibody simulation results across $N \in \{3, 5, 7\}$ with abrupt cable-snap faults. All results use the Drake~\cite{drake2024} plant at $\Delta t_{\mathrm{sim}} = 0.2$~ms with bead-chain cable dynamics and $30$~s figure-eight trajectories.
+This section reports full-Drake multibody simulation results across $N \in \{3, 5, 7\}$ with abrupt cable-snap faults. All results use the Drake~\cite{drake2024} plant at $\Delta t_{\mathrm{sim}} = 0.2$~ms with bead-chain cable dynamics and $30$~s figure-eight trajectories. Specifically, each physical cable is modeled as a chain of 8 point-mass beads connected by 9 tension-only spring-damper segments. This high-fidelity representation captures realistic elastic tension surges and slack behavior during abrupt severing faults, distinguishing it from the simplified scalar topology used for the analytical bounds.
 
 \begin{remark}[System Under Test]\label{rem:system_under_test}
 The full-Drake results use Layers~1--2 of the GPAC hierarchy (PID position control with gravity/cable-tension feedforward and geometric $\SOthree$ attitude control). Layer~3 (CL mass estimator), Layer~4 (ESO), and the $\mathcal{L}_1$ adaptive path are \textbf{disabled}. The CBF safety filter is \textbf{disabled}. Sensor state is \textbf{plant-state-direct} (ESKF disabled). Wind disturbance is \textbf{disabled} in the ideal runs; ESKF and Dryden wind are \textbf{active} in the sensor-realistic evaluation.
@@ -296,8 +293,6 @@ Configuration & RMSE [cm] & Peak [cm] & Final [cm] \\
 \midrule
 Full feedforward ($\kappa_T = 0.5$) & 48.84 & 107.44 & 42.36 \\
 No tension feedforward              & 48.40 & 107.50 & 43.13 \\
-\midrule
-\multicolumn{1}{r}{$\Delta$} & $-0.44$ & $+0.06$ & $+0.77$ \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -332,17 +327,21 @@ To contextualize the passive GPAC approach, three alternative controllers are ev
 
 \begin{table}[t]
 \centering
-\caption{Controller comparison hierarchy ($N{=}3$, single fault).}
+\caption{Controller comparison ($N{=}3$, single fault).}
 \label{tab:baseline_comparison}
-\begin{tabular}{lcccc}
+\begin{tabular}{l S[table-format=2.2] S[table-format=3.2] l l}
 \toprule
-Controller & RMSE & Peak & Detect.?\ & Comm.?\ \\
-           & [cm] & [cm] & & \\
+Controller & {RMSE} & {Peak} & Detection & Communication \\
+           & [cm] & [cm]       &           &     \\
 \midrule
-Centralized oracle          & 49.18 & 107.33 & Perfect & Yes \\
-Gain-scheduled PID ($1.5{\times}k_p$, $1.25{\times}k_d$) & 48.96 & 106.75 & Threshold & No \\
-Passive GPAC (this work)    & 48.84 & 107.44 & No      & No  \\
-Threshold-triggered reactive & 49.45 & 107.66 & Threshold & No \\
+Centralized oracle           & 49.18 & 107.33 & Perfect   & Yes \\
+\midrule
+Gain-scheduled PID & 48.96 & 106.75 & Threshold & No  \\
+($1.5{\times}k_p, 1.25{\times}k_d$) &       &        &           &     \\
+\midrule
+\textbf{Passive GPAC}     & 48.84 & 107.44 & No        & No  \\
+\midrule
+Threshold-triggered  & 49.45 & 107.66 & Threshold & No  \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -399,7 +398,11 @@ A campaign of $N_{\mathrm{MC}} = 30$ runs per scenario randomizes cable lengths 
 \centering
 \caption{Monte Carlo results (mean $\pm$ std over $N_{\mathrm{MC}}$ runs).}
 \label{tab:monte_carlo}
-\begin{tabular}{lcccc}
+\begingroup
+\setlength{\tabcolsep}{3.5pt}
+\renewcommand{\arraystretch}{0.96}
+\footnotesize
+\begin{tabular}{@{}lcccc@{}}
 \toprule
 Scenario & $N_{\mathrm{MC}}$ & RMSE [cm] & Peak [cm] & 95th pctl. \\
          &                    & mean $\pm$ std & mean $\pm$ std & peak [cm] \\
@@ -410,13 +413,14 @@ $N{=}7$, 3 faults  & 30 & $43.95 \pm 1.34$ & $117.55 \pm 1.37$ & 119.84 \\
 $N{=}3$, ESKF+wind & 30 & $53.62 \pm 0.83$ & $118.83 \pm 0.91$ & 120.19 \\
 \bottomrule
 \end{tabular}
+\endgroup
 \end{table}
 
 \emph{Broadened Monte Carlo.}\label{sec:broadened_mc}
 A broadened campaign additionally randomizes payload mass (${\pm}10\%$), PID gains (${\pm}10\%$), and fault timing (${\pm}2$~s). In $5$ runs for $N{=}3$, broadened RMSE is $48.04 \pm 1.29$~cm (vs.\ narrow MC $48.84 \pm 0.49$~cm): standard deviation increases ${\sim}2.6\times$ but all runs remain stable, confirming robustness to simultaneous plant-parameter variation.
 
 \emph{Trajectory generalization.}\label{sec:trajectory_generalization}
-Testing across hover, point-to-point, and figure-eight references (supplementary Table~\ref{tab:trajectory_generalization}) confirms that the fault-absorption mechanism operates consistently: RMSE decreases with team size and remains bounded across all trajectory types. Hover RMSE is $19\%$ lower than figure-eight ($39.75$ vs.\ $48.84$~cm for $N{=}3$), confirming that the figure-eight amplifies post-fault error through cable-pendulum near-resonance.
+Testing across hover, point-to-point, and figure-eight references in the supplementary material confirms that the fault-absorption mechanism operates consistently: RMSE decreases with team size and remains bounded across all trajectory types. Hover RMSE is $19\%$ lower than figure-eight ($39.75$ vs.\ $48.84$~cm for $N{=}3$), confirming that the figure-eight amplifies post-fault error through cable-pendulum near-resonance.
 
 % ============================================================
 \subsection{Summary of Evidence}
@@ -428,7 +432,7 @@ The full-Drake simulation results establish:
   \item Stable payload tracking through abrupt cable-snap faults across $N \in \{3, 5, 7\}$, with load RMSE $44$--$49$~cm decreasing with team size (Table~\ref{tab:scenario_summary}). Empirical $\rho_{\mathrm{FT}}$ values ($1.26$--$1.39$) are consistent with the transient-aware prediction.
   \item Under matched single-fault conditions, RMSE decreases monotonically from $48.8$ to $38.4$~cm as $N$ increases from $3$ to $7$ (Table~\ref{tab:matched_single_fault}). Fault-count isolation at $N{=}7$ (Table~\ref{tab:fault_count_isolation}) deconfounds the remaining variable.
   \item A sharp thrust-saturation phase transition at $f_{\max} \approx 45$~N coincides with the theoretical post-fault minimum; the default $150$~N provides $3\times$ headroom (Table~\ref{tab:fmax_boundary}).
-  \item Sensor-realistic evaluation (Table~\ref{tab:sensor_realistic}), Monte Carlo validation (Table~\ref{tab:monte_carlo}), trajectory generalization (Table~\ref{tab:trajectory_generalization}), and baseline comparison (Table~\ref{tab:baseline_comparison}) confirm robustness across conditions.
+  \item Sensor-realistic evaluation (Table~\ref{tab:sensor_realistic}), Monte Carlo validation (Table~\ref{tab:monte_carlo}), supplementary trajectory-generalization experiments, and baseline comparison (Table~\ref{tab:baseline_comparison}) confirm robustness across conditions.
   \item ESO-active evaluation (Table~\ref{tab:eso_evaluation}) confirms that $\rho_{\mathrm{FT}}$ increases modestly with a stronger controller while absolute post-fault RMSE decreases, demonstrating that fault tolerance is not an artifact of a deliberately weakened controller.
 \end{enumerate}
 

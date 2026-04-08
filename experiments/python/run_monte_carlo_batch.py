@@ -2,8 +2,7 @@
 """Monte Carlo batch wrapper for the full-Drake fault runner.
 
 Runs a single scenario N times with different random seeds (for wind
-turbulence) and aggregates statistics across trials.  Addresses reviewer M3
-(stochastic validation).
+turbulence) and aggregates statistics across trials.
 
 Usage:
     python3 run_monte_carlo_batch.py --scenario three_drones --trials 20 --enable-wind

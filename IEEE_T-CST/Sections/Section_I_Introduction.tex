@@ -1,6 +1,3 @@
-% Section I: Introduction
-% Style: IEEE Transactions on Control Systems Technology
-
 % ---- The problem ----
 
 In multi-quadrotor cooperative cable-suspended payload transport, $N$ underactuated vehicles are tethered to a shared rigid payload through flexible cables, forming a system on the configuration manifold $\mathcal{Q} = \SEthree \times (\SEthree \times \Sph^2)^N$ with $6 + 8N$ degrees of freedom. Geometric control methods~\cite{lee2010geometric,sreenath2013geometric,lee2018geometric,wu2014geometric} provide almost-global exponential stability on $\SOthree$ and enable aggressive trajectory tracking with cable-suspended loads, bringing multi-vehicle cable transport close to deployment readiness~\cite{estevez2024review,sun2025agile}. Yet every cable is a single point of mechanical failure. When a cable snaps, three coupled events occur simultaneously: the payload accelerates downward (${\approx}3.3$~m/s$^2$), the freed agent accelerates upward (${\approx}6.5$~m/s$^2$), and every remaining agent experiences an instantaneous load-share jump---a $50\%$ increase for $N{=}3$. These effects propagate on timescales from sub-$10$~ms (rigid-body force transmission) to ${\sim}200$~ms (cable wave propagation), creating a multi-channel fault signature that each surviving agent must absorb without centralized coordination or inter-agent communication.

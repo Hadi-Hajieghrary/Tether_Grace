@@ -1,6 +1,3 @@
-% Section IV: Fault-Tolerant Control Architecture
-% Style: IEEE Transactions on Control Systems Technology
-
 This section presents the fault-tolerant architecture addressing problems \textbf{P1}--\textbf{P2}. The primary fault-absorption mechanism is PID feedback with gravity feedforward in the GPAC hierarchy, supplemented by locally measured cable-tension feedforward and anti-swing damping. A post-fault geometry redistribution path is additionally described. The analytical core of this section is the identification of a topology-invariant error structure (Proposition~\ref{thm:topology_invariance}): the N-agnostic design makes the per-agent error dynamics independent of cable topology, addressing the tracking envelope~\eqref{eq:problem_bound} and the cost ratio~\eqref{eq:problem_rho}.
 
 % ============================================================
@@ -117,26 +114,15 @@ In the full plant, $d_i(t)$ is not purely exogenous: cable forces depend on agen
 
 Three lines of empirical evidence support the small-gain condition indirectly: (i)~the $f_{\max}$ boundary sweep shows RMSE insensitivity for $f_{\max} \geq 45$~N ($3\times$ headroom); (ii)~Monte Carlo shows ${<}3\%$ RMSE variation across $30$ runs with randomized cable parameters; (iii)~stability is maintained across all $N \in \{3, 5, 7\}$ scenarios with up to three cascading faults. None constitutes formal verification of $\gamma_{\mathrm{ISS}} \cdot \gamma_{\mathrm{cable}} < 1$, but together they make a strong empirical case.
 
-\emph{What is established.} The shared $(A, B)$ structure, common Lyapunov function, and hybrid-system analysis provide a coherent partial framework. Full-Drake results confirm bounded, topology-insensitive tracking degradation across $N \in \{3, 5, 7\}$ with up to three cascading faults, even though formal closure of Gap~2 remains open. Table~\ref{tab:claim_status} summarizes the evidence level supporting each claim.
-
-\begin{table}[t]
-\centering
-\caption{Claim-status summary: evidence level for each result.}
-\label{tab:claim_status}
-\small
-\begin{tabular}{@{}p{4.8cm}l@{}}
-\toprule
-Claim & Evidence level \\
-\midrule
-Topology-independent error dynamics $(A,B)$ for simplified per-agent model & Proven (Prop.~\ref{thm:topology_invariance}) \\
-Finite-time transient prediction ($\alpha \approx 5.8$, topology-invariant) & Analytical + empirical \\
-Cost ratio $\rho_{\mathrm{FT}} = N/(N{-}k)$ (cable-dominated) & Derived, validated \\
-Bounded tracking under faults in full nonlinear Drake plant & Empirically supported \\
-Small-gain condition for cable-force feedback & Scalar $\gamma_{\mathrm{ISS}}{=}0.125$ verified; full-plant open \\
-Formal stability for full bead-chain plant & Open \\
-\bottomrule
-\end{tabular}
-\end{table}
+\emph{What is established and what remains open.} The shared $(A, B)$ structure, common Lyapunov function, and hybrid-system analysis provide a coherent partial framework. Full-Drake results confirm bounded, topology-insensitive tracking degradation across $N \in \{3, 5, 7\}$ with up to three cascading faults, even though formal closure of Gap~2 remains open. To delineate the evidence boundary precisely:
+%
+\begin{itemize}
+  \item Topology-independent error dynamics $(A,B)$ for the simplified per-agent model are \emph{proven} (Proposition~\ref{thm:topology_invariance}).
+  \item The finite-time transient prediction ($\alpha \approx 5.8$, topology-invariant) and the cost ratio $\rho_{\mathrm{FT}} = N/(N{-}k)$ are \emph{derived analytically and validated} against full-Drake results.
+  \item Bounded tracking under faults in the full nonlinear Drake plant is \emph{empirically supported} across all tested scenarios.
+  \item The small-gain condition for cable-force feedback is \emph{partially verified}: the scalar $\gamma_{\mathrm{ISS}} = 0.125$ is computed, but the full-plant multivariable verification remains open.
+  \item Formal stability of the full bead-chain plant under topology switching is \emph{open}.
+\end{itemize}
 
 % ============================================================
 \subsection{Fault-Tolerance Cost}

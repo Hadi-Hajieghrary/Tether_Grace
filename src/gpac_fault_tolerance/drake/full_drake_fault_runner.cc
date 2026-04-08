@@ -90,7 +90,8 @@ struct QuadConfig {
   double rope_length{};
 };
 
-// Forward declarations for helper systems (defined after EvaluateWaypointTrajectory)
+// Forward declarations for helper systems (defined after
+// EvaluateWaypointTrajectory)
 class PayloadStateExtractor;
 class LoadTrajectorySource;
 
@@ -105,7 +106,7 @@ struct RunConfig {
   std::vector<int> fault_cables;
   std::vector<double> fault_times;
 
-  // Physics / controller overrides (reviewer M1, Q2, M3)
+  // Physics / controller overrides
   double max_thrust{150.0};
   double payload_mass{3.0};
   double tension_kp{0.5};
@@ -116,14 +117,14 @@ struct RunConfig {
   bool enable_eso{false};
   int seed{-1}; // -1 = deterministic (no stochastic perturbation)
 
-  // Wind disturbance (reviewer M3)
+  // Wind disturbance
   bool enable_wind{false};
   double wind_mean_x{1.0};
   double wind_mean_y{0.5};
   double wind_mean_z{0.0};
   double wind_sigma{0.5}; // turbulence intensity scale
 
-  // ESKF + sensor noise (reviewer M3: stochastic validation)
+  // ESKF + sensor noise (stochastic validation)
   bool enable_eskf{false};
   double imu_rate{200.0}; // Hz (ImuParams default is 400)
   double gps_noise{0.02}; // position noise stddev [m]
@@ -135,7 +136,7 @@ struct RunConfig {
   bool enable_load_tracking{true}; // default ON for the improved architecture
   double load_kp{6.0};
   double load_kd{8.0};
-  double load_ki{1.2};  // integral on LOAD error (not drone error)
+  double load_ki{1.2}; // integral on LOAD error (not drone error)
 
   // Oracle mode: perfect load-share feedforward (centralized upper bound)
   double oracle_load_share{0.0}; // kg; set to m_L/(N-k) for perfect knowledge
@@ -146,14 +147,15 @@ struct RunConfig {
   // Reactive FTC baseline: when enabled, surviving agents boost thrust by
   // this fraction when cable tension exceeds a debounced threshold.
   bool enable_reactive_ftc{false};
-  double reactive_boost_fraction{0.3};     // +30% thrust on detection
-  double reactive_tension_threshold{1.5};  // N·kg: threshold = this × load_per_rope
-  double reactive_debounce_time{0.2};      // seconds
+  double reactive_boost_fraction{0.3}; // +30% thrust on detection
+  double reactive_tension_threshold{
+      1.5};                           // N·kg: threshold = this × load_per_rope
+  double reactive_debounce_time{0.2}; // seconds
 
   // Gain-scheduled PID baseline: increase PID gains when tension spike detected
   bool enable_gain_scheduling{false};
-  double gs_kp_scale{1.5};                 // post-fault kp multiplier
-  double gs_kd_scale{1.25};               // post-fault kd multiplier
+  double gs_kp_scale{1.5};  // post-fault kp multiplier
+  double gs_kd_scale{1.25}; // post-fault kd multiplier
 };
 
 std::string Trim(const std::string &value) {
@@ -272,10 +274,11 @@ BuildPointToPointWaypoints(double initial_altitude, double duration) {
   };
 }
 
-std::vector<TrajectoryWaypoint>
-BuildWaypointsForMode(const std::string &mode, double initial_altitude,
-                      double duration) {
-  if (mode == "hover") return BuildHoverWaypoints(initial_altitude, duration);
+std::vector<TrajectoryWaypoint> BuildWaypointsForMode(const std::string &mode,
+                                                      double initial_altitude,
+                                                      double duration) {
+  if (mode == "hover")
+    return BuildHoverWaypoints(initial_altitude, duration);
   if (mode == "point_to_point")
     return BuildPointToPointWaypoints(initial_altitude, duration);
   return BuildWaypoints(initial_altitude, duration); // default: figure8
@@ -343,8 +346,7 @@ void EvaluateWaypointTrajectory(
 // =========================================================================
 
 /// Extracts payload position (3D) and velocity (3D) from the full plant state.
-class PayloadStateExtractor final
-    : public drake::systems::LeafSystem<double> {
+class PayloadStateExtractor final : public drake::systems::LeafSystem<double> {
 public:
   PayloadStateExtractor(const MultibodyPlant<double> &plant,
                         const RigidBody<double> &payload_body)
@@ -398,8 +400,7 @@ private:
 
 /// Outputs the load reference trajectory (9D: p_des, v_des, a_des) at
 /// the current time, using the same waypoint interpolation as the runner.
-class LoadTrajectorySource final
-    : public drake::systems::LeafSystem<double> {
+class LoadTrajectorySource final : public drake::systems::LeafSystem<double> {
 public:
   explicit LoadTrajectorySource(
       const std::vector<TrajectoryWaypoint> &waypoints)
@@ -585,7 +586,8 @@ RunConfig ParseArgs(int argc, char *argv[]) {
       config.gs_kp_scale = std::stod(argv[++i]);
     } else if (std::strcmp(argv[i], "--gs-kd-scale") == 0 && i + 1 < argc) {
       config.gs_kd_scale = std::stod(argv[++i]);
-    } else if (std::strcmp(argv[i], "--oracle-load-share") == 0 && i + 1 < argc) {
+    } else if (std::strcmp(argv[i], "--oracle-load-share") == 0 &&
+               i + 1 < argc) {
       config.oracle_load_share = std::stod(argv[++i]);
     } else if (std::strcmp(argv[i], "--disable-load-tracking") == 0) {
       config.enable_load_tracking = false;
@@ -733,9 +735,8 @@ int DoMain(int argc, char *argv[]) {
   const double reference_damping = 15.0;
   const double segment_damping =
       reference_damping * std::sqrt(segment_stiffness / reference_stiffness);
-  const auto waypoints =
-      BuildWaypointsForMode(config.trajectory_mode, initial_altitude,
-                            config.duration);
+  const auto waypoints = BuildWaypointsForMode(
+      config.trajectory_mode, initial_altitude, config.duration);
 
   DiagramBuilder<double> builder;
   auto [plant, scene_graph] = drake::multibody::AddMultibodyPlantSceneGraph(
@@ -890,11 +891,11 @@ int DoMain(int argc, char *argv[]) {
     ctrl_params.gpac.position_kd = config.position_kd;
     ctrl_params.gpac.position_ki = config.position_ki;
 
-    // Actuator and tension limits (reviewer M1 boundary testing, Q2 ablation).
+    // Actuator and tension limits.
     ctrl_params.gpac.max_thrust = config.max_thrust;
     ctrl_params.gpac.tension_kp = config.tension_kp;
 
-    // Tension feedforward ablation (reviewer Q2): disable entire pathway.
+    // Tension feedforward ablation: disable entire pathway.
     if (config.disable_tension_ff) {
       ctrl_params.gpac.pickup_target_tension = 0.0;
       ctrl_params.gpac.tension_kp = 0.0;
@@ -942,7 +943,7 @@ int DoMain(int argc, char *argv[]) {
       *builder.AddSystem<ExternallyAppliedSpatialForceMultiplexer>(
           2 * config.num_quadcopters + (config.enable_wind ? 1 : 0));
 
-  // --- ESKF + sensor noise subsystem (reviewer M3) ---
+  // --- ESKF + sensor noise subsystem ---
   // Per-quadcopter: IMU, GPS, Baro → ESKF → EstimatedStateOverride
   std::vector<EstimatedStateOverride *> state_overrides;
   std::vector<quad_rope_lift::EskfEstimator *> eskf_estimators;
@@ -1023,8 +1024,8 @@ int DoMain(int argc, char *argv[]) {
   PayloadStateExtractor *payload_extractor = nullptr;
   LoadTrajectorySource *load_traj_source = nullptr;
   if (config.enable_load_tracking) {
-    payload_extractor = &*builder.AddSystem<PayloadStateExtractor>(
-        plant, payload_body);
+    payload_extractor =
+        &*builder.AddSystem<PayloadStateExtractor>(plant, payload_body);
     builder.Connect(plant.get_state_output_port(),
                     payload_extractor->get_plant_state_input_port());
 
@@ -1079,7 +1080,7 @@ int DoMain(int argc, char *argv[]) {
                     force_combiner.get_input_port(2 * q));
   }
 
-  // --- Wind disturbance subsystem (reviewer M3) ---
+  // --- Wind disturbance subsystem ---
   if (config.enable_wind) {
     using quad_rope_lift::AttachmentPositionExtractor;
     using quad_rope_lift::DragParams;

@@ -119,7 +119,7 @@ if(ENABLE_GPAC_DRAKE_WRAPPERS)
     CXX_EXTENSIONS OFF
   )
 
-  # H∞ small-gain verification tool (reviewer M5)
+  # H∞ small-gain verification tool
   add_executable(linearize_plant
     src/gpac_fault_tolerance/drake/linearize_plant.cc
   )
