@@ -1,7 +1,7 @@
 # Simulation Outputs
 
 This directory contains all simulation results backing the IEEE T-CST paper
-*"Cable-Fault Tolerance in Decentralized Cooperative Aerial Transport."*
+*"Topology-Invariant Error Dynamics and Detection-Free Cable-Fault Tolerance in Decentralized Multi-Quadrotor Cooperative Transport."*
 Every subdirectory maps to one or more tables, figures, or sections in the manuscript.
 
 All results were produced by the `full_drake_fault_runner` executable

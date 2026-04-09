@@ -1,7 +1,7 @@
 # Tether Grace
 
-**Cable-Fault Tolerance in Decentralized Cooperative Aerial Transport:
-N-Agnostic Architecture, Evidence, and Open Bounds**
+**Topology-Invariant Error Dynamics and Detection-Free Cable-Fault Tolerance
+in Decentralized Multi-Quadrotor Cooperative Transport**
 
 Tether Grace is the research codebase behind an IEEE Transactions on Control
 Systems Technology submission that answers a simple question: when a cable
@@ -11,6 +11,12 @@ N-agnostic PID-plus-gravity-feedforward control law already absorbs cable
 faults with no detection, no reconfiguration, and no inter-agent
 communication. This repository contains the complete pipeline from theory
 to full multibody simulation evidence.
+
+---
+
+## Graphical Abstract
+
+![Graphical Abstract](IEEE_T-CST/Figures/graphical_abstract.png)
 
 ---
 
@@ -185,6 +191,8 @@ happens when a cable snaps.
  | [Recording](outputs/full_drake_fault_batch/three_drones/full_drake_recording.npz)
  | [Scenario Summary](outputs/full_drake_fault_batch/three_drones/scenario_summary.json)
 
+![Three Drones Simulation](outputs/full_drake_fault_batch/three_drones/sim_replay_video.gif)
+
 This is the most stressed scenario in terms of per-agent impact. Three
 quadrotors in a triangular formation transport a 3.0 kg payload along a
 figure-eight trajectory at 2.5 m altitude. Cable lengths are asymmetric:
@@ -267,6 +275,8 @@ fault, it can absorb any single fault in a larger team.
  | [Recording](outputs/full_drake_fault_batch/five_drones/full_drake_recording.npz)
  | [Scenario Summary](outputs/full_drake_fault_batch/five_drones/scenario_summary.json)
 
+![Five Drones Simulation](outputs/full_drake_fault_batch/five_drones/sim_replay_video.gif)
+
 Five quadrotors in a pentagonal formation transport the same 3.0 kg payload
 along the figure-eight trajectory. Cable lengths are 1.00, 1.05, 1.10, 1.14,
 and 1.18 m. Two cables are severed in sequence: cable 1 at t = 7.0 s and
@@ -319,6 +329,8 @@ both transitions.
 [**Open 3D Replay**](outputs/full_drake_fault_batch/seven_drones/full_drake_meshcat_replay.html)
  | [Recording](outputs/full_drake_fault_batch/seven_drones/full_drake_recording.npz)
  | [Scenario Summary](outputs/full_drake_fault_batch/seven_drones/scenario_summary.json)
+
+![Seven Drones Simulation](outputs/full_drake_fault_batch/seven_drones/sim_replay_video.gif)
 
 This is the most demanding scenario in the entire test matrix. Seven
 quadrotors in a heptagonal formation transport the payload along the

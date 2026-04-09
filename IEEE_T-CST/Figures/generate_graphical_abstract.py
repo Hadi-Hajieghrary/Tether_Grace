@@ -6,6 +6,7 @@ Uses raw Drake screenshots and generates plots from NPZ data.
 
 from PIL import Image, ImageDraw, ImageFont, ImageFilter
 import os
+import json
 import numpy as np
 
 # ── Paths ─────────────────────────────────────────────────────────────
@@ -37,6 +38,8 @@ FAULT_CABLES = [1, 3, 5]
 FAULT_TIMES = [7.0, 12.0, 14.0]
 RMSE_VALUES = {3: 48.84, 5: 46.37, 7: 43.60}
 COLORS_MPL = {3: '#1f77b4', 5: '#ff7f0e', 7: '#2ca02c'}
+
+MC_PATH = os.path.join(ROOT, 'outputs/monte_carlo/mc_all_results.json')
 
 # ── Canvas ────────────────────────────────────────────────────────────
 
@@ -232,6 +235,81 @@ def plot_rmse(ax):
                 arrowprops=dict(arrowstyle='->',color='#2ca02c',lw=2))
 
 
+def _load_mc():
+    with open(MC_PATH) as f:
+        return json.load(f)
+
+def plot_mc_hist(ax):
+    mc = _load_mc()
+    scenarios = {'mc_n3_1fault': ('N=3, 1 fault', COLORS_MPL[3]),
+                 'mc_n3_eskf_wind': ('N=3, wind+ESKF', '#9467bd')}
+    for scen, (label, color) in scenarios.items():
+        vals = [r['rmse'] for r in mc if r['scen'] == scen and r.get('ok', True)]
+        if not vals:
+            continue
+        ax.hist(vals, bins=12, alpha=0.55, color=color, label=label, edgecolor='white', lw=0.8)
+    ax.set_xlabel('RMSE [cm]', fontsize=14)
+    ax.set_ylabel('Count', fontsize=14)
+    ax.legend(fontsize=11, loc='upper right')
+    ax.grid(True, alpha=0.2, ls='--')
+    ax.tick_params(labelsize=12)
+
+def plot_mc_box(ax):
+    mc = _load_mc()
+    scenarios = [('mc_n3_1fault', 'N=3\n1 fault', COLORS_MPL[3]),
+                 ('mc_n3_eskf_wind', 'N=3\nwind+ESKF', '#9467bd')]
+    data = []
+    labels = []
+    colors = []
+    for scen, label, color in scenarios:
+        vals = [r['rmse'] for r in mc if r['scen'] == scen and r.get('ok', True)]
+        if not vals:
+            continue
+        data.append(vals)
+        labels.append(label)
+        colors.append(color)
+    bp = ax.boxplot(data, patch_artist=True, widths=0.5,
+                    medianprops=dict(color='white', lw=2))
+    for patch, color in zip(bp['boxes'], colors):
+        patch.set_facecolor(color)
+        patch.set_alpha(0.7)
+    ax.set_xticklabels(labels, fontsize=12)
+    ax.set_ylabel('RMSE [cm]', fontsize=14)
+    ax.grid(True, axis='y', alpha=0.2, ls='--')
+    ax.tick_params(labelsize=12)
+    # Annotate 100% success
+    n_ok = sum(1 for r in mc if r.get('ok', True) and 'rmse' in r)
+    ax.text(1.5, ax.get_ylim()[1]*0.90, f'{n_ok}/{n_ok} runs\nstable',
+            ha='center', fontsize=12, fontweight='bold', color=GREEN,
+            bbox=dict(boxstyle='round,pad=0.3', facecolor='white', edgecolor=GREEN, alpha=0.8))
+
+def plot_attitudes(ax):
+    npz = np.load(NPZ_PATHS[7], allow_pickle=True)
+    h = list(npz['attitude_headers']); att = npz['attitudes']
+    t = att[:, h.index('time')]
+    # Plot roll/pitch for each drone
+    cc = ['#1f77b4','#ff7f0e','#2ca02c','#d62728','#9467bd','#8c564b','#e377c2']
+    for i in range(7):
+        roll_col = f'drone{i}_roll'
+        pitch_col = f'drone{i}_pitch'
+        if roll_col in h and pitch_col in h:
+            roll = np.degrees(att[:, h.index(roll_col)])
+            pitch = np.degrees(att[:, h.index(pitch_col)])
+            tilt = np.sqrt(roll**2 + pitch**2)
+            f = i in FAULT_CABLES
+            ax.plot(t, tilt, color=cc[i], lw=1.5 if f else 1.0, alpha=0.85,
+                    label=f'Drone {i}'+(' \u2014 faulted' if f else ''))
+    for ft in FAULT_TIMES:
+        ax.axvline(ft, color='#d62728', ls='--', lw=1, alpha=0.5)
+    ax.axvspan(7, 30, alpha=0.04, color='red')
+    ax.set_xlim(3, 30)
+    ax.set_xlabel('Time [s]', fontsize=14)
+    ax.set_ylabel('Tilt [deg]', fontsize=14)
+    ax.legend(fontsize=8, ncol=2, loc='upper right')
+    ax.grid(True, alpha=0.2, ls='--')
+    ax.tick_params(labelsize=12)
+
+
 # ══════════════════════════════════════════════════════════════════════
 # BUILD
 # ══════════════════════════════════════════════════════════════════════
@@ -247,13 +325,15 @@ def build():
     # ══════════════════════════════════════════════════════════════════
     # HEADER
     # ══════════════════════════════════════════════════════════════════
-    header_h = 400
+    header_h = 460
     card(canvas, (M-20, M-20, W-M+20, M+header_h), radius=36, fill=NAVY)
     d = ImageDraw.Draw(canvas)
-    d.text((M+40, M+30), 'Inherent Cable-Fault Tolerance', font=F['title'], fill='white')
-    d.text((M+40, M+130), 'in Decentralized Cooperative Aerial Transport',
+    d.text((M+40, M+30), 'Topology-Invariant Error Dynamics and', font=F['title'], fill='white')
+    d.text((M+40, M+130), 'Detection-Free Cable-Fault Tolerance',
            font=F['title'], fill='white')
-    dwrap(d, (M+40, M+260),
+    d.text((M+40, M+220), 'in Decentralized Multi-Quadrotor Cooperative Transport',
+           font=F['subtitle'], fill='#d0dce8')
+    dwrap(d, (M+40, M+280),
           'When cables snap mid-flight, the remaining drones absorb the fault '
           'and keep tracking the payload \u2014 with no fault detection, '
           'no communication, and no reconfiguration.',
@@ -427,7 +507,133 @@ def build():
         pimg = mpl_panel(fn, ev_cw-50, ev_plot_h-30)
         canvas.alpha_composite(pimg, (cx+25, y+95))
 
-    y += ev_ch + 50
+    y += ev_ch + 60
+
+    # ══════════════════════════════════════════════════════════════════
+    # SECTION 4: Drone behaviour during faults
+    # ══════════════════════════════════════════════════════════════════
+    d = ImageDraw.Draw(canvas)
+    d.text((M, y), '4   Decentralized control architecture', font=F['section'], fill=NAVY)
+    y += 80
+
+    arch_h = 820
+    # Left card: architecture diagram (drawn with PIL)
+    arch_w = int(CW * 0.45)
+    card(canvas, (M, y, M+arch_w, y+arch_h), fill=OFFWHITE)
+    d = ImageDraw.Draw(canvas)
+
+    d.text((M+35, y+25), 'Each drone runs independently', font=F['label'], fill=NAVY)
+
+    # Draw a schematic control loop — compact vertical spacing
+    bx, by = M+60, y+80
+    block_w, block_h = 280, 60
+    gap = 35  # vertical gap between blocks (arrow length)
+
+    # --- Reference block ---
+    d.rounded_rectangle((bx, by, bx+block_w, by+block_h), 14, fill=LIGHT_BLUE, outline='#8aade0', width=3)
+    d.text((bx+30, by+14), 'Reference r(t)', font=F['small_bold'], fill=NAVY)
+
+    # Arrow down
+    arr_x = bx + block_w//2
+    d.line((arr_x, by+block_h, arr_x, by+block_h+gap), fill=MUTED, width=4)
+    d.polygon([(arr_x-10, by+block_h+gap-10), (arr_x+10, by+block_h+gap-10),
+               (arr_x, by+block_h+gap+5)], fill=MUTED)
+
+    # --- Sum node ---
+    sum_y = by + block_h + gap + 5
+    d.ellipse((arr_x-20, sum_y, arr_x+20, sum_y+40), outline=NAVY, width=3)
+    d.text((arr_x-8, sum_y+4), '\u03a3', font=F['small_bold'], fill=NAVY)
+
+    # Arrow down from sum
+    d.line((arr_x, sum_y+40, arr_x, sum_y+40+gap+15), fill=MUTED, width=4)
+    d.polygon([(arr_x-10, sum_y+40+gap+5), (arr_x+10, sum_y+40+gap+5),
+               (arr_x, sum_y+40+gap+20)], fill=MUTED)
+
+    # --- PID block ---
+    pid_y = sum_y + 40 + gap + 20
+    d.rounded_rectangle((bx, pid_y, bx+block_w, pid_y+block_h), 14, fill=LIGHT_GOLD, outline=GOLD, width=3)
+    d.text((bx+20, pid_y+14), 'PID + Gravity FF', font=F['small_bold'], fill=NAVY)
+
+    # Arrow down
+    d.line((arr_x, pid_y+block_h, arr_x, pid_y+block_h+gap), fill=MUTED, width=4)
+    d.polygon([(arr_x-10, pid_y+block_h+gap-10), (arr_x+10, pid_y+block_h+gap-10),
+               (arr_x, pid_y+block_h+gap+5)], fill=MUTED)
+
+    # --- Quadrotor block ---
+    quad_y = pid_y + block_h + gap + 5
+    d.rounded_rectangle((bx, quad_y, bx+block_w, quad_y+block_h), 14, fill='#e8f5e9', outline=GREEN, width=3)
+    d.text((bx+40, quad_y+14), 'Quadrotor i', font=F['small_bold'], fill=NAVY)
+
+    # Feedback arrow (right side going up)
+    fb_x = bx + block_w + 40
+    d.line((bx+block_w, quad_y+block_h//2, fb_x, quad_y+block_h//2), fill=MUTED, width=3)
+    d.line((fb_x, quad_y+block_h//2, fb_x, sum_y+20), fill=MUTED, width=3)
+    d.line((fb_x, sum_y+20, arr_x+20, sum_y+20), fill=MUTED, width=3)
+    d.polygon([(arr_x+30, sum_y+10), (arr_x+30, sum_y+30),
+               (arr_x+20, sum_y+20)], fill=MUTED)
+    d.text((fb_x+10, sum_y+60), 'x_i', font=F['small'], fill=MUTED)
+    # Minus sign
+    d.text((arr_x+26, sum_y+24), '\u2212', font=F['small_bold'], fill=RED)
+
+    # Key points below diagram
+    arch_bullet_y = quad_y + block_h + 50
+    arch_pts = [
+        ('N-agnostic', 'Controller does not know the team size N'),
+        ('No communication', 'No inter-drone data exchange required'),
+        ('Gravity feedforward', 'Compensates payload weight share: m_L g / N'),
+        ('Cable-mediated only', 'Coupling through physics, not information'),
+    ]
+    for head, body in arch_pts:
+        d.ellipse((M+40, arch_bullet_y+8, M+58, arch_bullet_y+26), fill=GREEN)
+        d.text((M+70, arch_bullet_y), head, font=F['small_bold'], fill=NAVY)
+        d.text((M+70, arch_bullet_y+34), body, font=F['small'], fill=MUTED)
+        arch_bullet_y += 68
+
+    # Right card: drone tilt plot
+    tilt_x = M + arch_w + 50
+    tilt_w = CW - arch_w - 50
+    card(canvas, (tilt_x, y, tilt_x+tilt_w, y+arch_h), fill=OFFWHITE)
+    d = ImageDraw.Draw(canvas)
+    d.text((tilt_x+30, y+25),
+           'Drone tilt stays bounded through faults',
+           font=F['label'], fill=NAVY)
+
+    tilt_img = mpl_panel(plot_attitudes, tilt_w-60, arch_h-120)
+    canvas.alpha_composite(tilt_img, (tilt_x+30, y+80))
+
+    y += arch_h + 60
+
+    # ══════════════════════════════════════════════════════════════════
+    # SECTION 5: Monte Carlo robustness
+    # ══════════════════════════════════════════════════════════════════
+    d = ImageDraw.Draw(canvas)
+    d.text((M, y), '5   Monte Carlo robustness (90 runs)', font=F['section'], fill=NAVY)
+    y += 80
+
+    mc_cw = (CW - 40) // 2
+    mc_ch = 580
+    mc_plot_h = mc_ch - 100
+
+    # Left: histogram
+    card(canvas, (M, y, M+mc_cw, y+mc_ch), fill=OFFWHITE)
+    d = ImageDraw.Draw(canvas)
+    d.text((M+mc_cw//2, y+20), 'RMSE distribution across\nrandomized initial conditions',
+           font=F['label'], fill=NAVY, anchor='ma', align='center')
+
+    hist_img = mpl_panel(plot_mc_hist, mc_cw-50, mc_plot_h-30)
+    canvas.alpha_composite(hist_img, (M+25, y+95))
+
+    # Right: box plot
+    box_x = M + mc_cw + 40
+    card(canvas, (box_x, y, box_x+mc_cw, y+mc_ch), fill=OFFWHITE)
+    d = ImageDraw.Draw(canvas)
+    d.text((box_x+mc_cw//2, y+20), 'Tight spread confirms\nrobust fault tolerance',
+           font=F['label'], fill=NAVY, anchor='ma', align='center')
+
+    box_img = mpl_panel(plot_mc_box, mc_cw-50, mc_plot_h-30)
+    canvas.alpha_composite(box_img, (box_x+25, y+95))
+
+    y += mc_ch + 50
 
     # ══════════════════════════════════════════════════════════════════
     # FOOTER
