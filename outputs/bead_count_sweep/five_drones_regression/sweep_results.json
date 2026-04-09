@@ -1,0 +1,11 @@
+{
+  "completed_runs": [
+    {
+      "num_beads": 8,
+      "output_dir": "/workspaces/Tether_Grace/outputs/bead_count_sweep/five_drones_regression/beads_08",
+      "wall_time_seconds": 663.76,
+      "success": true,
+      "error_message": ""
+    }
+  ]
+}

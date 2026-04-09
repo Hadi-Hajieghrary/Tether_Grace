@@ -45,7 +45,16 @@
       "Bash(head -1 /workspaces/Tether_Grace/docs/*.md)",
       "Bash(ffmpeg -version)",
       "Bash(sudo apt-get:*)",
-      "Bash(pip install:*)"
+      "Bash(pip install:*)",
+      "Bash(grep -l \"kappa_t\\\\|fmax\\\\|parameter.*sweep\\\\|sweep.*parameter\" /workspaces/Tether_Grace/experiments/python/*.py)",
+      "Bash(cmake --build build --target full_drake_fault_runner)",
+      "Read(//opt/drake/**)",
+      "Bash(cmake -B build -DENABLE_GPAC_DRAKE_WRAPPERS=ON -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH=/opt/drake)",
+      "Bash(python run_bead_count_sweep.py --bead-counts 8 --output-dir /workspaces/Tether_Grace/outputs/bead_count_sweep/five_drones_regression)",
+      "Bash(python -c ':*)",
+      "Bash(python run_bead_count_sweep.py --bead-counts 2,4,8,12,16)",
+      "Bash(grep -n \"\\\\\\\\\\\\\\\\label\\\\|\\\\\\\\\\\\\\\\begin{theorem}\\\\|\\\\\\\\\\\\\\\\begin{proposition}\\\\|\\\\\\\\\\\\\\\\begin{definition}\\\\|\\\\\\\\\\\\\\\\begin{figure}\\\\|\\\\\\\\\\\\\\\\begin{table}\" /workspaces/Tether_Grace/IEEE_T-CST/Sections/*.tex)",
+      "Bash(grep -n \"\\\\\\\\\\\\\\\\label\" /workspaces/Tether_Grace/IEEE_T-CST/Sections/*.tex)"
     ]
   }
 }

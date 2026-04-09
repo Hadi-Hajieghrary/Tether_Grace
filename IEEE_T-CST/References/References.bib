@@ -31,26 +31,6 @@
   pages     = {255–264}
 }
 
-@inproceedings{goodarzi2014geometric,
-  title     = {Geometric stabilization of a quadrotor UAV with a payload connected by flexible cable},
-  booktitle = {2014 American Control Conference},
-  publisher = {IEEE},
-  author    = {Goodarzi, Farhad A. and Lee, Daewon and Lee, Taeyoung},
-  year      = {2014},
-  month     = jun,
-  pages     = {4925–4930}
-}
-
-@inproceedings{sreenath2013dynamics,
-  title     = {Trajectory generation and control of a quadrotor with a cable-suspended load - A differentially-flat hybrid system},
-  booktitle = {2013 IEEE International Conference on Robotics and Automation},
-  publisher = {IEEE},
-  author    = {Sreenath, Koushil and Michael, Nathan and Kumar, Vijay},
-  year      = {2013},
-  month     = may,
-  pages     = {4888–4895}
-}
-
 @inproceedings{wu2014geometric,
   title     = {Adaptive control of a quadrotor UAV transporting a cable-suspended load with unknown mass},
   booktitle = {53rd IEEE Conference on Decision and Control},
@@ -104,19 +84,6 @@
   pages     = {3674–3679}
 }
 
-@article{chowdhary2013exponentially,
-  title     = {Concurrent learning adaptive control of linear systems with exponentially convergent bounds},
-  volume    = {27},
-  issn      = {1099-1115},
-  number    = {4},
-  journal   = {International Journal of Adaptive Control and Signal Processing},
-  publisher = {Wiley},
-  author    = {Chowdhary, Girish and Yucelen, Tansel and Mühlegg, Maximillian and Johnson, Eric N.},
-  year      = {2012},
-  month     = may,
-  pages     = {280–301}
-}
-
 @article{chowdhary2014bayesian,
   title     = {Bayesian Nonparametric Adaptive Control Using Gaussian Processes},
   volume    = {26},
@@ -143,16 +110,6 @@
   pages     = {3861–3876}
 }
 
-@inproceedings{ames2019control,
-  title     = {Control Barrier Functions: Theory and Applications},
-  booktitle = {2019 18th European Control Conference (ECC)},
-  publisher = {IEEE},
-  author    = {Ames, Aaron D. and Coogan, Samuel and Egerstedt, Magnus and Notomista, Gennaro and Sreenath, Koushil and Tabuada, Paulo},
-  year      = {2019},
-  month     = jun,
-  pages     = {3420–3431}
-}
-
 @inproceedings{williams2009dynamics,
   title     = {Probabilistic Prediction of Aggregate Traffic Demand Using Uncertainty in Individual Flight Predictions},
   booktitle = {AIAA Guidance, Navigation, and Control Conference},
@@ -160,13 +117,6 @@
   author    = {Gilbo, Eugene and Smith, Scott},
   year      = {2009},
   month     = jun
-}
-
-@article{sola2017quaternion,
-  author  = {Sol\`{a}, Joan},
-  title   = {Quaternion Kinematics for the Error-State {Kalman} Filter},
-  journal = {arXiv preprint arXiv:1711.02508},
-  year    = {2017}
 }
 
 @techreport{moorhouse1982us,
@@ -231,7 +181,7 @@
   volume  = {60},
   number  = {11},
   pages   = {2994--2999},
-  year    = {2015},
+  year    = {2015}
 }
 
 @book{guo2013active,
@@ -381,20 +331,13 @@
   month     = oct
 }
 
-@misc{wang2024automultilift,
-  author = {Wang, Bingheng and Huang, Rui and Zhao, Lin},
-  title  = {Auto-Multilift: Distributed Learning and Control for Cooperative Load Transportation With Quadrotors},
-  year   = {2024},
-  note   = {arXiv:2406.04858}
-}
-
 @article{yang2025robust,
   author  = {Zheng, Zhiyuan and Tong, Shiji and Zhang, Yunlin and Shao, Jinliang},
   title   = {Robust Safe Control for Nonlinear Quadrotor with a Cable-Suspended Payload Systems via Control Barrier Function and Disturbance Estimator},
   journal = {Control Engineering Practice},
   volume  = {165},
   pages   = {106564},
-  year    = {2025},
+  year    = {2025}
 }
 
 @article{estevez2024review,
@@ -426,7 +369,7 @@
   volume  = {55},
   number  = {2},
   pages   = {480--487},
-  year    = {2010},
+  year    = {2010}
 }
 
 @article{wu2025l1quad,
@@ -436,7 +379,7 @@
   volume  = {33},
   number  = {2},
   pages   = {597--612},
-  year    = {2025},
+  year    = {2025}
 }
 
 @article{kotaru2020geometric,
@@ -472,12 +415,28 @@
 
 % --- Decentralized Adaptive Transport ---
 
-@misc{gao2024decentralized,
-  author = {Gao, Liang and Poonawala, Hasan A. and Krovi, Venkat},
-  title  = {Decentralized Adaptive Aerospace Transportation of Unknown Loads Using a Team of Robots},
-  year   = {2024},
-  note   = {arXiv:2407.08084}
+@inproceedings{gao2024decentralized,
+  author    = {Gao, Longsen
+               and Aubert, Kevin
+               and Salda{\~{n}}a, David
+               and Danielson, Claus
+               and Fierro, Rafael},
+  editor    = {Nilles, Alexandra
+               and Petersen, Kirstin H.
+               and Lam, Tin Lun
+               and Prorok, Amanda
+               and Rubenstein, Michael
+               and Otte, Michael},
+  title     = {Decentralized Adaptive Aerospace Transportation of Unknown Loads Using A Team of Robots},
+  booktitle = {Distributed Autonomous Robotic Systems},
+  year      = {2026},
+  publisher = {Springer Nature Switzerland},
+  address   = {Cham},
+  pages     = {28--41},
+  abstract  = {Transportation missions in aerospace are limited to the capability of each robot and the properties of the object being transported, such as mass, inertia, and grasping points. We present a novel decentralized adaptive controller design for multiple robots that can be implemented in different kinds of aerospace robots. Moreover, our controller adapts to unknown objects in different gravity environments. We validate our method in an aerial scenario using multiple fully actuated hexarotors with grasping capabilities, and a space scenario using a group of space tugs. In both cases, the robots cooperatively transport a payload along desired three-dimensional trajectories. We demonstrate that our method can adapt to unexpected changes, including the loss of robots during the transportation mission.},
+  isbn      = {978-3-032-04584-3}
 }
+
 
 @article{barawkar2024decentralized,
   title     = {Decentralized adaptive controller for multi-drone cooperative transport with offset and moving center of gravity},
@@ -499,17 +458,6 @@
   year      = {2018},
   month     = may,
   pages     = {440–447}
-}
-
-@article{bai2019cooperative,
-  author  = {Bai, He and Wen, John T.},
-  title   = {Cooperative Load Transport with Decentralized Adaptive Force-Consensus Control},
-  journal = {J. Intell. Robot. Syst.},
-  volume  = {96},
-  number  = {2},
-  pages   = {201--217},
-  year    = {2019},
-  doi     = {10.1007/s10846-019-00986-7}
 }
 
 @article{smeur2016adaptive,
@@ -543,7 +491,7 @@
   journal = {Chinese J. Aeronautics},
   volume  = {38},
   number  = {11},
-  year    = {2025},
+  year    = {2025}
 }
 
 @article{steinert2025indi_part2,
@@ -552,7 +500,7 @@
   journal = {Chinese J. Aeronautics},
   volume  = {38},
   number  = {11},
-  year    = {2025},
+  year    = {2025}
 }
 
 @article{sun2020incremental,
@@ -562,7 +510,7 @@
   volume  = {37},
   number  = {1},
   pages   = {116--130},
-  year    = {2021},
+  year    = {2021}
 }
 
 @article{adaika2025fdd,
@@ -573,19 +521,6 @@
   pages   = {63},
   year    = {2025},
   doi     = {10.1007/s10846-025-02218-x}
-}
-
-@article{yu2022review,
-  title     = {A review on fault-tolerant cooperative control of multiple unmanned aerial vehicles},
-  volume    = {35},
-  issn      = {1000-9361},
-  number    = {1},
-  journal   = {Chinese Journal of Aeronautics},
-  publisher = {Elsevier BV},
-  author    = {YU, Ziquan and ZHANG, Youmin and JIANG, Bin and FU, Jun and JIN, Ying},
-  year      = {2022},
-  month     = jan,
-  pages     = {1–18}
 }
 
 @article{moustakides1986optimal,
@@ -624,20 +559,13 @@
   pages     = {59–76}
 }
 
-@inproceedings{zhu2024interval,
-  author    = {Zhu, Hao and Li, Zhenhua and Yin, Shen and Patton, Ron J.},
-  title     = {Interval Observer-Based Fault Detection and Isolation for a Quadrotor {{UAV}} with Cable-Suspended Load},
-  booktitle = {Proc. IEEE Int. Conf. Networking, Sensing and Control (ICNSC)},
-  year      = {2024},
-}
-
 @article{raman2023cable,
   author  = {Raman, Rohit and Mottola, Giovanni and Briot, S{'e}bastien and Caro, St{'e}phane and Merlet, Jean-Pierre},
   title   = {Cable Failure Tolerant Control and Planning in a Planar Reconfigurable Cable-Driven Parallel Robot},
   journal = {Frontiers in Robotics and AI},
   volume  = {10},
   pages   = {1235949},
-  year    = {2023},
+  year    = {2023}
 }
 
 @article{kolathaya2019input,
@@ -658,18 +586,7 @@
   title     = {Fault Tolerant Neural Control Barrier Functions for Robotic Systems Under Sensor Faults and Attacks},
   booktitle = {Proc. IEEE Int. Conf. Robot. Autom. (ICRA)},
   pages     = {11197--11203},
-  year      = {2024},
-}
-
-@article{tsukamoto2021contraction,
-  title     = {Contraction theory for nonlinear stability analysis and learning-based control: A tutorial overview},
-  volume    = {52},
-  issn      = {1367-5788},
-  journal   = {Annual Reviews in Control},
-  publisher = {Elsevier BV},
-  author    = {Tsukamoto, Hiroyasu and Chung, Soon-Jo and Slotine, Jean-Jaques E.},
-  year      = {2021},
-  pages     = {135–169}
+  year      = {2024}
 }
 
 @article{manchester2017control,
@@ -683,16 +600,6 @@
   year      = {2017},
   month     = jun,
   pages     = {3046–3053}
-}
-
-@inproceedings{singh2021safe,
-  title     = {Robust online motion planning via contraction theory and convex optimization},
-  booktitle = {2017 IEEE International Conference on Robotics and Automation (ICRA)},
-  publisher = {IEEE},
-  author    = {Singh, Sumeet and Majumdar, Anirudha and Slotine, Jean-Jacques and Pavone, Marco},
-  year      = {2017},
-  month     = may,
-  pages     = {5883–5890}
 }
 
 @inproceedings{hespanha1999stability,
@@ -718,19 +625,6 @@
   year      = {2007},
   month     = apr,
   pages     = {639–646}
-}
-
-@article{zhao2012mode,
-  title     = {Stability and Stabilization of Switched Linear Systems With Mode-Dependent Average Dwell Time},
-  volume    = {57},
-  issn      = {1558-2523},
-  number    = {7},
-  journal   = {IEEE Transactions on Automatic Control},
-  publisher = {Institute of Electrical and Electronics Engineers (IEEE)},
-  author    = {Zhao, Xudong and Zhang, Lixian and Shi, Peng and Liu, Ming},
-  year      = {2012},
-  month     = jul,
-  pages     = {1809–1815}
 }
 
 @book{goebel2012hybrid,
@@ -771,7 +665,7 @@
   volume  = {9},
   number  = {4},
   pages   = {3688--3695},
-  year    = {2024},
+  year    = {2024}
 }
 
 @article{li2024rotortm,
@@ -783,29 +677,6 @@
   author    = {Li, Guanrui and Liu, Xinyang and Loianno, Giuseppe},
   year      = {2024},
   pages     = {831–850}
-}
-
-@article{li2021cooperative,
-  author  = {Li, Guanrui and Ge, Rundong and Loianno, Giuseppe},
-  title   = {Cooperative Transportation of Cable Suspended Payloads with {{MAVs}} Using Monocular Vision and Inertial Sensing},
-  journal = {IEEE Robot. Autom. Lett.},
-  volume  = {6},
-  number  = {3},
-  pages   = {5316--5323},
-  year    = {2021},
-}
-
-@article{deangelis2025twotimescale,
-  title     = {Two-Time-Scale Cooperative UAV Transportation of a Cable-Suspended Load: A Minimal Swing Approach},
-  volume    = {9},
-  issn      = {2504-446X},
-  number    = {8},
-  journal   = {Drones},
-  publisher = {MDPI AG},
-  author    = {Costantini, Elia and de Angelis, Emanuele Luigi and Giulietti, Fabrizio},
-  year      = {2025},
-  month     = aug,
-  pages     = {559}
 }
 
 @inproceedings{dai2014adaptive,
@@ -830,58 +701,22 @@
   pages     = {111594}
 }
 
-@article{villa2024cooperative,
-  author  = {Villa, Daniel K. D. and Brand\~{a}o, Alexandre S. and Sarcinelli-Filho, M'{a}rio},
-  title   = {Cooperative Load Transportation with Quadrotors Using Adaptive {{RISE}} Control},
-  journal = {J. Intell. Robot. Syst.},
-  volume  = {110},
-  number  = {4},
-  pages   = {138},
-  year    = {2024},
-}
-
-@article{boschetti2024sensorless,
-  author  = {Boschetti, Giovanni and Minto, Riccardo and Trevisani, Alberto},
-  title   = {A Sensorless Approach for Cable Failure Detection and Identification in Cable-Driven Parallel Robots},
-  journal = {Robot. Auton. Syst.},
-  volume  = {183},
-  pages   = {104838},
-  year    = {2024},
-}
-
-@inproceedings{chen2025passive,
-  author    = {Chen, Jiaxin and Zhao, Kangli and Liu, Zhen and Li, Yanjie and Lou, Yunjiang},
-  title     = {Learning-Based Passive Fault-Tolerant Control of a Quadrotor with Rotor Failure},
-  booktitle = {Proc. IEEE/RSJ Int. Conf. Intell. Robots and Syst. (IROS)},
-  year      = {2025}
-}
-
 @inproceedings{demarina2019flexible,
   author    = {de Marina, H\'{e}ctor Garcia and Smeur, Ewoud J. J.},
   title     = {Flexible Collaborative Transportation by a Team of Rotorcraft},
   booktitle = {Proc. IEEE Int. Conf. Robot. Autom. (ICRA)},
   year      = {2019},
-  pages     = {5474--5480},
-}
-
-@article{oliva2024aerial,
-  author  = {Oliva-Palomo, Fernando and Mercado-Mercado, Diego and Castillo, Pedro},
-  title   = {Aerial Transportation Control of Suspended Payloads with Multiple Agents},
-  journal = {J. Franklin Inst.},
-  volume  = {361},
-  number  = {7},
-  pages   = {106787},
-  year    = {2024},
+  pages     = {5474--5480}
 }
 
 @article{sontag2008iss,
-  author  = {Sontag, Eduardo D.},
-  title   = {Input to State Stability: Basic Concepts and Results},
-  journal = {Lecture Notes in Mathematics},
-  volume  = {1932},
-  pages   = {163--220},
-  year    = {2008},
-  publisher = {Springer},
+  author    = {Sontag, Eduardo D.},
+  title     = {Input to State Stability: Basic Concepts and Results},
+  journal   = {Lecture Notes in Mathematics},
+  volume    = {1932},
+  pages     = {163--220},
+  year      = {2008},
+  publisher = {Springer}
 }
 
 @unpublished{hajieghrary2026tetherlift,
@@ -889,5 +724,12 @@
   title  = {Decentralized Geometric Control for Cable-Suspended Payload Transport with Adaptive Mass Estimation},
   note   = {Submitted to The IEEE/RSJ International Conference on Intelligent Robots and Systems (IROS)},
   year   = {2026}
+}
+
+@misc{hajieghrary2026tethergrace,
+  author = {Hadi Hajieghrary},
+  title  = {Tether\_Grace: code and experiments for cable-fault tolerance in decentralized cooperative aerial transport},
+  year   = {2026},
+  note   = {GitHub repository. Available at \url{https://github.com/Hadi-Hajieghrary/Tether_Grace}}
 }
 

@@ -1,10 +1,5 @@
 This section presents the fault-tolerant architecture addressing problems \textbf{P1}--\textbf{P2}. The primary fault-absorption mechanism is PID feedback with gravity feedforward in the GPAC hierarchy, supplemented by locally measured cable-tension feedforward and anti-swing damping. A post-fault geometry redistribution path is additionally described. The analytical core of this section is the identification of a topology-invariant error structure (Proposition~\ref{thm:topology_invariance}): the N-agnostic design makes the per-agent error dynamics independent of cable topology, addressing the tracking envelope~\eqref{eq:problem_bound} and the cost ratio~\eqref{eq:problem_rho}.
 
-% ============================================================
-\subsection{Layer~1 Control Law: PID with Model-Based Feedforward}
-\label{sec:layer1_control}
-% ============================================================
-
 Each agent~$i$ computes a desired force in the world frame:
 \begin{equation}\label{eq:layer1_force_ft}
   \bm{F}_i^{\mathrm{des}} = \bm{F}_{\mathrm{grav}} + \bm{F}_{\mathrm{fb}} + \bm{F}_{\mathrm{cable}} + \bm{F}_{\mathrm{swing}},
@@ -27,15 +22,8 @@ The desired force is decomposed into thrust magnitude and desired body-$z$ direc
   f_i = \bm{F}_i^{\mathrm{des}} \cdot \bm{R}_i \bm{e}_3, \quad \bm{b}_{3,i}^{\mathrm{des}} = \frac{\bm{F}_i^{\mathrm{des}}}{\norm{\bm{F}_i^{\mathrm{des}}}}.
 \end{equation}
 
-% NOTE: The $\mathcal{L}_1$ adaptive controller is implemented in the codebase
-% but is not active in the reported results. It is discussed in
-% Section~VII (Future Work) rather than here, to maintain clarity
-% about the tested architecture.
-
-% ============================================================
-\subsection{Topology-Invariance: Formal Result for the Simplified Model}
+\subsection{Topology-Invariant Error Analysis}
 \label{sec:topology_invariance_theorem}
-% ============================================================
 
 The central architectural insight is that the N-agnostic control law~\eqref{eq:layer1_force_ft} produces per-agent error dynamics that are \emph{structurally independent of cable topology}. We formalize this as a structural property, then derive an operationally useful transient prediction.
 
@@ -110,7 +98,7 @@ The piecewise cable law~\eqref{eq:cable_tension} produces impulsive forces when 
 Assumption~(A1) requires that $R_i \bm{e}_3 \approx \bm{b}_{3,i}^{\mathrm{des}}$ instantaneously. The SO(3) inner loop runs at 200~Hz ($5$~ms period), but the cable-snap force transmission occurs at ${\sim}7.9$~ms (rigid-body path). During this interval, the position-loop model assumes the attitude has already aligned with the new desired force direction; in reality, the attitude lags, creating an unanalyzed residual coupling. Quantifying the resulting tracking-error increment requires a cascaded stability analysis of the two-timescale system under impulsive disturbance---a nontrivial extension beyond the scope of this work.
 
 \emph{Gap~3: State-dependent disturbance (small-gain condition).}
-In the full plant, $d_i(t)$ is not purely exogenous: cable forces depend on agent position relative to the payload, creating a feedback loop from $\bm{z}$ to $d_i$through the elastic cable dynamics. The ISS argument in Proposition~\ref{thm:topology_invariance} treats $d_i$as an external input. Rigorously, the interconnection of the position-loop ISS system with the cable-dynamics subsystem requires a small-gain condition~\cite{sontag2008iss}: the product of the position-loop ISS gain ($\gamma_{\mathrm{ISS}} = \norm{G(s)}_{\mathcal{H}_\infty}$) and the cable-dynamics input-output gain ($\gamma_{\mathrm{cable}}$) must be less than unity. A scalar (per-axis) reduction is insufficient because cable forces act along specific directions ($\bm{q}_i \in \mathbb{S}^2$), the payload inertia filters force transmission, and multiple cables distribute the coupling---all of which reduce the effective interconnection gain below the conservative scalar product. For the scalar per-axis model, the position-loop $\mathcal{H}_\infty$ gain is $\gamma_{\mathrm{ISS}} = \norm{G(s)}_{\mathcal{H}_\infty} \approx 0.125$ (peaked at $\omega \approx 0.15$~rad/s), so the small-gain condition requires $\gamma_{\mathrm{cable}} < 1/\gamma_{\mathrm{ISS}} \approx 8.0$. This is a generous margin: a cable-dynamics gain of~$8$ would require the cable-force perturbation (in m/s$^2$) to exceed $8\times$ the position error (in m), which is inconsistent with the observed bounded tracking. The full multivariable verification---computing $\gamma_{\mathrm{ISS}}$ and $\gamma_{\mathrm{cable}}$ from the linearized $6{+}8N$-dimensional plant at the taut equilibrium via Drake's \texttt{Linearize()}---is feasible with the existing infrastructure and is planned as near-term future work.
+In the full plant, $d_i(t)$ is not purely exogenous: cable forces depend on agent position relative to the payload, creating a feedback loop from $\bm{z}$ to $d_i$ through the elastic cable dynamics. The ISS argument in Proposition~\ref{thm:topology_invariance} treats $d_i$ as an external input. Rigorously, the interconnection of the position-loop ISS system with the cable-dynamics subsystem requires a small-gain condition~\cite{sontag2008iss}: the product of the position-loop ISS gain ($\gamma_{\mathrm{ISS}} = \norm{G(s)}_{\mathcal{H}_\infty}$) and the cable-dynamics input-output gain ($\gamma_{\mathrm{cable}}$) must be less than unity. A scalar (per-axis) reduction is insufficient because cable forces act along specific directions ($\bm{q}_i \in \mathbb{S}^2$), the payload inertia filters force transmission, and multiple cables distribute the coupling---all of which reduce the effective interconnection gain below the conservative scalar product. For the scalar per-axis model, the position-loop $\mathcal{H}_\infty$ gain is $\gamma_{\mathrm{ISS}} = \norm{G(s)}_{\mathcal{H}_\infty} \approx 0.125$ (peaked at $\omega \approx 0.15$~rad/s), so the small-gain condition requires $\gamma_{\mathrm{cable}} < 1/\gamma_{\mathrm{ISS}} \approx 8.0$. This is a generous margin: a cable-dynamics gain of~$8$ would require the cable-force perturbation (in m/s$^2$) to exceed $8\times$ the position error (in m), which is inconsistent with the observed bounded tracking. The full multivariable verification---computing $\gamma_{\mathrm{ISS}}$ and $\gamma_{\mathrm{cable}}$ from the linearized $6{+}8N$-dimensional plant at the taut equilibrium via Drake's \texttt{Linearize()}---is feasible with the existing infrastructure and is planned as near-term future work.
 
 Three lines of empirical evidence support the small-gain condition indirectly: (i)~the $f_{\max}$ boundary sweep shows RMSE insensitivity for $f_{\max} \geq 45$~N ($3\times$ headroom); (ii)~Monte Carlo shows ${<}3\%$ RMSE variation across $30$ runs with randomized cable parameters; (iii)~stability is maintained across all $N \in \{3, 5, 7\}$ scenarios with up to three cascading faults. None constitutes formal verification of $\gamma_{\mathrm{ISS}} \cdot \gamma_{\mathrm{cable}} < 1$, but together they make a strong empirical case.
 
@@ -123,10 +111,6 @@ Three lines of empirical evidence support the small-gain condition indirectly: (
   \item The small-gain condition for cable-force feedback is \emph{partially verified}: the scalar $\gamma_{\mathrm{ISS}} = 0.125$ is computed, but the full-plant multivariable verification remains open.
   \item Formal stability of the full bead-chain plant under topology switching is \emph{open}.
 \end{itemize}
-
-% ============================================================
-\subsection{Fault-Tolerance Cost}
-% ============================================================
 
 Designing for $\mathcal{W}_{\mathrm{FT}}$ rather than $\mathcal{W}_{\mathrm{nom}}$ widens the tracking tube. From~\eqref{eq:rho_closed_form}, the steady-state ratio $\rho_{\mathrm{ss}} = N/(N{-}k)$ is conservative because it assumes the fault disturbance is sustained indefinitely.
 
@@ -166,17 +150,9 @@ The transient-aware prediction matches the empirical $\rho_{\mathrm{FT}}$ closel
 
 For actuator sizing, the conservative $\rho_{\mathrm{ss}} = 1.5$ remains appropriate (it bounds the worst case). For performance prediction, the transient-aware~\eqref{eq:rho_transient} is the operationally relevant metric.
 
-% ============================================================
-\subsection{Relationship to Adaptive Estimation}
-% ============================================================
-
 The topology-invariance property (Proposition~\ref{thm:topology_invariance}) applies to the PID-plus-feedforward law without adaptive estimation. The GPAC baseline includes a Concurrent Learning (CL) mass estimator (Layer~3) and an Extended State Observer (ESO, Layer~4), both of which are \emph{disabled} in the reported full-Drake runs. This choice is deliberate: the topology-invariant error structure explains why PID feedback with gravity feedforward already suffices (Section~\ref{sec:tension_ablation}).
 
 With CL active, the feedforward includes an adaptive term $\hat{m}_L \cdot g$ that depends on the regressor history. After a cable snap, pre-fault data in the $M{=}50$ regressor buffer biases $\hat{m}_L$ toward the pre-fault load share, temporarily injecting incorrect feedforward for $2$--$5$~s of buffer turnover. The per-agent error dynamics are no longer topology-independent in the sense of Proposition~\ref{thm:topology_invariance}: the system matrix acquires an implicit dependence on cable topology through the history-dependent estimate. Topology invariance holds strictly only for the PID-plus-gravity-feedforward path. Adaptive estimation (CL, ESO, or $\mathcal{L}_1$) remains a candidate residual channel for scenarios requiring tighter steady-state tracking; its integration is discussed in Section~\ref{Section_VII:Discussion}.
-
-% ============================================================
-\subsection{Signal Flow Summary}
-% ============================================================
 
 \begin{remark}[Geometry Redistribution]
 The codebase includes a post-fault geometry redistribution module that re-centers surviving agents' formation offsets when a cable fault is detected locally. This module operates upstream at the reference level and does not modify the GPAC control law. All reported results use fixed formation offsets throughout, demonstrating that PID-plus-gravity-feedforward alone suffices for fault tolerance. Ablation of the redistribution path is deferred to future work.

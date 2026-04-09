@@ -282,6 +282,8 @@ def run_drake_executable(scenario: ExperimentScenario) -> Path:
         command += ["--reactive-boost", str(scenario.reactive_boost)]
     if scenario.oracle_load_share is not None:
         command += ["--oracle-load-share", str(scenario.oracle_load_share)]
+    if scenario.num_rope_beads is not None:
+        command += ["--num-rope-beads", str(scenario.num_rope_beads)]
     subprocess.run(command, check=True, cwd=ROOT)
     return scenario_dir
 

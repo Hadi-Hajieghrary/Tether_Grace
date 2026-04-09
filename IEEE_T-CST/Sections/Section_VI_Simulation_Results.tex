@@ -209,7 +209,7 @@ Vehicle-level dynamics for the most demanding case ($N{=}7$, Fig.~\ref{fig:vehic
 \end{figure}
 
 % ============================================================
-\subsection{Deconfounding: Team Size, Fault Count, and Thrust Margin}
+\subsection{Deconfounding by Team Size, Fault Count, and Thrust Margin}
 \label{sec:matched_single_fault}
 % ============================================================
 
@@ -239,7 +239,7 @@ Holding $N{=}7$ constant while varying $k \in \{1, 2, 3\}$ (Table~\ref{tab:fault
 
 \begin{table}[t]
 \centering
-\caption{Fault-count isolation: $N{=}7$ with $k \in \{1, 2, 3\}$ faults.}
+\caption{Fault-count isolation: $N{=}7$ with 1, 2, and 3 faults.}
 \label{tab:fault_count_isolation}
 \begin{tabular}{lccccc}
 \toprule
@@ -302,7 +302,7 @@ Sweeping $f_{\max}$ from $150$~N down to $35$~N reveals a sharp phase transition
 \begin{equation}\label{eq:fmax_critical}
   f_{\max}^* = \frac{(N \cdot m_Q + m_L) \cdot g}{N - k} + f_{\mathrm{track}} \approx 36.8 + 8 \approx 45\;\text{N},
 \end{equation}
-where $f_{\mathrm{track}} \approx m_Q \cdot a_{\max} \approx 8$~N accounts for figure-eight tracking demand (matching the observed pre-fault thrust above hover). The default $f_{\max} = 150$~N provides $3\times$ headroom, confirming that the claimed fault tolerance does not depend on aggressive actuator sizing.
+where $f_{\mathrm{track}} \approx m_Q \cdot a_{\max} \approx 8$~N accounts for figure-eight tracking demand (matching the observed pre-fault thrust above hover). The default $f_{\max} = 150$~N provides $3\times$ headroom, confirming that the claimed fault tolerance does not depend on aggressive actuator sizing. Below the transition, RMSE is non-monotonic ($236.9$~cm at $38$~N vs.\ $192.1$~cm at $35$~N): the system enters distinct saturation-dominated failure modes where the specific trajectory phase at the fault instant determines which agents saturate and for how long.
 
 \begin{table}[t]
 \centering
@@ -323,7 +323,7 @@ $f_{\max}$ [N] & $f_{\max}/f_{\mathrm{hover}}$ & RMSE [cm] & Peak [cm] & Final [
 \end{table}
 
 \emph{Controller comparison hierarchy.}\label{sec:baseline_comparison}
-To contextualize the passive GPAC approach, three alternative controllers are evaluated on the $N{=}3$ single-fault scenario (Table~\ref{tab:baseline_comparison}): a centralized oracle with perfect post-fault load-share knowledge, a gain-scheduled PID~\cite{yu2022review} triggered by elevated cable tension, and a threshold-triggered reactive controller that boosts thrust by $+30\%$. The centralized oracle performs comparably to passive GPAC ($49.18$ vs.\ $48.84$~cm, $+0.7\%$), confirming that local cable sensing already captures nearly all fault-relevant information. All detection-based alternatives fall within $1.2\%$ of the passive mechanism, providing no meaningful benefit over the N-agnostic PID-plus-feedforward structure.
+To contextualize the passive GPAC approach, three alternative controllers are evaluated on the $N{=}3$ single-fault scenario (Table~\ref{tab:baseline_comparison}): a centralized oracle with perfect post-fault load-share knowledge, a gain-scheduled PID triggered by elevated cable tension, and a threshold-triggered reactive controller that boosts thrust by $+30\%$. The centralized oracle performs comparably to passive GPAC ($49.18$ vs.\ $48.84$~cm, $+0.7\%$), confirming that local cable sensing already captures nearly all fault-relevant information. All detection-based alternatives fall within $1.2\%$ of the passive mechanism, providing no meaningful benefit over the N-agnostic PID-plus-feedforward structure.
 
 \begin{table}[t]
 \centering
@@ -351,7 +351,7 @@ To assess whether the favorable $\rho_{\mathrm{FT}}$ values are an artifact of t
 
 \begin{table}[t]
 \centering
-\caption{ESO-active evaluation: $\rho_{\mathrm{FT}}$ sensitivity to controller complexity.}
+\caption{ESO-active evaluation: sensitivity of $\rho_{\mathrm{FT}}$ to controller complexity.}
 \label{tab:eso_evaluation}
 \begin{tabular}{lccccc}
 \toprule
@@ -375,18 +375,18 @@ Four complementary evaluations establish robustness beyond the ideal-condition c
 \emph{Sensor-realistic evaluation.}
 Activating the ESKF and Dryden wind model produces moderate, consistent RMSE degradation: $+9.9\%$ for $N{=}3$, $+8.1\%$ for $N{=}5$, and $+10.7\%$ for $N{=}7$ (Table~\ref{tab:sensor_realistic}). All scenarios remain stable with RMSE below $54$~cm, and the uniform ${\sim}10\%$ degradation confirms robustness to sensor noise and wind perturbations. Peak errors increase by $12$--$14$~cm, attributable to wind compounding fault transients and ESKF estimation lag.
 
-\begin{table}[t]
+\begin{table}[h]
 \centering
-\caption{Sensor-realistic evaluation: ESKF + Dryden wind active.}
+\caption{Sensor-realistic evaluation}
 \label{tab:sensor_realistic}
 \begin{tabular}{lccccc}
 \toprule
-Scenario & \multicolumn{2}{c}{RMSE [cm]} & \multicolumn{2}{c}{Peak error [cm]} & $\Delta_{\mathrm{RMSE}}$ \\
-         & Ideal & ESKF+wind & Ideal & ESKF+wind & [\%] \\
+Scenario & \multicolumn{2}{c}{RMSE [cm]} & \multicolumn{2}{c}{Peak error [cm]} \\
+         & Ideal & ESKF+wind & Ideal & ESKF+wind \\
 \midrule
-$N{=}3$, 1~fault   & 48.84 & 53.68 & 107.44 & 119.14 & $+9.9$ \\
-$N{=}5$, 2~faults  & 46.37 & 50.14 & 112.30 & 125.17 & $+8.1$ \\
-$N{=}7$, 3~faults  & 43.60 & 48.28 & 117.45 & 131.56 & $+10.7$ \\
+$N{=}3$, 1~fault   & 48.84 & 53.68 & 107.44 & 119.14 \\
+$N{=}5$, 2~faults  & 46.37 & 50.14 & 112.30 & 125.17 \\
+$N{=}7$, 3~faults  & 43.60 & 48.28 & 117.45 & 131.56 \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -423,6 +423,52 @@ A broadened campaign additionally randomizes payload mass (${\pm}10\%$), PID gai
 Testing across hover, point-to-point, and figure-eight references in the supplementary material confirms that the fault-absorption mechanism operates consistently: RMSE decreases with team size and remains bounded across all trajectory types. Hover RMSE is $19\%$ lower than figure-eight ($39.75$ vs.\ $48.84$~cm for $N{=}3$), confirming that the figure-eight amplifies post-fault error through cable-pendulum near-resonance.
 
 % ============================================================
+\subsection{Cable Discretization Sensitivity}
+\label{sec:bead_discretization}
+% ============================================================
+
+The bead-chain cable model discretizes each continuous cable into $n_b$ point-mass beads connected by $(n_b{+}1)$ tension-only spring-damper segments. All preceding results use $n_b{=}8$. To assess whether the spatial resolution of the cable model materially affects the load-tracking conclusions, a discretization sweep varies $n_b \in \{2, 4, 8, 12, 16\}$ in the $N{=}5$ cascading-fault scenario (cable~1 snap at $7.0$~s, cable~3 snap at $12.0$~s) while holding all other parameters---cable rest length, total rope mass, payload mass, trajectory, fault schedule, controller gains, and simulation timestep ($\Delta t = 0.2$~ms)---fixed.
+
+\emph{Invariant preservation.}
+Cable-level stiffness is preserved exactly: the runner computes per-segment stiffness as $k_{\mathrm{seg}} = k_{\mathrm{cable}} \cdot (n_b{+}1)$, correct for springs in series. Cable-level damping is held invariant by deriving a reference cable damping from the $n_b{=}8$ baseline and scaling per-segment damping as $c_{\mathrm{seg}} = c_{\mathrm{cable}} \cdot (n_b{+}1)$. The collision-geometry bead radius is clamped at $12$~mm for all tested bead counts; consequently, bead contact forces operate under a fixed geometric cap rather than scaling with segment length.
+
+\emph{Results.}
+Table~\ref{tab:bead_discretization} reports the event-centered metrics. The first-fault and second-fault peak errors and recovery times are evaluated using clean time windows that exclude startup transients and avoid cross-contamination between fault events. The whole-run RMSE in this table is computed from $t \geq 3.0$~s (excluding liftoff), which differs from the full-horizon RMSE in Table~\ref{tab:scenario_summary}.
+
+% Table generated from outputs/bead_count_sweep/five_drones/bead_sweep_metrics.json
+\begin{table}[t]
+  \centering
+  \caption{Cable discretization sensitivity ($N{=}5$).}
+  \label{tab:bead_discretization}
+  \setlength{\tabcolsep}{4pt}
+  \begin{tabular}{r c c c c c c}
+    \toprule
+    $n_b$ & \makecell{Fault\,1\\peak [cm]} & \makecell{Fault\,1\\$t_{\mathrm{rec}}$ [s]}
+     & \makecell{Fault\,2\\peak [cm]} & \makecell{Fault\,2\\$t_{\mathrm{rec}}$ [s]}
+     & \makecell{Whole-run\\RMSE [cm]} & \makecell{Wall\\time [s]} \\
+    \midrule
+    2  & 31.8 & 4.09 & 43.4 & 3.67 & 43.2 & 284 \\
+    4  & 31.7 & 4.10 & 43.2 & 3.67 & 43.2 & 343 \\
+    8  & 31.5 & 4.09 & 43.2 & 3.67 & 43.1 & 593 \\
+    12 & 31.5 & 4.09 & 43.2 & 3.67 & 43.1 & 1144 \\
+    16 & 31.5 & 4.09 & 43.4 & 3.67 & 43.1 & 2003 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+Fig.~\ref{fig:bead_discretization} overlays the load tracking error for $n_b \in \{4, 8, 16\}$. Across the full discretization range, the first-fault peak error varies by only $0.3$~cm ($31.5$--$31.8$~cm), the second-fault peak error by $0.2$~cm ($43.2$--$43.4$~cm), and the whole-run RMSE by $0.1$~cm ($43.1$--$43.2$~cm). Recovery times are effectively identical at $4.09$~s (fault~1) and $3.67$~s (fault~2) for all bead counts. The metrics converge between $n_b{=}4$ and $n_b{=}8$, with changes from $8$ to $16$ beads below $0.15$~cm in all scalar metrics.
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=\columnwidth]{./Figures/bead_discretization/bead_discretization_composite.pdf}
+  \caption{Load tracking error under cable discretization sweep ($N{=}5$, cascading faults). (a)~Full horizon; (b)~first-fault zoom ($t{=}7$~s); (c)~second-fault zoom ($t{=}12$~s). Dashed red lines mark fault times.}
+  \label{fig:bead_discretization}
+\end{figure}
+
+\emph{Interpretation.}
+The load-tracking response is effectively insensitive to cable discretization over the tested range ($n_b{=}2$ to $16$), with all scalar metrics varying by less than $1\%$. The main fault-tolerant transport conclusion---that the N-agnostic architecture absorbs cable topology changes without reconfiguration---is preserved across the tested discretization range. The $n_b{=}8$ baseline used throughout this paper captures the essential fault dynamics; finer discretization does not alter the mechanism, the scalability trend, or the quantitative metrics to within the precision reported in the preceding tables. Runtime scales approximately as $\mathcal{O}(n_b^{1.5})$, making the $n_b{=}8$ choice a practical tradeoff between resolution and computational cost.
+
+% ============================================================
 \subsection{Summary of Evidence}
 % ============================================================
 
@@ -434,6 +480,7 @@ The full-Drake simulation results establish:
   \item A sharp thrust-saturation phase transition at $f_{\max} \approx 45$~N coincides with the theoretical post-fault minimum; the default $150$~N provides $3\times$ headroom (Table~\ref{tab:fmax_boundary}).
   \item Sensor-realistic evaluation (Table~\ref{tab:sensor_realistic}), Monte Carlo validation (Table~\ref{tab:monte_carlo}), supplementary trajectory-generalization experiments, and baseline comparison (Table~\ref{tab:baseline_comparison}) confirm robustness across conditions.
   \item ESO-active evaluation (Table~\ref{tab:eso_evaluation}) confirms that $\rho_{\mathrm{FT}}$ increases modestly with a stronger controller while absolute post-fault RMSE decreases, demonstrating that fault tolerance is not an artifact of a deliberately weakened controller.
+  \item Cable discretization sensitivity (Table~\ref{tab:bead_discretization}) confirms that varying the bead-chain resolution from $n_b{=}2$ to $16$ changes all scalar load-tracking metrics by less than $1\%$, establishing that the preceding results are not artifacts of a particular spatial discretization.
 \end{enumerate}
 
 Complementary reduced-order studies are provided in the supplementary material. The central conclusion is that N-agnostic decentralized architectures absorb cable topology changes without explicit fault detection or reconfiguration, as explained by the topology-independent error structure (Proposition~\ref{thm:topology_invariance}).

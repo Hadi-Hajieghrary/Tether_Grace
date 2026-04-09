@@ -83,6 +83,9 @@ class ExperimentScenario:
     # Oracle baseline
     oracle_load_share: float | None = None  # kg; centralized oracle feedforward
 
+    # Cable discretization
+    num_rope_beads: int | None = None  # beads per cable (default 8 in runner)
+
     @property
     def fault_cables(self) -> list[int]:
         return [event.cable_index for event in self.fault_events]
@@ -123,6 +126,7 @@ class ExperimentScenario:
             enable_reactive_ftc=payload.get("enable_reactive_ftc"),
             reactive_boost=payload.get("reactive_boost"),
             oracle_load_share=payload.get("oracle_load_share"),
+            num_rope_beads=payload.get("num_rope_beads"),
         )
 
     def to_dict(self) -> dict[str, Any]:
@@ -141,7 +145,7 @@ class ExperimentScenario:
                      "enable_eskf", "imu_rate", "gps_noise", "baro_noise",
                      "gps_rate", "baro_rate",
                      "trajectory_mode", "enable_reactive_ftc", "reactive_boost",
-                     "oracle_load_share"):
+                     "oracle_load_share", "num_rope_beads"):
             value = getattr(self, key)
             if value is not None:
                 result[key] = value

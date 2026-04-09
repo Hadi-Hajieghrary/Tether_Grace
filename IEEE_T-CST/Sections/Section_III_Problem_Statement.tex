@@ -1,11 +1,6 @@
 
 This section defines the physical system, the baseline control architecture, the cable-snap fault event, and the formal problem.
 
-% ============================================================
-\subsection{System Model}
-% ============================================================
-
-\subsubsection{Configuration Space}
 
 The system comprises $N$ quadrotors cooperatively transporting a rigid payload via flexible cables. The state evolves on
 \begin{equation}\label{eq:config_manifold}
@@ -13,7 +8,6 @@ The system comprises $N$ quadrotors cooperatively transporting a rigid payload v
 \end{equation}
 where $\SEthree$ captures the payload's six-DOF pose, each quadrotor contributes a further $\SEthree$, and each cable direction lives on $\Sph^2$. The default configuration uses $N = 3$ ($\dim(\mathcal{Q}) = 30$), with scaling experiments extending to $N \in \{5, 7\}$.
 
-\subsubsection{Quadrotor Dynamics}
 
 Each quadrotor $i \in \{1,\dots,N\}$ has mass $m_Q = 1.5$~kg and obeys (with $\bm{e}_3 = [0,0,1]^\top$ pointing upward and $g = 9.81$~m/s$^2$):
 \begin{align}
@@ -23,8 +17,6 @@ Each quadrotor $i \in \{1,\dots,N\}$ has mass $m_Q = 1.5$~kg and obeys (with $\b
 \end{align}
 where $f_i \in [0, f_{\max}]$ is the scalar thrust ($f_{\max} = 150$~N), $R_i \in \SOthree$ is the body-to-world rotation, $J \in \R^{3 \times 3}$ is the inertia tensor (from a $0.30 \times 0.30 \times 0.10$~m solid box), $\bm{\Omega}_i \in \R^3$ is the body angular velocity, $\bm{\tau}_i \in \R^3$ is the commanded torque ($\abs{\tau_k} \leq 10$~N$\cdot$m per axis), $\bm{F}_i^{\mathrm{cable}}$ is the cable force, and $\bm{F}_i^{\mathrm{wind}}$ is the aerodynamic disturbance.
 
-\subsubsection{Payload Dynamics}
-
 The payload is a rigid sphere of mass $m_L = 3.0$~kg and radius $r_L = 0.15$~m:
 \begin{equation}\label{eq:payload_dynamics}
   m_L \ddot{\bm{p}}_L = -m_L g\,\bm{e}_3 + \textstyle\sum_{i=1}^{N} T_i \bm{q}_i + \bm{F}^{\mathrm{contact}} + \bm{F}_L^{\mathrm{wind}},
@@ -32,7 +24,6 @@ The payload is a rigid sphere of mass $m_L = 3.0$~kg and radius $r_L = 0.15$~m:
 where $T_i \geq 0$ is the scalar cable tension, $\bm{q}_i \in \Sph^2$ is the unit direction from payload to quadrotor~$i$, and $\bm{F}^{\mathrm{contact}}$ accounts for ground interaction (Coulomb friction, $\mu_s = 0.5$, $\mu_k = 0.3$). Cable attachment points are at radius $0.105$~m on the payload surface. The payload mass $m_L$ is \emph{unknown to every agent}.
 The force balance in \eqref{eq:payload_dynamics} is the plant-level relation that later explains how cable-load redistribution appears immediately at the payload during a snap event.
 
-\subsubsection{Bead-Chain Cable Model}
 
 Each cable is modeled as a chain of $n_b = 8$ point-mass beads ($m_{\mathrm{rope}} = 0.2$~kg) creating $n_b + 1 = 9$ spring-damper segments with tension
 \begin{equation}\label{eq:cable_tension}
@@ -46,15 +37,11 @@ where $\epsilon_j = \norm{\bm{b}_{j-1} - \bm{b}_j} - L_0$ is the segment stretch
   k_s = \frac{m_L g}{N \cdot L_{\mathrm{rest}} \cdot \varepsilon_{\max}} \cdot (n_b + 1).
 \end{equation}
 The piecewise law in \eqref{eq:cable_tension} is the key cable nonlinearity for the reported fault transients, because it captures the slack-to-taut switching that a rigid-cable model would miss.
-Damping is $c_s = c_{\mathrm{ref}} \sqrt{k_s / k_{\mathrm{ref}}}$ with $c_{\mathrm{ref}} = 15$~N$\cdot$s/m, $k_{\mathrm{ref}} = 300$~N/m. Cable lengths are sampled from per-quadrotor Gaussians: $L_i \sim \mathcal{N}(\mu_i, s_i^2)$ with means $\mu \in \{1.0, 1.1, 0.95\}$~m and standard deviations $s \in \{0.05, 0.08, 0.06\}$~m, producing up to $19\%$ asymmetry.
+Damping is scaled to preserve cable-level damping across discretization: a reference cable damping $c_{\mathrm{cable}}$ is derived from a reference configuration ($n_b{=}8$, $c_{\mathrm{ref}} = 15$~N$\cdot$s/m, $k_{\mathrm{ref}} = 300$~N/m) and per-segment damping is $c_s = c_{\mathrm{cable}} \cdot (n_b{+}1)$, ensuring dampers-in-series equivalence. Cable lengths are deterministic for each scenario (e.g., $[1.00, 1.08, 1.16]$~m for $N{=}3$); Monte Carlo campaigns additionally randomize lengths by ${\pm}5\%$ from these baselines, producing up to $19\%$ asymmetry.
 
 The tension-only constraint means cables cannot push. The bead-chain discretization captures lateral vibration, wave propagation ($v_{\mathrm{wave}} \approx 7$~m/s), distributed inertia, and slack-to-taut transitions that rigid-cable assumptions miss. The plant is simulated in Drake~\cite{drake2024} at $\Delta t_{\mathrm{sim}} = 0.2$~ms ($5$~kHz).
 
-\subsubsection{Wind Disturbance}
-
 Aerodynamic disturbance follows the MIL-F-8785C Dryden turbulence model ($\sigma_u = \sigma_v = 1.0$~m/s, $\sigma_w = 0.5$~m/s; $L_u = L_v = 200$~m, $L_w = 50$~m; mean wind $[2.0, 0, 0]$~m/s). Spatial correlation decays as $\rho(\bm{p}_i, \bm{p}_j) = \exp(-\norm{\bm{p}_i - \bm{p}_j}/l_c)$ with $l_c = 10$~m.
-
-\subsubsection{Sensor Suite and State Estimation}
 
 Each agent carries an IMU ($400$~Hz; gyroscope noise $5 \times 10^{-4}$~rad/s/$\sqrt{\text{Hz}}$; accelerometer noise $4 \times 10^{-3}$~m/s$^2$/$\sqrt{\text{Hz}}$), GPS ($10$~Hz; position noise $[0.02, 0.02, 0.05]$~m), barometer ($25$~Hz; $0.3$~m white noise, $0.2$~m correlated with $5$~s time constant), and a cable tension/direction sensor ($200$~Hz). State estimation uses a $15$-state error-state Kalman filter (ESKF) with multiplicative quaternion error, fusing IMU propagation at $400$~Hz with discrete GPS and barometer updates.
 
@@ -71,10 +58,6 @@ Each agent~$i$ knows only:
   \item a shared reference trajectory $\bm{p}_d(t)$ (pre-broadcast, evaluated locally).
 \end{itemize}
 It does \emph{not} know: the number of other agents, the payload mass, any other agent's state, or whether other agents are connected. This eliminates single points of failure and communication dependency, making the per-agent policy identical regardless of team size.
-
-% ============================================================
-\subsection{Baseline GPAC Architecture}
-% ============================================================
 
 The baseline GPAC architecture is a four-layer hierarchical controller per agent with separated timescales.
 
@@ -135,9 +118,7 @@ Adaptive divergence & Parameter estimate drift & ${\sim}300$~ms \\
 \end{tabular}
 \end{center}
 
-% ============================================================
-\subsection{Two Fault Scenarios Under N-Agnosticism}
-% ============================================================
+Two Fault Scenarios Under N-Agnosticism is the fundamental problem: (A)~agent~$i$'s own cable breaks, and (B)~another agent's cable breaks. Scenario~A is trivial to detect and isolate; Scenario~B is the difficult case and the paper's focus.
 
 \subsubsection{Scenario~A: Own Cable Breaks}
 
@@ -148,6 +129,7 @@ Agent~$i$ observes $T_i \to 0$ within one sample period ($\Delta t_d = 5$~ms). D
 A threshold $T_i < T_{\min}$ (held for $0.12$~s debounce) triggers an escape maneuver: climbing $0.9$~m and displacing $1.8$~m horizontally within $1.5$~s, extending to $1.8$~m climb and $3.8$~m displacement within $3.0$~s. Direction is biased $0.18$ toward the formation tangent and $0.10$ toward current velocity, chosen to limit tilt to ${<}30$\textdegree\ during escape and ensure adequate vertical thrust margin.
 
 \subsubsection{Scenario~B: Another Agent's Cable Breaks}
+\label{sec:why_fdir_fails}
 
 Agent~$i$ does not observe $T_j$ directly. The fault manifests only through payload-mediated perturbations. The tension-channel SNR is
 \begin{equation}\label{eq:snr_ps}
@@ -155,16 +137,7 @@ Agent~$i$ does not observe $T_j$ directly. The fault manifests only through payl
 \end{equation}
 insufficient for reliable discrimination from wind gusts. Multi-channel analysis improves SNR to ${\sim}2$--$6$ but with $13$--$300$~ms delays. Scenario~B is the fundamentally difficult case and this paper's focus.
 
-% ============================================================
-\subsection{Why Conventional Fault Tolerance Cannot Apply}
-\label{sec:why_fdir_fails}
-% ============================================================
-
 Under the N-agnostic constraint, conventional FDIR is \emph{architecturally incompatible} with Scenario~B: (i)~MMAE requires $N{+}1$ parallel filters, violating N-agnosticism; (ii)~tension-channel SNR~$\approx 1.3$ is indistinguishable from wind perturbations; (iii)~an N-agnostic agent has no mode parameter depending on~$N$ to reconfigure. These are structural consequences of the design choice. Any compatible fault-tolerance approach must work \emph{without} detection, isolation, or recovery.
-
-% ============================================================
-\subsection{Agent-Level Uncertainty Reformulation}
-% ============================================================
 
 From agent~$i$'s perspective, translational dynamics~\eqref{eq:quad_trans} can be rewritten as
 \begin{equation}\label{eq:lumped_dynamics}
@@ -188,11 +161,7 @@ For $N{=}3$, $k{=}1$: $\bar{d}_{\mathrm{FT}} \approx 9.81 + 1.0 \approx 10.8$~m/
 which gives $\rho_{\mathrm{FT}} = 3/2 = 1.5$ for $N{=}3$, $k{=}1$; $5/3 = 1.67$ for $N{=}5$, $k{=}2$; and $7/4 = 1.75$ for $N{=}7$, $k{=}3$. These are conservative upper bounds; the empirical values ($1.26$--$1.39$) are lower because the fault disturbance is transient rather than sustained (Section~\ref{sec:topology_invariance_theorem}).
 \end{definition}
 
-% ============================================================
-\subsection{Formal Problem Statement}
-% ============================================================
-
-Given the system on manifold~\eqref{eq:config_manifold}, the N-agnostic constraint (Section~\ref{sec:n_agnostic}), the cable-snap fault model (Section~\ref{sec:cable_snap}), the lumped uncertainty~\eqref{eq:lumped_dynamics} with disturbance sets (Definition~\ref{def:disturbance_sets_ps}), and the architectural incompatibility of detection-based FDIR (Section~\ref{sec:why_fdir_fails}), the paper addresses two problems.
+The formal problem statement is as follows: Given the system on manifold~\eqref{eq:config_manifold}, the N-agnostic constraint (Section~\ref{sec:n_agnostic}), the cable-snap fault model (Section~\ref{sec:cable_snap}), the lumped uncertainty~\eqref{eq:lumped_dynamics} with disturbance sets (Definition~\ref{def:disturbance_sets_ps}), and the architectural incompatibility of detection-based FDIR (Scenario~\ref{sec:why_fdir_fails}), the paper addresses two problems.
 
 \begin{enumerate}[label=\textbf{P\arabic*.},leftmargin=*]
   \item \textbf{Topology-Invariant Tracking.} Identify sufficient conditions under which the per-agent tracking error satisfies

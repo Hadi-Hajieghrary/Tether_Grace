@@ -156,6 +156,9 @@ struct RunConfig {
   bool enable_gain_scheduling{false};
   double gs_kp_scale{1.5};  // post-fault kp multiplier
   double gs_kd_scale{1.25}; // post-fault kd multiplier
+
+  // Cable discretization: number of beads per rope segment
+  int num_rope_beads{8};
 };
 
 std::string Trim(const std::string &value) {
@@ -586,6 +589,8 @@ RunConfig ParseArgs(int argc, char *argv[]) {
       config.gs_kp_scale = std::stod(argv[++i]);
     } else if (std::strcmp(argv[i], "--gs-kd-scale") == 0 && i + 1 < argc) {
       config.gs_kd_scale = std::stod(argv[++i]);
+    } else if (std::strcmp(argv[i], "--num-rope-beads") == 0 && i + 1 < argc) {
+      config.num_rope_beads = std::stoi(argv[++i]);
     } else if (std::strcmp(argv[i], "--oracle-load-share") == 0 &&
                i + 1 < argc) {
       config.oracle_load_share = std::stod(argv[++i]);
@@ -610,7 +615,8 @@ RunConfig ParseArgs(int argc, char *argv[]) {
                 << "  [--enable-wind] [--wind-mean X Y Z] [--wind-sigma S]\n"
                 << "  [--enable-eskf] [--imu-rate HZ] [--gps-noise M] "
                    "[--baro-noise M]\n"
-                << "  [--gps-rate HZ] [--baro-rate HZ]\n";
+                << "  [--gps-rate HZ] [--baro-rate HZ]\n"
+                << "  [--num-rope-beads N] (default 8)\n";
       std::exit(0);
     }
   }
@@ -684,7 +690,8 @@ void WriteRunManifest(const RunConfig &config, const std::string &log_dir,
       << (config.enable_load_tracking ? "true" : "false") << ",\n";
   out << "  \"load_kp\": " << config.load_kp << ",\n";
   out << "  \"load_kd\": " << config.load_kd << ",\n";
-  out << "  \"load_ki\": " << config.load_ki << "\n";
+  out << "  \"load_ki\": " << config.load_ki << ",\n";
+  out << "  \"num_rope_beads\": " << config.num_rope_beads << "\n";
   out << "}\n";
 }
 
@@ -700,7 +707,7 @@ int DoMain(int argc, char *argv[]) {
   const double payload_mass = config.payload_mass;
   const double payload_radius = 0.15;
   const double rope_total_mass = 0.2;
-  const int num_rope_beads = 8;
+  const int num_rope_beads = config.num_rope_beads;
   const double gravity = 9.81;
   const double initial_altitude = 1.2;
   const double final_altitude = 3.0;
@@ -731,10 +738,22 @@ int DoMain(int argc, char *argv[]) {
       load_per_rope / (avg_rope_length * max_stretch_percentage);
   const int num_segments = num_rope_beads + 1;
   const double segment_stiffness = effective_rope_stiffness * num_segments;
-  const double reference_stiffness = 300.0;
-  const double reference_damping = 15.0;
-  const double segment_damping =
-      reference_damping * std::sqrt(segment_stiffness / reference_stiffness);
+
+  // Cable-level damping target: derived from the 8-bead reference configuration
+  // so that effective cable damping is invariant to discretization.
+  // For dampers in series: c_cable = c_segment / num_segments.
+  // Reference: 8 beads (9 segments), reference_stiffness = 300, reference_damping = 15.
+  constexpr int reference_num_segments = 9;  // 8 beads + 1
+  constexpr double reference_stiffness = 300.0;
+  constexpr double reference_damping = 15.0;
+  const double reference_segment_stiffness =
+      effective_rope_stiffness * reference_num_segments;
+  const double reference_segment_damping =
+      reference_damping *
+      std::sqrt(reference_segment_stiffness / reference_stiffness);
+  const double cable_damping =
+      reference_segment_damping / reference_num_segments;
+  const double segment_damping = cable_damping * num_segments;
   const auto waypoints = BuildWaypointsForMode(
       config.trajectory_mode, initial_altitude, config.duration);
 

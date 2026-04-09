@@ -1,4 +1,4 @@
-This paper distinguishes three levels of claim: \textit{implemented} modules that exist in the codebase, \textit{reproducible} results reproducible from canonical artifacts, and \textit{open} hypotheses whose formal proof is incomplete (see the evidence-level summary in Section~\ref{Section_IV:Fault-Tolerant_Control_Architecture}). The full-Drake simulations use the GPAC hierarchy's PID-plus-feedforward control law (Section~\ref{sec:layer1_control}) with PID feedback, gravity feedforward, and cable-tension feedforward as the fault-tolerance mechanism. The ESO feedforward and adaptive estimation are disabled. The reduced-order comparisons retain the CL baseline as the standardized reference.
+This paper distinguishes three levels of claim: \textit{implemented} modules that exist in the codebase, \textit{reproducible} results reproducible from canonical artifacts, and \textit{open} hypotheses whose formal proof is incomplete (see the evidence-level summary in Section~\ref{Section_IV:Fault-Tolerant_Control_Architecture}). The full-Drake simulations use the GPAC hierarchy's PID-plus-feedforward control law (Section~\ref{Section_IV:Fault-Tolerant_Control_Architecture}) with PID feedback, gravity feedforward, and cable-tension feedforward as the fault-tolerance mechanism. The ESO feedforward and adaptive estimation are disabled. The reduced-order comparisons retain the CL baseline as the standardized reference. The related code, including the full-Drake scenarios, experiment drivers, and analysis scripts used in this study, is available in the public Tether\_Grace repository~\cite{hajieghrary2026tethergrace}. That repository serves as the canonical source for the reproducible artifacts referenced throughout this section.
 
 \subsection{Scenario Families and Evaluation Pipeline}
 
@@ -10,11 +10,10 @@ The primary full-Drake scenario families are:
   \item thrust saturation boundary sweep ($f_{\max} \in \{35, 38, 45, 60, 80, 150\}$~N) in $N{=}3$;
   \item controller comparison hierarchy including centralized oracle, reactive FTC, and gain-scheduled PID baselines;
   \item ESO-active evaluation to assess $\rho_{\mathrm{FT}}$ sensitivity to controller complexity;
-  \item broadened Monte Carlo with randomized payload mass (${\pm}10\%$), PID gains (${\pm}10\%$), and fault timing (${\pm}2$~s).
+  \item broadened Monte Carlo with randomized payload mass (${\pm}10\%$), PID gains (${\pm}10\%$), and fault timing (${\pm}2$~s);
+  \item cable discretization sensitivity: bead count $n_b \in \{2, 4, 8, 12, 16\}$ in the $N{=}5$ cascading-fault scenario, holding cable-level stiffness and damping invariant to isolate the effect of spatial resolution on transient load dynamics.
 \end{enumerate}
 Complementary reduced-order studies---CL fidelity comparison, history-management diagnostics, gradual degradation, and non-CL adaptive law search---are reported in the supplementary material.
-
-\subsection{Metrics}
 
 The primary metric is post-fault payload tracking RMSE, available across all standardized scenarios. For fidelity comparison, the key statistic is the full-Drake to reduced-order RMSE ratio under matched conditions. For history corruption, the main quantities are CL bias duration and stack refill time. For topology-margin screening, capacity and effective-capacity ratios are reported rather than closed-form proofs.
 

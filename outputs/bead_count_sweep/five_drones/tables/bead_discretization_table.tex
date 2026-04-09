@@ -1,0 +1,17 @@
+\begin{table}[t]
+  \centering
+  \caption{Cable discretization sensitivity ($N{=}5$, cascading-fault scenario).}
+  \label{tab:bead_discretization}
+  \setlength{\tabcolsep}{4pt}
+  \begin{tabular}{r c c c c c c}
+    \toprule
+    $n_b$ & \makecell{Fault\,1\\peak [cm]} & \makecell{Fault\,1\\$t_{\mathrm{rec}}$ [s]} & \makecell{Fault\,2\\peak [cm]} & \makecell{Fault\,2\\$t_{\mathrm{rec}}$ [s]} & \makecell{Whole-run\\RMSE [cm]} & \makecell{Wall\\time [s]} \\
+    \midrule
+    2 & 31.8 & 4.09 & 43.4 & 3.67 & 43.2 & 284 \\
+    4 & 31.7 & 4.10 & 43.2 & 3.67 & 43.2 & 343 \\
+    8 & 31.5 & 4.09 & 43.2 & 3.67 & 43.1 & 593 \\
+    12 & 31.5 & 4.09 & 43.2 & 3.67 & 43.1 & 1144 \\
+    16 & 31.5 & 4.09 & 43.4 & 3.67 & 43.1 & 2003 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
