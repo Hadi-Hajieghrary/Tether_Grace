@@ -68,6 +68,7 @@ Computes the desired force:
   \bm{F}_{\mathrm{des},i} = \bm{F}_{\mathrm{fb}} + \bm{F}_{\mathrm{ff}} + \bm{F}_{\mathrm{cable}} + \bm{F}_{\mathrm{swing}} + \bm{F}_{\mathrm{eso}},
 \end{equation}
 where $\bm{F}_{\mathrm{fb}} = -K_p \bm{e}_p - K_d \bm{e}_v$ with gain matrices $K_p$, $K_d$; $\bm{F}_{\mathrm{ff}} = m_Q(\bm{a}_d + g\bm{e}_3)$; cable compensation $\bm{F}_{\mathrm{cable}} = \kappa_T(t) T_i \bm{q}_i$ with ramp $\kappa_T(t) = \min(1, (t - t_{\mathrm{taut}})/\Delta_{\mathrm{ramp}})$, $\Delta_{\mathrm{ramp}} = 2$~s; anti-swing $\bm{F}_{\mathrm{swing}} = k_q \bm{e}_q - k_\omega \bm{\omega}_q$ ($k_q = 4.0$~N/rad, $k_\omega = 2.0$~N$\cdot$s/rad); and ESO feedforward $\bm{F}_{\mathrm{eso}} = m_Q \hat{\bm{d}}_i$. The fault-tolerance evaluation (Sections~\ref{Section_IV:Fault-Tolerant_Control_Architecture}--\ref{Section_VI:Simulation_Results}) uses uniform scalar gains $k_p = 8.0$, $k_d = 8.0$, $k_i = 0.15$ (i.e., $K_p = k_p I$, $K_d = k_d I$) to enable the per-axis eigenvalue analysis in Section~\ref{sec:topology_invariance_theorem}.
+Sections~\ref{Section_IV:Fault-Tolerant_Control_Architecture}--\ref{Section_VI:Simulation_Results} analyze the reduced controller actually used in the full-Drake fault-tolerance runs: reference-acceleration and ESO feedforward are disabled, the cable-tension ramp is replaced by a constant gain, and the matrix gains are specialized to the uniform scalar gains above. The force decomposition is therefore restated in Section~\ref{Section_IV:Fault-Tolerant_Control_Architecture} in the form used for the reported fault-tolerance evidence.
 
 \subsubsection{Layer~2: Geometric $\SOthree$ Attitude Control (200~Hz)}
 
@@ -127,6 +128,7 @@ Agent~$i$ observes $T_i \to 0$ within one sample period ($\Delta t_d = 5$~ms). D
   \norm{\Delta \bm{p}_i(\Delta t_d)} \leq \frac{T_i^-}{2m_Q} \cdot \Delta t_d^2 \approx 0.082 \;\text{mm}.
 \end{equation}
 A threshold $T_i < T_{\min}$ (held for $0.12$~s debounce) triggers an escape maneuver: climbing $0.9$~m and displacing $1.8$~m horizontally within $1.5$~s, extending to $1.8$~m climb and $3.8$~m displacement within $3.0$~s. Direction is biased $0.18$ toward the formation tangent and $0.10$ toward current velocity, chosen to limit tilt to ${<}30$\textdegree\ during escape and ensure adequate vertical thrust margin.
+Section~\ref{sec:payload_tracking} reports the resulting separation distances for all observed faults, and Fig.~\ref{fig:vehicle_dynamics_seven} provides representative tilt and thrust histories in the most demanding scenario. The escape policy is therefore presented as a conservative, validated maneuver rather than as an optimized trajectory.
 
 \subsubsection{Scenario~B: Another Agent's Cable Breaks}
 \label{sec:why_fdir_fails}
@@ -135,6 +137,7 @@ Agent~$i$ does not observe $T_j$ directly. The fault manifests only through payl
 \begin{equation}\label{eq:snr_ps}
   \mathrm{SNR}_T^{(B)} = \frac{\Delta T_i^{(\mathrm{imm})}}{\sigma_T} \approx \frac{4.2\;\text{N}}{3.0\;\text{N}} \approx 1.3,
 \end{equation}
+where $\Delta T_i^{(\mathrm{imm})} \approx 4.2$~N denotes the immediate tension jump measured on a surviving cable in the canonical $N{=}3$ full-Drake traces, and $\sigma_T \approx 3.0$~N denotes the corresponding pre-fault fluctuation level in that channel. The estimate is therefore empirical, drawn from the same scenario family used to motivate Scenario~B, rather than a closed-form sensor-noise bound.
 insufficient for reliable discrimination from wind gusts. Multi-channel analysis improves SNR to ${\sim}2$--$6$ but with $13$--$300$~ms delays. Scenario~B is the fundamentally difficult case and this paper's focus.
 
 Under the N-agnostic constraint, conventional FDIR is \emph{architecturally incompatible} with Scenario~B: (i)~MMAE requires $N{+}1$ parallel filters, violating N-agnosticism; (ii)~tension-channel SNR~$\approx 1.3$ is indistinguishable from wind perturbations; (iii)~an N-agnostic agent has no mode parameter depending on~$N$ to reconfigure. These are structural consequences of the design choice. Any compatible fault-tolerance approach must work \emph{without} detection, isolation, or recovery.

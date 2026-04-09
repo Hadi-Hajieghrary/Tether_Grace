@@ -19,7 +19,7 @@ No agent is informed of topology changes except the freed agent itself, which de
 \label{sec:payload_tracking}
 % ============================================================
 
-Table~\ref{tab:scenario_summary} reports payload tracking performance across all canonical scenarios. The ${\sim}35$~cm nominal RMSE reflects PID-only control by design; the full GPAC stack (CL+ESO) would reduce it but would introduce history-dependent terms breaking the topology-invariant structure. The favorable $\rho_{\mathrm{FT}}$ values ($1.26$--$1.39$) partly reflect this choice (larger denominator); with the full stack, $\rho_{\mathrm{FT}}$ increases modestly (Section~\ref{sec:eso_evaluation}). The absolute post-fault RMSE ($44$--$49$~cm) is the operationally relevant quantity. Empirical $\rho_{\mathrm{FT}}^{\mathrm{emp}}$ falls below the conservative bound $N/(N{-}k)$ from~\eqref{eq:rho_closed_form}, consistent with the transient-aware analysis in Section~\ref{sec:topology_invariance_theorem}.
+Table~\ref{tab:scenario_summary} reports payload tracking performance across all canonical scenarios. The ${\sim}35$~cm nominal RMSE reflects PID-only control by design; the full GPAC stack (CL+ESO) would reduce it but would introduce history-dependent terms breaking the topology-invariant structure. The favorable $\rho_{\mathrm{FT}}$ values ($1.26$--$1.39$) partly reflect this choice (larger denominator); with the full stack, $\rho_{\mathrm{FT}}$ increases modestly (Section~\ref{sec:eso_evaluation}). The absolute post-fault RMSE ($44$--$49$~cm) is the operationally relevant quantity: it is about three payload radii and roughly $40\%$ of a nominal $1.0$--$1.2$~m cable length, so the controller preserves transport continuity rather than precision placement. Empirical $\rho_{\mathrm{FT}}^{\mathrm{emp}}$ falls below the conservative bound $N/(N{-}k)$ from~\eqref{eq:rho_closed_form}, consistent with the transient-aware analysis in Section~\ref{sec:topology_invariance_theorem}. The canonical scenarios themselves confound team size with fault count; the matched single-fault comparison below isolates the team-size effect.
 
 \begin{table}[t]
 \centering
@@ -41,7 +41,7 @@ Seven drones, 3~faults  & 7 & 43.60 & 117.45 & 1.26 \\
 \end{tabular}
 \end{table}
 
-The key finding is that payload RMSE \emph{decreases} with team size despite absorbing proportionally more faults: the $N{=}7$ scenario absorbs three cascading faults yet achieves $11\%$ lower RMSE than $N{=}3$ with one fault. Peak errors ($107$--$117$~cm) settle within $1$--$2$~s (Figs.~\ref{fig:tracking_errors_all},~\ref{fig:load_error_overlay}), and each snap produces a bounded reconfiguration rather than loss of transport (Fig.~\ref{fig:scenario_seven}).
+The canonical scenarios suggest that average payload RMSE falls with team size even while the number of faults increases: the $N{=}7$ scenario absorbs three cascading faults yet achieves $11\%$ lower RMSE than $N{=}3$ with one fault. Peak errors ($107$--$117$~cm) settle within $1$--$2$~s (Figs.~\ref{fig:tracking_errors_all},~\ref{fig:load_error_overlay}), and each snap produces a bounded reconfiguration rather than loss of transport (Fig.~\ref{fig:scenario_seven}). The matched single-fault comparison below shows that the same trend persists once the fault schedule is held fixed.
 
 \begin{figure*}
 
@@ -323,11 +323,11 @@ $f_{\max}$ [N] & $f_{\max}/f_{\mathrm{hover}}$ & RMSE [cm] & Peak [cm] & Final [
 \end{table}
 
 \emph{Controller comparison hierarchy.}\label{sec:baseline_comparison}
-To contextualize the passive GPAC approach, three alternative controllers are evaluated on the $N{=}3$ single-fault scenario (Table~\ref{tab:baseline_comparison}): a centralized oracle with perfect post-fault load-share knowledge, a gain-scheduled PID triggered by elevated cable tension, and a threshold-triggered reactive controller that boosts thrust by $+30\%$. The centralized oracle performs comparably to passive GPAC ($49.18$ vs.\ $48.84$~cm, $+0.7\%$), confirming that local cable sensing already captures nearly all fault-relevant information. All detection-based alternatives fall within $1.2\%$ of the passive mechanism, providing no meaningful benefit over the N-agnostic PID-plus-feedforward structure.
+To contextualize the passive GPAC approach, three alternative controllers are evaluated on the $N{=}3$ single-fault scenario (Table~\ref{tab:baseline_comparison}): a centralized oracle with perfect post-fault load-share feedforward, a gain-scheduled PID triggered by elevated cable tension, and a threshold-triggered reactive controller that boosts thrust by $+30\%$. The centralized oracle performs comparably to passive GPAC ($49.18$ vs.\ $48.84$~cm, $+0.7\%$), but this should be interpreted narrowly: the oracle only replaces the local cable-tension feedforward term and does not reconfigure geometry, reset the integral state, or alter the trajectory. The absolute difference is $0.34$~cm, smaller than the $0.49$~cm run-to-run standard deviation reported for the same $N{=}3$ fault scenario in Table~\ref{tab:monte_carlo}. The tested detection-based alternatives therefore provide no practically meaningful benefit over the N-agnostic PID-plus-feedforward structure, but this comparison does not rule out stronger centralized policies.
 
 \begin{table}[t]
 \centering
-\caption{Controller comparison ($N{=}3$, single fault).}
+\caption{Controller comparison ($N{=}3$, single fault). The centralized oracle uses perfect post-fault load-share feedforward only; it does not alter geometry, trajectory references, or integral states.}
 \label{tab:baseline_comparison}
 \begin{tabular}{l S[table-format=2.2] S[table-format=3.2] l l}
 \toprule
@@ -417,7 +417,7 @@ $N{=}3$, ESKF+wind & 30 & $53.62 \pm 0.83$ & $118.83 \pm 0.91$ & 120.19 \\
 \end{table}
 
 \emph{Broadened Monte Carlo.}\label{sec:broadened_mc}
-A broadened campaign additionally randomizes payload mass (${\pm}10\%$), PID gains (${\pm}10\%$), and fault timing (${\pm}2$~s). In $5$ runs for $N{=}3$, broadened RMSE is $48.04 \pm 1.29$~cm (vs.\ narrow MC $48.84 \pm 0.49$~cm): standard deviation increases ${\sim}2.6\times$ but all runs remain stable, confirming robustness to simultaneous plant-parameter variation.
+A broadened campaign additionally randomizes payload mass (${\pm}10\%$), PID gains (${\pm}10\%$), and fault timing (${\pm}2$~s). In $5$ runs for $N{=}3$, broadened RMSE is $48.04 \pm 1.29$~cm (vs.\ narrow MC $48.84 \pm 0.49$~cm): standard deviation increases ${\sim}2.6\times$ but all runs remain stable. Because this broadened campaign contains only five trials, it is interpreted here as exploratory evidence of robustness to simultaneous plant-parameter variation rather than as the same statistical tier as Table~\ref{tab:monte_carlo}.
 
 \emph{Trajectory generalization.}\label{sec:trajectory_generalization}
 Testing across hover, point-to-point, and figure-eight references in the supplementary material confirms that the fault-absorption mechanism operates consistently: RMSE decreases with team size and remains bounded across all trajectory types. Hover RMSE is $19\%$ lower than figure-eight ($39.75$ vs.\ $48.84$~cm for $N{=}3$), confirming that the figure-eight amplifies post-fault error through cable-pendulum near-resonance.
@@ -427,60 +427,5 @@ Testing across hover, point-to-point, and figure-eight references in the supplem
 \label{sec:bead_discretization}
 % ============================================================
 
-The bead-chain cable model discretizes each continuous cable into $n_b$ point-mass beads connected by $(n_b{+}1)$ tension-only spring-damper segments. All preceding results use $n_b{=}8$. To assess whether the spatial resolution of the cable model materially affects the load-tracking conclusions, a discretization sweep varies $n_b \in \{2, 4, 8, 12, 16\}$ in the $N{=}5$ cascading-fault scenario (cable~1 snap at $7.0$~s, cable~3 snap at $12.0$~s) while holding all other parameters---cable rest length, total rope mass, payload mass, trajectory, fault schedule, controller gains, and simulation timestep ($\Delta t = 0.2$~ms)---fixed.
+The bead-chain cable model discretizes each continuous cable into $n_b$ point-mass beads connected by $(n_b{+}1)$ tension-only spring-damper segments. All preceding results use $n_b{=}8$. A dedicated sweep over $n_b \in \{2, 4, 8, 12, 16\}$ in the $N{=}5$ cascading-fault scenario kept cable-level stiffness and damping invariant while varying spatial resolution. Across the full range, the first-fault peak error changed by only $0.3$~cm ($31.5$--$31.8$~cm), the second-fault peak by $0.2$~cm ($43.2$--$43.4$~cm), the whole-run RMSE by $0.1$~cm ($43.1$--$43.2$~cm), and the recovery times remained $4.09$~s and $3.67$~s for the two faults. The main fault-tolerant transport conclusion is therefore insensitive to cable discretization over the tested range, and the $n_b{=}8$ baseline remains the practical choice.
 
-\emph{Invariant preservation.}
-Cable-level stiffness is preserved exactly: the runner computes per-segment stiffness as $k_{\mathrm{seg}} = k_{\mathrm{cable}} \cdot (n_b{+}1)$, correct for springs in series. Cable-level damping is held invariant by deriving a reference cable damping from the $n_b{=}8$ baseline and scaling per-segment damping as $c_{\mathrm{seg}} = c_{\mathrm{cable}} \cdot (n_b{+}1)$. The collision-geometry bead radius is clamped at $12$~mm for all tested bead counts; consequently, bead contact forces operate under a fixed geometric cap rather than scaling with segment length.
-
-\emph{Results.}
-Table~\ref{tab:bead_discretization} reports the event-centered metrics. The first-fault and second-fault peak errors and recovery times are evaluated using clean time windows that exclude startup transients and avoid cross-contamination between fault events. The whole-run RMSE in this table is computed from $t \geq 3.0$~s (excluding liftoff), which differs from the full-horizon RMSE in Table~\ref{tab:scenario_summary}.
-
-% Table generated from outputs/bead_count_sweep/five_drones/bead_sweep_metrics.json
-\begin{table}[t]
-  \centering
-  \caption{Cable discretization sensitivity ($N{=}5$).}
-  \label{tab:bead_discretization}
-  \setlength{\tabcolsep}{4pt}
-  \begin{tabular}{r c c c c c c}
-    \toprule
-    $n_b$ & \makecell{Fault\,1\\peak [cm]} & \makecell{Fault\,1\\$t_{\mathrm{rec}}$ [s]}
-     & \makecell{Fault\,2\\peak [cm]} & \makecell{Fault\,2\\$t_{\mathrm{rec}}$ [s]}
-     & \makecell{Whole-run\\RMSE [cm]} & \makecell{Wall\\time [s]} \\
-    \midrule
-    2  & 31.8 & 4.09 & 43.4 & 3.67 & 43.2 & 284 \\
-    4  & 31.7 & 4.10 & 43.2 & 3.67 & 43.2 & 343 \\
-    8  & 31.5 & 4.09 & 43.2 & 3.67 & 43.1 & 593 \\
-    12 & 31.5 & 4.09 & 43.2 & 3.67 & 43.1 & 1144 \\
-    16 & 31.5 & 4.09 & 43.4 & 3.67 & 43.1 & 2003 \\
-    \bottomrule
-  \end{tabular}
-\end{table}
-
-Fig.~\ref{fig:bead_discretization} overlays the load tracking error for $n_b \in \{4, 8, 16\}$. Across the full discretization range, the first-fault peak error varies by only $0.3$~cm ($31.5$--$31.8$~cm), the second-fault peak error by $0.2$~cm ($43.2$--$43.4$~cm), and the whole-run RMSE by $0.1$~cm ($43.1$--$43.2$~cm). Recovery times are effectively identical at $4.09$~s (fault~1) and $3.67$~s (fault~2) for all bead counts. The metrics converge between $n_b{=}4$ and $n_b{=}8$, with changes from $8$ to $16$ beads below $0.15$~cm in all scalar metrics.
-
-\begin{figure}[t]
-  \centering
-  \includegraphics[width=\columnwidth]{./Figures/bead_discretization/bead_discretization_composite.pdf}
-  \caption{Load tracking error under cable discretization sweep ($N{=}5$, cascading faults). (a)~Full horizon; (b)~first-fault zoom ($t{=}7$~s); (c)~second-fault zoom ($t{=}12$~s). Dashed red lines mark fault times.}
-  \label{fig:bead_discretization}
-\end{figure}
-
-\emph{Interpretation.}
-The load-tracking response is effectively insensitive to cable discretization over the tested range ($n_b{=}2$ to $16$), with all scalar metrics varying by less than $1\%$. The main fault-tolerant transport conclusion---that the N-agnostic architecture absorbs cable topology changes without reconfiguration---is preserved across the tested discretization range. The $n_b{=}8$ baseline used throughout this paper captures the essential fault dynamics; finer discretization does not alter the mechanism, the scalability trend, or the quantitative metrics to within the precision reported in the preceding tables. Runtime scales approximately as $\mathcal{O}(n_b^{1.5})$, making the $n_b{=}8$ choice a practical tradeoff between resolution and computational cost.
-
-% ============================================================
-\subsection{Summary of Evidence}
-% ============================================================
-
-The full-Drake simulation results establish:
-
-\begin{enumerate}[label=(\roman*),nosep]
-  \item Stable payload tracking through abrupt cable-snap faults across $N \in \{3, 5, 7\}$, with load RMSE $44$--$49$~cm decreasing with team size (Table~\ref{tab:scenario_summary}). Empirical $\rho_{\mathrm{FT}}$ values ($1.26$--$1.39$) are consistent with the transient-aware prediction.
-  \item Under matched single-fault conditions, RMSE decreases monotonically from $48.8$ to $38.4$~cm as $N$ increases from $3$ to $7$ (Table~\ref{tab:matched_single_fault}). Fault-count isolation at $N{=}7$ (Table~\ref{tab:fault_count_isolation}) deconfounds the remaining variable.
-  \item A sharp thrust-saturation phase transition at $f_{\max} \approx 45$~N coincides with the theoretical post-fault minimum; the default $150$~N provides $3\times$ headroom (Table~\ref{tab:fmax_boundary}).
-  \item Sensor-realistic evaluation (Table~\ref{tab:sensor_realistic}), Monte Carlo validation (Table~\ref{tab:monte_carlo}), supplementary trajectory-generalization experiments, and baseline comparison (Table~\ref{tab:baseline_comparison}) confirm robustness across conditions.
-  \item ESO-active evaluation (Table~\ref{tab:eso_evaluation}) confirms that $\rho_{\mathrm{FT}}$ increases modestly with a stronger controller while absolute post-fault RMSE decreases, demonstrating that fault tolerance is not an artifact of a deliberately weakened controller.
-  \item Cable discretization sensitivity (Table~\ref{tab:bead_discretization}) confirms that varying the bead-chain resolution from $n_b{=}2$ to $16$ changes all scalar load-tracking metrics by less than $1\%$, establishing that the preceding results are not artifacts of a particular spatial discretization.
-\end{enumerate}
-
-Complementary reduced-order studies are provided in the supplementary material. The central conclusion is that N-agnostic decentralized architectures absorb cable topology changes without explicit fault detection or reconfiguration, as explained by the topology-independent error structure (Proposition~\ref{thm:topology_invariance}).
