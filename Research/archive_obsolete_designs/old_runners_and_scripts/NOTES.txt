@@ -1,0 +1,21 @@
+Old runners and post-processing scripts
+=======================================
+Purpose: Orchestration / analysis scripts from earlier phases.
+
+Files:
+- phase2_campaign_runner.py          Phase-2 campaign orchestrator.
+- run_full_campaign.sh               Early 6-scenario shell runner
+                                     (soft-rope era, before IEEE figure style).
+- run_four_drones_scenarios.sh       Box-only 4-drone runner.
+- four_drones_meshcat_replay.py      pydrake-based replay attempt — replaced
+                                     once Meshcat recording was moved into
+                                     the C++ sim itself.
+- scripts/                           Phase-1 analyze_* Python tools for
+                                     the early single-drone MPC work.
+
+Why kept: reference only. They illustrate how the campaign was run in
+earlier phases. They generally target old source files that are now in
+sibling archive folders here — so re-running them would need the
+corresponding old targets restored in CMakeLists.
+
+Active counterpart: Research/run_ieee_campaign.sh  +  Research/analysis/ieee/

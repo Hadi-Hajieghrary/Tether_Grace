@@ -1,0 +1,13 @@
+Old design documentation
+========================
+Purpose: Markdown describing earlier design iterations that were later
+replaced. Superseded by `Research/DECENTRALIZED_FAULT_AWARE_README.md`
+and the top-level `Research/README.md`.
+
+Files:
+- FOUR_DRONES_SCENARIO.md   Originally documented the box-only 4-drone
+                            test harness. The physics and controller have
+                            since been rewritten twice; most details are
+                            no longer accurate.
+
+Active counterpart: Research/DECENTRALIZED_FAULT_AWARE_README.md

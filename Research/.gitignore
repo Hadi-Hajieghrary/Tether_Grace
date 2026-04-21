@@ -1,0 +1,15 @@
+# CMake / build output
+cpp/build/
+cpp/**/build/
+
+# Python caches
+__pycache__/
+*.pyc
+*.pyo
+
+# Editor / IDE temp files
+*.swp
+.vscode/*.log
+
+# Local-only scratch
+*.tmp

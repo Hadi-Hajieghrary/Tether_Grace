@@ -1,0 +1,20 @@
+Early Phase 4 — four-drone box-only test
+========================================
+Era: first attempt at a four-drone fleet, before switching to URDF quadrotors.
+
+Purpose: Extend the Phase-2.5 architecture to N = 4 drones. Used simple
+coloured box visuals (no URDF model) to keep the plant tractable while
+the team nailed down the load-sharing dynamics.
+
+Files:
+- decentralized_mpc_four_drones_test_main.cc  Top-level 4-drone sim harness.
+- quad_plant_state_splitter.{cc,h}            Four-drone version of the
+                                              plant-state splitter.
+
+Why superseded: early validation only; payload-tracking was jumpy and the
+box visuals were unsuitable for paper-quality replay. Replaced in quick
+succession by: (a) a proper URDF-based 4-drone sim with the peer-aware
+controller, and (b) the fully-local QP controller.
+
+Replaced by: Research/cpp/src/decentralized_local_controller.cc
+            Research/cpp/src/decentralized_fault_aware_sim_main.cc (URDF)

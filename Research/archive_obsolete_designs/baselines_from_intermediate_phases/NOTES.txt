@@ -1,0 +1,23 @@
+Baseline simulations kept from earlier phases
+=============================================
+Purpose: Reference / regression harnesses from Tether_Lift baselines.
+These were useful in earlier phases for benchmarking the new decentralized
+controller against the unmodified single-loop GPAC lift controller from
+Tether_Lift (and for smoke-testing the multibody plant assembly before
+our own controller was ready).
+
+Files:
+- fault_injection_main.cc   Wraps Tether_Lift's unmodified controllers in
+                            our sim harness with a CableFaultGate — used
+                            as a Phase-1/2 regression reference.
+- gpac_fault_sim_main.cc    GPAC-specific variant (adds an extended-state
+                            observer plus concurrent-learning adaptive
+                            load estimator around the same Tether_Lift
+                            inner-loop controllers).
+
+Why kept: both are fully-wired working sims, independently useful for
+"baseline vs our-controller" comparisons in future paper revisions. They
+are NOT compiled by the trimmed CMakeLists; if you want to revive them,
+restore their `add_executable` blocks (the source files are right here).
+
+Active counterpart: Research/cpp/src/decentralized_fault_aware_sim_main.cc

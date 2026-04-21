@@ -1,0 +1,23 @@
+Phase 1 — single-drone decentralized MPC
+=========================================
+Era: early Phase 1 of the research programme.
+
+Purpose: First attempt at an explicit model-predictive controller using
+SNOPT over a short horizon, applied to one quadrotor carrying a payload
+via a single rope. Meant to serve as the N = 1 base case for later
+extension to multi-drone.
+
+Files:
+- decentralized_mpc_test_main.cc   Top-level sim harness.
+- decentralized_optimal_controller.{cc,h}
+                                   The SNOPT MPC controller (abandoned).
+- plant_state_splitter.{cc,h}      Utility that sliced the plant state
+                                   vector into drone-position, rope-tension,
+                                   and cable-direction signals.
+
+Why superseded: the MPC never tracked reference properly (trajectory-tracking
+cost had no gradient in decision variables — see discussion in the
+session memory); replaced by a simple cascade PD, which later evolved into
+the peer-aware controller and finally into the fully-local QP controller.
+
+Replaced by: Research/cpp/src/decentralized_local_controller.cc
