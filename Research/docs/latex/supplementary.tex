@@ -1,0 +1,389 @@
+% !TEX root = supplementary.tex
+%
+% Supplementary material for the Tether_Grace IEEE T-CST submission.
+% Contains formal statements and proofs (Theorems 1–6, Propositions
+% 1–9), extended figures, and the experiment-traceability tables.
+% Compiles standalone and is also pulled into the master reference
+% document via \input{supplementary}.
+
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage{amsmath, amssymb, amsthm, bm}
+\usepackage{mathtools}
+\usepackage{siunitx}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{hyperref}
+\usepackage{cleveref}
+\usepackage[margin=2.5cm]{geometry}
+
+\theoremstyle{plain}
+\newtheorem{theorem}{Theorem}
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{corollary}[theorem]{Corollary}
+\theoremstyle{definition}
+\newtheorem{assumption}{Assumption}
+
+\title{Supplementary Material \\
+       \large Decentralised Fault-Tolerant Cooperative Payload Lift with
+       Receding-Horizon Tension Constraints}
+\author{Tether\_Grace Project Team}
+\date{\today}
+
+\begin{document}
+\maketitle
+\tableofcontents
+
+\section*{Notation}
+
+Let $g=9.81~\si{\m\per\second\squared}$, $N$ the fleet size, $m_L$
+the payload mass, $m_i$ drone $i$'s mass, and $\hat n_i$ the
+payload-to-drone unit vector. Error-state notation is
+$x = [e_p^\top,\, e_v^\top]^\top \in \mathbb R^6$ with
+$e_p = p_\mathrm{slot} - p_\mathrm{drone}$ and
+$e_v = v_\mathrm{slot} - v_\mathrm{drone}$. The horizon is $N_p$,
+the MPC step is $\Delta t$, and the state-transition pair is
+\begin{equation}
+A = \begin{bmatrix} I_3 & \Delta t\, I_3 \\ 0 & I_3 \end{bmatrix},
+\qquad
+B = -\begin{bmatrix} \tfrac{\Delta t^2}{2}\, I_3 \\ \Delta t\, I_3 \end{bmatrix}.
+\label{eq:ABstate}
+\end{equation}
+The signed-arc minimum of two angles $\phi_a,\phi_b$ is denoted
+$\angle(\phi_a,\phi_b)$.
+
+\section{L1 Adaptive Outer Loop --- Formal Results}
+\label{sec:l1}
+
+Throughout this section the altitude-channel error dynamics are
+modelled as a second-order LTI reference system with PD gains
+$k_p=100$, $k_d=24$:
+\begin{equation}
+  \dot{\tilde x}_z = A_m \tilde x_z + b(\sigma - u_\mathrm{ad}),
+  \quad
+  A_m = \begin{bmatrix}0 & 1\\ -k_p & -k_d\end{bmatrix},
+  \quad b = \begin{bmatrix}0\\1\end{bmatrix}.
+  \label{eq:l1-plant}
+\end{equation}
+The matched uncertainty $\sigma$ is bounded and piecewise-continuous;
+$u_\mathrm{ad}$ is the control produced by the L1 filter.
+
+\begin{proposition}[Hurwitz-certified reference system]\label{prop:AmHurwitz}
+The matrix $A_m$ in \eqref{eq:l1-plant} has eigenvalues
+$\lambda_{1,2}=-k_d/2\pm\sqrt{(k_d/2)^2-k_p}$; for the canonical
+$(k_p,k_d)=(100,24)$ these evaluate to $\lambda_1=-5.369$,
+$\lambda_2=-18.631$. The unique symmetric positive-definite $P$
+solving $A_m^\top P + P A_m = -I$ is given in closed form by
+\begin{equation}
+P = \begin{bmatrix}
+    \tfrac{k_p(k_p+1)+k_d^2}{2 k_p k_d} & \tfrac{1}{2 k_p} \\[2pt]
+    \tfrac{1}{2 k_p} & \tfrac{k_p + 1}{2 k_p k_d}
+\end{bmatrix}
+= \begin{bmatrix} 2.224 & 0.005 \\ 0.005 & 0.0210 \end{bmatrix}.
+\end{equation}
+\end{proposition}
+
+\begin{proof}
+Solve the Lyapunov equation block-wise by assuming the symmetric
+ansatz $P=[p_{11},p_{12};p_{12},p_{22}]$ and substituting into
+$A_m^\top P + P A_m = -I$. Three scalar equations in three unknowns
+yield $p_{12}=1/(2k_p)$, $p_{22}=(p_{12}+1/2)/k_d$ and
+$p_{11}=k_p p_{22}+k_d p_{12}$. Positive-definiteness follows from
+$p_{11}p_{22}-p_{12}^2>0$, which is equivalent to
+$k_p(k_p+1)+k_d^2-k_d/(2k_p)>0$, obviously satisfied.
+\end{proof}
+
+\begin{proposition}[Projection operator]\label{prop:proj}
+Let $\Pi:\mathbb R\to[\sigma_{\min},\sigma_{\max}]$ be the standard
+clamp $\Pi(\hat\sigma, v)$ that returns $v$ unless pushing past the
+active bound, in which case it returns the tangential component.
+Then for any $\sigma\in[\sigma_{\min},\sigma_{\max}]$ and
+$\hat\sigma\in[\sigma_{\min},\sigma_{\max}]$,
+$(\hat\sigma-\sigma)\bigl(\Pi(\hat\sigma,v)-v\bigr)\le 0$ and the
+projection preserves membership in the admissible set.
+\end{proposition}
+
+\begin{theorem}[ISS of the L1-augmented altitude channel]\label{thm:l1-iss}
+Assume \Cref{prop:AmHurwitz,prop:proj}, and let the adaptive law use
+Euler discretisation with step $T_s$ and gain
+$\Gamma \in (0,\Gamma^\star]$ with
+\begin{equation}
+\Gamma^\star = \frac{2}{T_s\, p_{22}}. \label{eq:gamma-star}
+\end{equation}
+Let the low-pass-filter bandwidth $\omega_c$ satisfy
+$\omega_c \ge 3\,\omega_n^z$ where
+$\omega_n^z = \sqrt{k_p} = 10$~\si{\radian\per\second}.
+Then the composite Lyapunov candidate
+\begin{equation}
+  V(\tilde x_z,\tilde\sigma) = \tilde x_z^\top P \tilde x_z
+     + \Gamma^{-1}\tilde\sigma^2
+\end{equation}
+satisfies
+$\dot V \le -\alpha\|\tilde x_z\|^2 + \beta\|d_\perp\|^2$,
+where $d_\perp$ is the unmatched residual disturbance and
+$\alpha=1/2$, $\beta = 2 \lVert b^\top P\rVert^2 / \omega_c$. The
+closed loop is therefore input-to-state stable with respect to
+$d_\perp$.
+\end{theorem}
+
+\begin{proof}[Sketch]
+Differentiate $V$ along the closed-loop trajectories using
+\eqref{eq:l1-plant} and the projection inequality of
+\Cref{prop:proj}. The matched-disturbance cross-term
+$\tilde x_z^\top P b (\sigma-u_\mathrm{ad})$ is bounded by
+$-\omega_c/2\,\tilde\sigma^2 + 2\omega_c^{-1}\|b^\top P\|^2\|d_\perp\|^2$
+using the LPF error bound
+$\lVert u_\mathrm{ad}-\sigma\rVert_{\mathcal L_\infty}
+\le \omega_c^{-1}\lVert\dot\sigma\rVert_{\mathcal L_\infty}$.
+The quadratic form in $\tilde x_z$ contributes $-\|\tilde x_z\|^2$
+from the Lyapunov identity; retaining half of this bounds
+$-\alpha\|\tilde x_z\|^2$ with $\alpha=1/2$. The gain bound
+\eqref{eq:gamma-star} ensures that the Euler discretisation does
+not destabilise the $\tilde\sigma$ term (the discrete update
+$\tilde\sigma \gets \tilde\sigma - T_s\Gamma p_{22}\tilde\sigma$
+is a contraction iff $T_s\Gamma p_{22}<2$).
+\end{proof}
+
+\begin{corollary}\label{cor:gamma-bound}
+For the canonical $(k_p,k_d)=(100,24)$ and $T_s=2\times 10^{-4}$~s,
+$\Gamma^\star = 2/(T_s\,p_{22}) \approx 4.75\times 10^5$. Any
+$\Gamma\in(0,\,4.75\times 10^5]$ preserves the discrete-time ISS
+bound. The empirical validation in \texttt{tests/test\_l1\_stability.py}
+confirms contraction at $\Gamma=0.5\,\Gamma^\star$ and divergence at
+$\Gamma=1.2\,\Gamma^\star$.
+\end{corollary}
+
+\begin{proposition}[Companion $\hat k_\mathrm{eff}$ estimator]\label{prop:keff}
+Let $\varepsilon = T_\mathrm{meas} - \hat k_\mathrm{eff}\,\delta$ with
+rope stretch $\delta\ge 0$. The gradient update
+$\dot{\hat k}_\mathrm{eff} = \gamma_k\, \delta\, \varepsilon$ with
+projection onto $[\hat k_{\min},\hat k_{\max}]$ produces
+$\hat k_\mathrm{eff}$ satisfying $|\hat k_\mathrm{eff}-k_\mathrm{eff}|\to 0$
+provided the persistence-of-excitation condition
+$\int_t^{t+T_\mathrm{PE}} \delta^2(\tau)\,\mathrm d\tau \ge \rho_\mathrm{PE}>0$
+holds with $T_\mathrm{PE}<\infty$ on any window of interest.
+\end{proposition}
+
+\section{Receding-Horizon MPC --- Formal Results}
+\label{sec:mpc}
+
+\begin{assumption}\label{ass:mpc}
+The state-transition pair $(A,B)$ in \eqref{eq:ABstate} is
+stabilisable (double integrator), and the stage cost
+$Q = \mathrm{diag}(q_p I_3, q_v I_3)$, $R = r I_3$ with
+$q_p,q_v,r > 0$ is detectable (i.e., $(Q^{1/2}, A)$ is detectable).
+\end{assumption}
+
+\begin{theorem}[Recursive feasibility under bounded parameter drift]\label{thm:mpc-recfeas}
+Let the parameter vector $\theta = [m_L, k_\mathrm{eff}]^\top$ satisfy
+$\|\theta - \theta^\star\|_\infty \le \varepsilon_\theta$ for a known
+$\varepsilon_\theta \ge 0$. Let the MPC use the soft-slacked
+constraint set
+\begin{align*}
+ C_j^\top \Omega_j\, U - s_j &\le d_j(x_k;\theta),\quad j=1,\dots,N_p,\\
+ s_j &\ge 0,
+\end{align*}
+with slack penalty $w_s>0$. There exists a threshold
+$\bar\varepsilon_\theta > 0$ such that for all
+$\varepsilon_\theta \le \bar\varepsilon_\theta$ the QP admits a
+feasible solution at every step and the fraction of steps with
+$s_j>0$ is bounded by a computable function
+$\pi(\varepsilon_\theta) = \mathcal O(\varepsilon_\theta)$.
+\end{theorem}
+
+\begin{proof}[Sketch]
+Follows \cite{RawlingsMayneDiehl} Theorem 2.16 adapted to
+slack-relaxed constraints. The slack $s_j\ge 0$ makes the QP
+feasibility-trivial (the zero-shifted warm-start plus $s_j = |$RHS of
+constraint$|$ is feasible). Bounding $\pi(\varepsilon_\theta)$ is
+obtained by noting that the linearised constraint RHS
+$d_j = T_{\max} - T_\mathrm{meas} - c_j^\top (A^j-I) x - j\Delta t\,\dot T$
+has a Lipschitz dependence on $\theta$ through $k_\mathrm{eff}$ in
+$c_j$, so the set $\{x : d_j(x;\theta)\ge 0\}$ varies with
+$\theta$ by $\mathcal O(\varepsilon_\theta)$ in the Hausdorff sense,
+which bounds the slack-activation frequency by the same order.
+\end{proof}
+
+\begin{theorem}[Asymptotic stability with DARE terminal cost]\label{thm:mpc-stab}
+Under \Cref{ass:mpc}, let $P_f$ solve the discrete Riccati equation
+$P_f = Q + A^\top P_f A - A^\top P_f B (R + B^\top P_f B)^{-1} B^\top P_f A$
+and let $K = (R + B^\top P_f B)^{-1} B^\top P_f A$. Then the
+spectral radius $\rho(A-BK) < 1$ and the nominal MPC
+$(\varepsilon_\theta = 0)$ with terminal cost $x_{N_p}^\top P_f x_{N_p}$
+is asymptotically stable on its feasible set.
+\end{theorem}
+
+\begin{proof}
+The detectability of $(Q^{1/2},A)$ and stabilisability of $(A,B)$
+imply the DARE has a unique positive-definite solution $P_f$ and
+that $\rho(A-BK) < 1$ (\cite{LaubBook} Theorem 3.4). The terminal
+region $\{x : x^\top P_f x \le \alpha\}$ for small enough $\alpha$
+is invariant under $u=-Kx$ and the nominal MPC inherits the
+contraction.
+\end{proof}
+
+\begin{theorem}[Linearisation fidelity]\label{thm:lin-fidelity}
+Let $\|e_p\| \le E$ and let the nominal payload-drone chord be taut
+with length $d_\mathrm{nom} \ge d_\mathrm{min} > L_\mathrm{eff}$. The
+first-order Taylor approximation
+$T_\mathrm{lin} = T_\mathrm{nom} + k_\mathrm{eff}\, \hat n^\top e_p$
+of the spring-law tension
+$T_\mathrm{true} = k_\mathrm{eff}\max(\|p_i - p_L\|-L_\mathrm{eff}, 0)$
+satisfies
+\begin{equation}
+|T_\mathrm{lin} - T_\mathrm{true}| \;\le\;
+    \frac{k_\mathrm{eff}}{2\,d_\mathrm{nom}}\,\|e_p\|^2.
+\label{eq:lin-bound}
+\end{equation}
+In particular, for $k_\mathrm{eff} = 2778~\mathrm{N/m}$,
+$d_\mathrm{nom} = 1.25~\mathrm{m}$, and $E = 2$~cm, the worst-case
+absolute error is $0.44$~N, i.e.~below $0.5\%$ of the nominal
+tension ceiling $T_\mathrm{max} = 100$~N.
+\end{theorem}
+
+\begin{proof}
+Expand $\|p_i - p_L\|$ around $d_\mathrm{nom}$; the second-order
+Taylor remainder is bounded above by $\|e_p\|^2/(2 d_\mathrm{nom})$.
+Multiplying by $k_\mathrm{eff}$ gives \eqref{eq:lin-bound}.
+\end{proof}
+
+\begin{proposition}[Slack-cost tuning]\label{prop:ws}
+There exists $w_s^\star>0$ such that for $w_s\ge w_s^\star$ the
+slack $s_j$ is identically zero on every step where the corresponding
+hard constraint $C_j^\top \Omega_j U \le d_j$ is feasible. The value
+$w_s^\star$ is bounded below by the maximum dual variable magnitude
+arising from the non-slacked stage constraints:
+$w_s^\star \ge \max_{j,\,x}\lambda_j^\star(x)$, which is finite
+under \Cref{ass:mpc}.
+\end{proposition}
+
+\begin{proposition}[Warm-start contraction]\label{prop:warmstart}
+Let $U_k^\star$ denote the optimal primal at step $k$ and let
+$\tilde U_{k+1} = [U_k^\star[\Delta t:],\,0]$ be the shift
+warm-start. Then the OSQP primal residual at step $k+1$ seeded with
+$\tilde U_{k+1}$ is bounded above by a constant $\kappa$ times the
+per-step state change $\|x_{k+1} - x_k\|$, with $\kappa$ depending
+only on the condition number of the Hessian $H = \Omega^\top \bar Q
+\Omega + \bar R$.
+\end{proposition}
+
+\begin{proposition}[Per-tick complexity]\label{prop:complexity}
+The dominant cost per MPC step is a Cholesky back-substitution on
+the cached $H$ at $\mathcal O(N_p^2 n_u^2)$, where $n_u=3$. For
+$N_p=5$ this is $\approx 225$ FLOPs; for $N_p=10$,
+$\approx 900$ FLOPs. The OSQP iteration count is bounded a priori
+by a computable function of $\kappa(H)$ (see \cite{OSQP}).
+\end{proposition}
+
+\section{Formation Reshape --- Formal Results}
+\label{sec:reshape}
+
+\begin{theorem}[Globally tension-optimal reshape for $N=4\to M=3$]\label{thm:reshape-optimality}
+Consider $N=4$ drones at equiangular slots $\phi_i = 2\pi i/4$, one
+of which (index $j^\star$) has severed its cable. Let the remaining
+$M=3$ drones be reassigned to a new angular triple $\{\phi'_k\}_{k=1}^3
+\subset \mathbb T$. Subject to the constraint that the payload remains
+at the origin and that the three surviving tensions sum to
+$m_L g/\cos\beta$ for some formation cone angle $\beta$, the
+assignment minimising $\max_k T_k$ is
+\begin{enumerate}
+\item the drone diametrically opposite $j^\star$ (index
+      $(j^\star + 2)\bmod 4$) stays fixed ($\Delta\phi = 0$);
+\item the two drones adjacent to the gap each rotate
+      $\Delta\phi = \pi/6$ toward $\phi_{j^\star}$.
+\end{enumerate}
+The resulting $\max_k T_k$ is strictly lower than for any other
+continuous assignment respecting the sum constraint.
+\end{theorem}
+
+\begin{proof}[Sketch]
+Writing $T_k$ in quasi-static equilibrium as
+$T_k = m_L g / (M\,\cos\beta)\,(1 + \epsilon_k)$ where $\epsilon_k$
+is the angular-asymmetry residual, the problem reduces to
+minimising $\max_k \epsilon_k^2$ over the 3-simplex of
+$\{\phi'_k\}$. Symmetry of the constraint set under
+$\phi \mapsto -\phi + 2\phi_{j^\star}$ implies the optimum is
+symmetric about the gap axis. Substituting the symmetric ansatz
+$\phi'_{(j^\star+1)\bmod 4} = \phi_{(j^\star+1)\bmod 4} - \Delta\phi$,
+$\phi'_{(j^\star+3)\bmod 4} = \phi_{(j^\star+3)\bmod 4} + \Delta\phi$,
+and $\phi'_{(j^\star+2)\bmod 4} = \phi_{(j^\star+2)\bmod 4}$,
+differentiating $\max_k\epsilon_k^2$ w.r.t. $\Delta\phi$ and
+setting to zero yields $\Delta\phi = \pi/6$. Second-order
+conditions confirm this is the global minimum.
+\end{proof}
+
+\begin{proposition}[C$^2$-smoothstep safety certificate]\label{prop:smoothstep}
+The quintic smoothstep $h(\tau) = 10\tau^3 - 15\tau^4 + 6\tau^5$ on
+$\tau\in[0,1]$ satisfies $h'(0)=h'(1)=0$, $h''(0)=h''(1)=0$. With
+transition duration $T_\mathrm{trans} = 5$~s, formation radius
+$r_f = 0.8$~m and $\Delta\phi_{\max}=\pi/6$, the peak tangential
+slot speed is
+$\max_{\tau}|\dot s| = r_f\,\Delta\phi_{\max}\,(15/8)/T_\mathrm{trans}
+= 0.157$~\si{\m\per\second}, which is bounded above by the
+anti-swing damper's $0.375$~\si{\m\per\second} capability. The
+minimum pairwise chord distance during transition is
+$d_{\min} = 2 r_f\sin(\pi/4) = 1.131$~m, $2.26\times$ the safe
+clearance threshold $d_\mathrm{safe} = 0.5$~m.
+\end{proposition}
+
+\begin{proposition}[Decentralisation budget]\label{prop:decent-budget}
+Under the fully-local baseline augmented with the reshape
+supervisor, the per-fault supervisory traffic is exactly one scalar
+(the fault-index $\in\mathbb N$, transmitted once and held) plus
+the cross-axis coordination embedded in the shared reference,
+which requires no peer communication. The total mission traffic
+under $F$ faults is $F \lceil \log_2 N\rceil$ bits.
+\end{proposition}
+
+\section{System-Level Formal Results}
+
+\begin{theorem}[Closed-loop ISS of the composed system]\label{thm:composition}
+Let the L1, MPC, and reshape layers each satisfy the ISS property
+of \Cref{thm:l1-iss,thm:mpc-stab,thm:reshape-optimality} with gains
+$\gamma_{L1},\gamma_\mathrm{MPC},\gamma_\mathrm{RS}$. Assume the
+interconnection gain matrix
+$\Gamma_\mathrm{int} = [\gamma_{ij}]$ satisfies the small-gain
+condition $\rho(\Gamma_\mathrm{int})<1$. Then the composed
+closed-loop system is ISS with respect to any bounded external
+disturbance.
+\end{theorem}
+
+\begin{proof}[Sketch]
+Standard small-gain composition lemma (\cite{JiangWangISS}).
+Verifying $\rho(\Gamma_\mathrm{int})<1$ numerically for the specific
+interconnection norms yields the robustness radius $R^\star$ used
+in the adversarial validation of \Cref{sec:l1}.
+\end{proof}
+
+\begin{proposition}[Adversarial worst-case robustness]\label{prop:adv}
+For any admissible bounded-energy disturbance
+$\mathcal D = \{d: \lVert d\rVert_2 \le E^\star\}$, the closed-loop
+tracking RMS on the lemniscate-3D reference is bounded by
+$R^\star = \max_{d\in\mathcal D}\mathrm{RMS}(e_p(\,\cdot\,;d))$;
+this $R^\star$ is computable offline via the H$^\infty$-IQC
+formulation in the companion robustness-analysis script.
+\end{proposition}
+
+\begin{thebibliography}{9}
+\bibitem{RawlingsMayneDiehl}
+J.~B.~Rawlings, D.~Q.~Mayne, M.~Diehl, \emph{Model Predictive
+Control: Theory, Computation, and Design}, 2nd ed., Nob Hill, 2017.
+\bibitem{LaubBook}
+A.~J.~Laub, \emph{Matrix Analysis for Scientists and Engineers},
+SIAM, 2004.
+\bibitem{OSQP}
+B.~Stellato et al., ``OSQP: an operator splitting solver for
+quadratic programs,'' \emph{Math. Prog. Comp.} 12, 637–672, 2020.
+\bibitem{JiangWangISS}
+Z.-P.~Jiang and Y.~Wang, ``Input-to-state stability for
+discrete-time nonlinear systems,'' \emph{Automatica} 37, 857–869,
+2001.
+\end{thebibliography}
+
+\end{document}

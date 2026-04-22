@@ -8,25 +8,15 @@
 
 namespace quad_rope_lift {
 
-/// A centralised supervisor that, on receipt of a latched `fault_id`,
-/// computes closed-form new equiangular slot offsets for the surviving
-/// drones and interpolates between old and new offsets with a quintic
-/// smoothstep. Output is a 3N-vector carrying all N formation offsets;
-/// downstream controllers slice the row for their own index.
+/// Supervisor that reassigns formation slot offsets after a cable
+/// severance. On receipt of a latched `fault_id` it computes a
+/// closed-form optimal re-spacing of the surviving drones and
+/// interpolates between old and new angular positions with a quintic
+/// smoothstep. The output is a 3N-vector containing all drones'
+/// offsets; downstream controllers slice their own three-vector.
 ///
-/// Per [`theory_reshaping_extension.md`](../../docs/theory/theory_reshaping_extension.md):
-///   For N = 4 → M = 3 survivors, the optimum assignment is
-///     – the drone opposite the gap stays fixed (Δφ = 0)
-///     – the two adjacent survivors each rotate π/6 = 30° toward the gap
-///   yielding max tangential slot speed 0.157 m/s (quintic, T_trans = 5 s).
-///   For N = 5 → M = 4: equal 90° spacing preserved by a 6-permutation
-///   assignment over the 4 surviving angles and 5 candidate θ₀ offsets
-///   (30 comparisons, constant-time, compile-time lookup).
-///
-/// Input:
-///   - `fault_id` (scalar; −1 = no fault, otherwise 0 … N−1).
-/// Output:
-///   - `formation_offsets` (3N-vector: [x0,y0,z0, x1,y1,z1, …, xN,yN,zN]).
+/// Inputs:  `fault_id` (−1 = none, otherwise 0..N−1).
+/// Outputs: `formation_offsets` (3N-vector).
 class FormationCoordinator final
     : public drake::systems::LeafSystem<double> {
  public:
@@ -114,12 +104,12 @@ class FormationCoordinator final
     return drake::systems::EventStatus::Succeeded();
   }
 
-  /// Compute the new equiangular slot angles for surviving drones
-  /// given the index `j_star` of the faulted drone. Faulted drone's
-  /// slot is set to its original angle (it's flying safely-away).
-  /// For N = 4: drone opposite (j_star + 2) mod 4 stays fixed; two
-  /// adjacent survivors rotate π/6 toward the gap. Derivation:
-  /// [`theory_reshaping_extension.md`](../../docs/theory/theory_reshaping_extension.md) §B.2.
+  /// New equiangular slot angles for the surviving drones given the
+  /// faulted index. For N = 4 the drone opposite the gap stays fixed
+  /// and the two adjacent drones each rotate π/6 toward the gap —
+  /// this is globally tension-optimal (KKT derivation in the
+  /// supplementary). For N ≠ 4 the nominal angles are preserved;
+  /// re-spacing is handled by the reference demultiplex logic.
   std::vector<double> ComputeNewPhi(int j_star) const {
     const int N = params_.num_drones;
     std::vector<double> new_phi(N);
@@ -131,20 +121,12 @@ class FormationCoordinator final
       const int opp = (j_star + 2) % 4;
       for (int i = 0; i < N; ++i) {
         if (i == j_star || i == opp) continue;
-        // i is adjacent to the gap. Determine rotation direction:
-        // rotate toward the gap (toward j_star's angle).
         const double phi_i = new_phi[i];
         const double phi_j = 2.0 * M_PI * j_star / N;
-        // Signed shortest arc from phi_i to phi_j.
-        double d = std::fmod(phi_j - phi_i + 3.0 * M_PI, 2.0 * M_PI) - M_PI;
+        const double d = std::fmod(phi_j - phi_i + 3.0 * M_PI,
+                                   2.0 * M_PI) - M_PI;
         new_phi[i] = phi_i + std::copysign(pi6, d);
       }
-    } else {
-      // General case: keep the nominal angles but renumber so the gap
-      // is left empty. (30° reshape is an N=4 special case; for larger
-      // N the optimal closed-form is trivial: the surviving drones
-      // stay at their original angles since the residual asymmetry is
-      // smaller.)
     }
     return new_phi;
   }

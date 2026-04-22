@@ -21,9 +21,9 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-# Startup-transient burn-in: single-source-of-truth in ieee_style.
-# Importing here prevents drift between the figure-plotting pipeline and
-# the metric-filler (resolves A3 of the 2026-04-21 doc audit).
+# Startup-transient burn-in is the single source of truth defined in
+# ieee_style; importing here prevents drift between figure-plotting
+# pipeline and metric filler.
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from ieee_style import BURN_IN_SECONDS as T_BURN_IN  # noqa: E402
 

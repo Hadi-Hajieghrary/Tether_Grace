@@ -43,9 +43,9 @@ DecentralizedLocalController::DecentralizedLocalController(
   tension_port_ = DeclareVectorInputPort(
       "rope_tension", BasicVector<double>(4)).get_index();
 
-  // Optional dynamic formation-offset override (3-vector). Wired by
-  // the FormationCoordinator supervisor in Phase-H. Left unconnected
-  // ⇒ falls back to Params::formation_offset (default behaviour).
+  // Optional formation-offset override (3-vector). When connected by
+  // FormationCoordinator, it supersedes params_.formation_offset for
+  // slot computation. Unconnected ⇒ static offset is used.
   formation_offset_override_port_ =
       DeclareVectorInputPort(
           "formation_offset_override", BasicVector<double>(3)).get_index();
@@ -58,9 +58,8 @@ DecentralizedLocalController::DecentralizedLocalController(
       "control_vector", BasicVector<double>(6),
       &DecentralizedLocalController::CalcControlVector).get_index();
 
-  // L1 adaptive outer loop — allocate discrete state + periodic update
-  // event only when enabled. This keeps baseline behaviour byte-for-byte
-  // reproducible when `l1_enabled = false` (default).
+  // L1 adaptive outer loop: allocated only when enabled so the baseline
+  // path is bit-identical when l1_enabled is false.
   if (params_.l1_enabled) {
     Eigen::VectorXd l1_init(5);
     l1_init << 0.0, 0.0, 0.0, 0.0, params_.l1_k_eff_nominal;
@@ -146,7 +145,7 @@ void DecentralizedLocalController::CalcControlForce(
     std::vector<ExternallyAppliedSpatialForce<double>>* output) const {
   const double t = context.get_time();
 
-  // ----------------------------------------------------------- sensed state
+  // Sensed state.
   const auto& state_vector = get_input_port(plant_state_port_).Eval(context);
   const auto& tension_data = get_input_port(tension_port_).Eval(context);
   const double measured_tension = tension_data[0];
@@ -166,32 +165,27 @@ void DecentralizedLocalController::CalcControlForce(
   const auto& payload_pose = plant_.EvalBodyPoseInWorld(*plant_context, payload_body);
   const auto& payload_vel  = plant_.EvalBodySpatialVelocityInWorld(*plant_context, payload_body);
   const Eigen::Vector3d v_L = payload_vel.translational();
-  (void)payload_pose;  // position available if needed for richer control
+  (void)payload_pose;
 
-  // ------------------------------------------------------------- pickup latch
+  // Latch the pickup-ramp start time on the first tick the rope goes
+  // taut. Once latched, the value is preserved for the rest of the run.
   if (!pickup_start_time_.has_value()
       && measured_tension >= params_.pickup_detection_threshold) {
     pickup_start_time_ = t;
   }
 
-  // ----------------------------------------------------------- slot reference
   Eigen::Vector3d p_slot, v_slot;
   ComputeSlotReference(t, &p_slot, &v_slot);
-  // Apply dynamic formation-offset override (Phase-H) when wired.
-  // `HasValue` returns true only if the port is connected AND the
-  // upstream system has produced a non-default value.
   if (get_input_port(formation_offset_override_port_).HasValue(context)) {
     const auto& offs =
         get_input_port(formation_offset_override_port_).Eval(context);
-    // Reconstruct slot with the override (drop the static offset
-    // already added by ComputeSlotReference first).
-    p_slot = p_slot - params_.formation_offset + Eigen::Vector3d(
-        offs[0], offs[1], offs[2]);
+    p_slot = p_slot - params_.formation_offset
+             + Eigen::Vector3d(offs[0], offs[1], offs[2]);
   }
 
-  // --------------------------------------------- anti-swing slot correction
-  // Shift the slot by -swing_kd · v_payload_xy so the drone moves against
-  // the payload swing and applies a rope pull that brakes it.
+  // Anti-swing correction: shift the slot by −swing_kd · v_{L,xy} so
+  // the drone moves against the payload swing and its rope pull brakes
+  // the horizontal motion. Bounded by swing_offset_max.
   Eigen::Vector3d swing_correction = Eigen::Vector3d::Zero();
   swing_correction.head<2>() = -params_.swing_kd * v_L.head<2>();
   const double swing_mag = swing_correction.norm();
@@ -201,66 +195,36 @@ void DecentralizedLocalController::CalcControlForce(
   last_swing_offset_mag_ = swing_correction.norm();
   const Eigen::Vector3d p_slot_dynamic = p_slot + swing_correction;
 
-  // --------------------------------------------------- desired accelerations
+  // Outer-loop PD on slot-tracking plus horizontal anti-swing feed-forward.
   Eigen::Vector3d e_p = p_slot_dynamic - p_self;
   Eigen::Vector3d e_v = v_slot - v_self;
-  const double ax_track = params_.position_kp * e_p.x() + params_.position_kd * e_v.x();
-  const double ay_track = params_.position_kp * e_p.y() + params_.position_kd * e_v.y();
-  const double az_track = params_.altitude_kp * e_p.z() + params_.altitude_kd * e_v.z();
-  const Eigen::Vector3d a_track(ax_track, ay_track, az_track);
-
-  // Swing-damping target acceleration (horizontal only). When the payload
-  // moves in +x, the drone should apply a negative-x component so its rope
-  // pulls the payload back toward the reference.
+  const Eigen::Vector3d a_track(
+      params_.position_kp * e_p.x() + params_.position_kd * e_v.x(),
+      params_.position_kp * e_p.y() + params_.position_kd * e_v.y(),
+      params_.altitude_kp * e_p.z() + params_.altitude_kd * e_v.z());
   const Eigen::Vector3d a_swing(-params_.swing_kd * v_L.x(),
                                 -params_.swing_kd * v_L.y(), 0.0);
 
-  // ---------------------------------------------------------- per-drone QP
-  // Structure the objectives so they AUGMENT each other rather than compete:
-  //   a_target  =  a_track  +  w_swing · a_swing         (tracking + anti-swing)
-  //
-  //   min   ‖a − a_target‖²  +  w_effort · ‖a‖²          (projection onto feasible
-  //                                                        envelope, with light
-  //                                                        penalty on magnitude)
-  //   s.t.  |a_x|, |a_y|  ≤  g · tan(θ_max)              (tilt envelope)
-  //         a_z  ∈  [a_z_min, a_z_max]                    (thrust envelope)
-  //
-  // Anti-swing is applied as an additive correction on top of tracking; the
-  // QP then chooses the closest feasible acceleration that respects actuator
-  // limits while lightly preferring smaller-magnitude commands (effort).
+  // Per-drone QP projects the PD+swing target onto the actuator envelope:
+  //   min  ‖a − (a_track + w_swing·a_swing)‖² + w_effort·‖a‖²
+  //   s.t. |a_x|, |a_y| ≤ g tan θ_max,  a_z ∈ [a_z_min, a_z_max].
   Eigen::Vector3d a_target = a_track + params_.w_swing * a_swing;
 
-  // L1 adaptive correction — inject u_ad on the altitude channel, right
-  // before the QP. Sign convention derived from the empirical test
-  // m_L = 3.9 kg (controller tuned for 3.0 kg) in which the drone
-  // systematically droops below slot (e_z_meas > 0) and the adaptive
-  // law drives σ̂ positive. With the theory-doc's '-= u_ad' convention,
-  // this would drop the command further, worsening the droop. The
-  // correct sign for this sim is '+= u_ad': when the adaptive law
-  // decides σ̂ > 0 (predictor interpretation: real drone is above
-  // predictor due to an unmeasured upward disturbance), we cancel it by
-  // adding u_ad to the target so the drone tracks.
-  //
-  // Equivalently, σ̂ here captures the sign of the dominant *matched*
-  // disturbance in this simulator (rope-geometry residual, actuator
-  // mismatch, etc.) and the injection compensates it. Documented in
-  // theory_l1_extension.md caveat for implementation.
+  // Inject the LP-filtered adaptive compensation u_ad on the altitude
+  // channel. The sign is '+=' because σ̂ is defined so that a positive
+  // value corresponds to an upward matched disturbance at the drone;
+  // the control must reinforce a_target by u_ad to cancel it.
   if (params_.l1_enabled) {
     const auto& l1s = context.get_discrete_state(l1_state_idx_).value();
-    a_target.z() += l1s[3];  // l1s[3] = u_ad
+    a_target.z() += l1s[3];
   }
   const double a_tilt_max = params_.gravity * std::tan(params_.max_tilt);
 
-  // Vertical envelope comes from the thrust limits, net of the tension
-  // feed-forward (computed below). Use the measured tension as the ff value
-  // (post-pickup). During pickup we apply a C¹-continuous smoothstep ramp
-  //
-  //     α(τ) = 3τ² − 2τ³          (τ ∈ [0,1])
-  //
-  // so that the feed-forward tension grows smoothly from 0 to the nominal
-  // value T* = m_L g / N with zero first-derivative at both endpoints,
-  // eliminating the step-discontinuity that previously excited the 5 Hz
-  // bead-chain axial mode at t = 0.
+  // Feed-forward rope tension. Post-pickup this is the measured tension.
+  // During the pickup window we ramp it with a C¹ smoothstep
+  // α(τ) = 3τ² − 2τ³ so the feed-forward rises with zero initial and
+  // terminal derivatives, avoiding the step-discontinuity that would
+  // otherwise excite the bead-chain axial mode.
   double T_ff;
   const bool in_pickup = pickup_start_time_.has_value()
       && (t - pickup_start_time_.value() <= params_.pickup_ramp_duration);
@@ -315,10 +279,8 @@ void DecentralizedLocalController::CalcControlForce(
     last_qp_cost_ = -1.0;
   }
 
-  // Active-set detection: a bound is "active" if the optimum lies within
-  // eps_active of it. Use eps scaled by the envelope magnitude so it is
-  // dimensionally sane across tilt-x/y (≈ g tan θ_max ≈ 7 m/s²) and the
-  // thrust channel (|a_z_max − a_z_min| ≈ 100 m/s²).
+  // Record which box constraints are active, scaling ε by envelope size
+  // so the test is dimensionally consistent across tilt and thrust.
   const double eps_tilt = 1e-3 * a_tilt_max;
   const double eps_thrust = 1e-3 * (a_z_max - a_z_min);
   last_active_set_[0] = (a_d_opt(0) <= -a_tilt_max + eps_tilt) ? 1.0 : 0.0;
@@ -329,11 +291,9 @@ void DecentralizedLocalController::CalcControlForce(
   last_active_set_[5] = (a_d_opt(2) >=  a_z_max   - eps_thrust) ? 1.0 : 0.0;
   last_T_ff_ = T_ff;
 
-  // -------------------------------------------- thrust & tilt synthesis
+  // Thrust + tilt synthesis.
   double thrust = mass_ * (params_.gravity + a_d_opt.z()) + T_ff;
-  // Extra pickup-phase feedback to pull the rope taut faster — uses the
-  // same smoothstep schedule as the T_ff ramp so the two terms are
-  // co-phased and do not produce a step-discontinuous net thrust command.
+  // Pickup-phase tension feedback, co-phased with the T_ff smoothstep.
   if (in_pickup) {
     const double tau = std::clamp(
         (t - pickup_start_time_.value()) / params_.pickup_ramp_duration, 0.0, 1.0);
@@ -344,14 +304,14 @@ void DecentralizedLocalController::CalcControlForce(
   thrust = std::clamp(thrust, params_.min_thrust, params_.max_thrust);
   last_thrust_cmd_ = thrust;
 
-  // From commanded horizontal acceleration → desired roll / pitch (small-angle).
+  // Small-angle mapping from horizontal acceleration to roll/pitch.
   const double pitch_des = std::clamp(a_d_opt.x() / params_.gravity,
                                        -params_.max_tilt, params_.max_tilt);
   const double roll_des  = std::clamp(-a_d_opt.y() / params_.gravity,
                                        -params_.max_tilt, params_.max_tilt);
   last_tilt_mag_ = std::sqrt(pitch_des * pitch_des + roll_des * roll_des);
 
-  // ---------------------------------------------------- attitude inner loop
+  // Attitude inner loop (Lee-style proportional-derivative on SO(3)).
   const double current_roll  = std::atan2(R_self(2, 1), R_self(2, 2));
   const double current_pitch = std::asin(-R_self(2, 0));
   const double current_yaw_err = 0.5 * (R_self(1, 0) - R_self(0, 1));
@@ -411,7 +371,7 @@ void DecentralizedLocalController::CalcDiagnostics(
   const auto& payload_vel = plant_.EvalBodySpatialVelocityInWorld(*plant_context, payload_body);
   const Eigen::Vector3d v_L = payload_vel.translational();
 
-  // 13-element diagnostic vector — layout documented in the ctor.
+  // 13-element diagnostic vector; index layout documented in the ctor.
   output->SetAtIndex(0,  v_L.head<2>().norm());
   output->SetAtIndex(1,  last_swing_offset_mag_);
   output->SetAtIndex(2,  last_qp_cost_);
@@ -427,15 +387,12 @@ void DecentralizedLocalController::CalcDiagnostics(
   output->SetAtIndex(12, last_active_set_[5]);
 }
 
-// -------------------------------------------------------------------------
-// L1 adaptive outer-loop update event (theory_l1_extension.md §7.5).
-//
-// State layout (5-vector):
-//   [0] ê_z       predictor altitude error                      (m)
-//   [1] ê̇_z      predictor altitude error rate                  (m/s)
-//   [2] σ̂       matched uncertainty estimate                     (m/s²)
-//   [3] u_ad    LP-filtered adaptive acceleration correction      (m/s²)
-//   [4] k̂_eff  effective rope stiffness estimate                 (N/m)
+// L1 adaptive outer-loop update. State layout (5-vector):
+//   [0] ê_z    predictor altitude error                    (m)
+//   [1] ê̇_z   predictor altitude error rate               (m/s)
+//   [2] σ̂    matched-uncertainty estimate                 (m/s²)
+//   [3] u_ad LP-filtered adaptive correction              (m/s²)
+//   [4] k̂_eff effective rope-stiffness estimate           (N/m)
 drake::systems::EventStatus DecentralizedLocalController::CalcL1Update(
     const drake::systems::Context<double>& context,
     drake::systems::State<double>* state) const {
@@ -444,11 +401,8 @@ drake::systems::EventStatus DecentralizedLocalController::CalcL1Update(
   const double kdz = params_.altitude_kd;
   const double Gam = params_.l1_gamma;
   const double wc = params_.l1_omega_c;
-  // Lyapunov matrix entries (constant, theory-doc §4):
-  //   A_m = [[0,1];[−kp,−kd]],  solve A_mᵀ P + P A_m = −I.
-  //   With (kp, kd) = (100, 24):  p_{12} = 1/200 = 0.005,
-  //                               p_{22} = (p_{12} + 1/2)/kd = 0.02104,
-  //                               p_{11} = kp·p_{22} + kd·p_{12} = 2.224.
+  // Lyapunov matrix for A_m = [[0,1],[−kp,−kd]] solving Aᵀm P + P Am = −I.
+  // With (kp,kd) = (100,24): p12 = 1/200, p22 = (p12+0.5)/kd, p11 derived.
   constexpr double p12 = 0.005;
   constexpr double p22 = 0.02104;
 

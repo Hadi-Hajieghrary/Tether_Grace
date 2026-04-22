@@ -1,20 +1,11 @@
 /// @file decentralized_fault_aware_sim_main.cc
 ///
-/// Decentralized, fault-aware 4-quadcopter cooperative lift simulation.
-///
-/// Reuses Tether_Lift's proven simulation infrastructure (URDF-welded
-/// quadrotors, bead-chain ropes, ground plane, MeshcatVisualizer + HTML
-/// recording). The ONLY substitution is the per-drone controller:
-///
-///   QuadcopterLiftController        (baseline, intact assumption)
-///           ↓ replaced by
-///   DecentralizedFaultAwareController (peer-aware load rebalancing)
-///
-/// The new controller monitors peer rope tensions via a TensionCommunicator-
-/// like Multiplexer and automatically increases its share of the load when a
-/// peer's cable severs. No centralized fault signal is used; each drone
-/// senses the fault indirectly through the N_alive count it infers from
-/// tension measurements.
+/// Simulation harness for the decentralised fault-tolerant cooperative
+/// lift. Wires together the MultibodyPlant (URDF quadrotors + bead-chain
+/// ropes + ground plane), per-drone controllers, fault gates, logging,
+/// and the MeshcatVisualizer replay. All controllers are fully local;
+/// the harness knows about faults only in order to inject them and to
+/// switch the visual rope-hiding state.
 
 #include <cmath>
 #include <cstring>
@@ -93,19 +84,17 @@ struct CliOptions {
   double fault_time_1 = -1.0;
   int fault_quad_2 = -1;
   double fault_time_2 = -1.0;
-  // Phase-F: run CL parameter estimator alongside each drone.
+  // Run the concurrent-learning parameter estimator in parallel.
   bool adaptive = false;
-  // Phase-F (L1): enable L1 adaptive inside the controller.
+  // Enable the L1 adaptive outer loop inside the baseline controller.
   bool l1_enabled = false;
-  // Optional payload mass override for testing adaptation convergence.
-  // Negative → use default (3.0 kg).
+  // Override the default payload mass (3.0 kg) when ≥ 0.
   double payload_mass_override = -1.0;
-  // Phase-G: choose controller. Default "baseline" keeps existing runs
-  // byte-for-byte reproducible; "mpc" selects MpcLocalController.
-  std::string controller = "baseline";
+  // Controller selection and MPC horizon parameters.
+  std::string controller = "baseline";  // "baseline" | "mpc"
   int    mpc_horizon = 5;
   double mpc_tension_max = 100.0;
-  // Phase-H: enable FaultDetector + FormationCoordinator supervisor.
+  // Engage the fault-triggered formation-reshape supervisor.
   bool reshaping_enabled = false;
 };
 
@@ -323,13 +312,11 @@ int DoMain(int argc, char** argv) {
     }
   }
 
-  // ============ PHYSICS CONFIG (aligned with Tether_Lift baseline) ============
+  // Physics configuration (values match the Tether_Lift baseline).
   const double quadcopter_mass = 1.5;
   const Eigen::Vector3d quadcopter_dimensions(0.3, 0.3, 0.08);
-  // Payload mass defaults to 3.0 kg; the `--payload-mass` CLI flag
-  // overrides it so the Phase-F adaptive estimator can be tested
-  // against a known bias (e.g. --payload-mass 4.5 → 50 % heavier
-  // payload than the nominal controller design value).
+  // Default payload mass 3.0 kg, overridden by --payload-mass for
+  // robustness experiments.
   const double payload_mass =
       (opts.payload_mass_override > 0.0) ? opts.payload_mass_override : 3.0;
   const double payload_radius = 0.15;
@@ -553,9 +540,7 @@ int DoMain(int argc, char** argv) {
     builder.Connect(plant.get_state_output_port(),
                     segment_probes[q]->get_plant_state_input_port());
 
-    // Phase-F: per-drone extended-CL parameter estimator (observer only).
-    // Off by default; enabled via `--adaptive`. Connected after the
-    // tension demux below.
+    // Optional concurrent-learning parameter estimator (observer only).
     if (opts.adaptive) {
       CLParamEstimatorParams ep;
       ep.rope_rest_length = rope_length;
@@ -828,8 +813,8 @@ int DoMain(int argc, char** argv) {
                     segment_tension_logs[q]->get_input_port());
   }
 
-  // Phase-F (L1): per-drone L1 adaptive state logs — only meaningful in
-  // the baseline controller (the MPC does not carry an L1 inner loop).
+  // L1 state logs; only connected when the baseline controller runs
+  // with L1 enabled (the MPC does not carry an L1 inner loop).
   std::vector<VectorLogSink<double>*> l1_state_logs(N, nullptr);
   if (opts.l1_enabled && !use_mpc) {
     for (int q = 0; q < N; ++q) {
@@ -839,10 +824,8 @@ int DoMain(int argc, char** argv) {
     }
   }
 
-  // Phase-F: per-drone CL parameter estimator diagnostics. Logs are
-  // constructed even if the estimator is absent (the vectors stay
-  // nullptr); the CSV write loop skips drones whose estimator pointer
-  // is null.
+  // Concurrent-learning diagnostics. Vectors are sized N; the write
+  // loop skips drones whose estimator pointer is null.
   std::vector<VectorLogSink<double>*> cl_theta_logs(N, nullptr);
   std::vector<VectorLogSink<double>*> cl_innov_logs(N, nullptr);
   std::vector<VectorLogSink<double>*> cl_rank_logs(N, nullptr);
@@ -1106,7 +1089,6 @@ int DoMain(int argc, char** argv) {
       csv << ",seg_T_" << i << "_" << j;
     }
   }
-  // Phase-F: per-drone CL estimator outputs (only present if --adaptive).
   if (opts.adaptive) {
     for (int i = 0; i < N; ++i) {
       csv << ",cl_m_hat_" << i << ",cl_k_hat_" << i
@@ -1114,7 +1096,6 @@ int DoMain(int argc, char** argv) {
           << ",cl_history_size_" << i;
     }
   }
-  // Phase-F (L1): per-drone L1 adaptive state (only if --l1-enabled).
   if (opts.l1_enabled && !use_mpc) {
     for (int i = 0; i < N; ++i) {
       csv << ",l1_ez_hat_" << i << ",l1_vez_hat_" << i
@@ -1177,11 +1158,9 @@ int DoMain(int argc, char** argv) {
       const auto& st = segment_tension_logs[i]->FindLog(context).data();
       for (int j = 0; j < num_rope_segments; ++j) csv << "," << st(j, s);
     }
-    // Phase-F: CL estimator outputs per drone (if enabled).
     if (opts.adaptive) {
       for (int i = 0; i < N; ++i) {
         if (!cl_theta_logs[i]) {
-          // Should not happen if --adaptive was set, but keep safe.
           csv << ",0,0,0,0,0";
           continue;
         }
@@ -1194,7 +1173,6 @@ int DoMain(int argc, char** argv) {
             << "," << hist(0, s);
       }
     }
-    // Phase-F (L1): 5-scalar L1 adaptive state (if enabled).
     if (opts.l1_enabled && !use_mpc) {
       for (int i = 0; i < N; ++i) {
         if (!l1_state_logs[i]) {

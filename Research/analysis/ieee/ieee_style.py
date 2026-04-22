@@ -85,13 +85,9 @@ def annotate_faults(ax, faults, label_each=False):
                    label=(f"Fault @ t={t_fault:.1f}s" if label_each and i == 0 else None))
 
 
-# ---------------------------------------------------------------------------
-# Single-source-of-truth for the startup-transient burn-in window used by
-# every metric-computing script. Changing this constant updates every
-# downstream script simultaneously — resolves the A3 drift risk flagged in
-# the 2026-04-21 doc audit. Do NOT hard-code 0.5 anywhere else; import this
-# constant instead.
-# ---------------------------------------------------------------------------
+# Single source of truth for the startup-transient burn-in window.
+# Every downstream metric script imports this constant; do not hard-code
+# the value anywhere else.
 BURN_IN_SECONDS = 0.5
 
 

@@ -14,22 +14,14 @@
 namespace quad_rope_lift {
 
 /// Drop-in replacement for `DecentralizedLocalController` that solves a
-/// receding-horizon QP with a hard linearised tension-ceiling constraint.
-/// See `Research/docs/theory/theory_mpc_extension.md` for the full
-/// derivation (error-state double integrator, condensed prediction
-/// Φ/Ω, linearised tension rows C_T, DARE terminal cost P_f, OSQP
-/// mapping).
+/// receding-horizon QP with a linearised tension-ceiling constraint on
+/// every prediction step. Prediction is done in error-state coordinates
+/// (e_p, e_v) with a pre-computed condensed model (Φ, Ω) and a DARE
+/// terminal cost; the tension constraint is a first-order Taylor
+/// expansion of the rope-spring law around the current chord geometry.
 ///
-/// Port interface (matches `DecentralizedLocalController` exactly):
-///   Inputs:  plant_state, rope_tension (4-vector [T, fx, fy, fz])
-///   Outputs: control_force  (abstract spatial force)
-///            control_vector (6-scalar [τ_x, τ_y, τ_z, f_x, f_y, f_z])
-///            diagnostics    (baseline's 13 scalars + 4 MPC additions)
-///            l1_state       (5-vector, zero if L1 not enabled)
-///
-/// Wiring: `decentralized_fault_aware_sim_main.cc` selects one of the
-/// two controllers via `--controller={baseline|mpc}`; the rest of the
-/// diagram is unchanged.
+/// The port interface matches `DecentralizedLocalController` exactly,
+/// so the sim harness switches between them via `--controller=`.
 class MpcLocalController final
     : public drake::systems::LeafSystem<double> {
  public:
@@ -86,12 +78,11 @@ class MpcLocalController final
     // Effective rope stiffness used by the linearised constraint.
     // Matches the series stiffness k_seg / N_seg = 2777.8 N/m.
     double k_eff = 25000.0 / 9.0;
-    // Effective body-to-body rest length used so that the nominal hover
-    // tension evaluates to m_L g · L_chord / (N · Δz_attach) ≈ 8 N
-    // rather than the naïve 650 N from d_body − L_rest (theory-doc
-    // §4.1 caveat + EXTENSION_PLAN.md §2.4 correction). Computed in
-    // `decentralized_fault_aware_sim_main.cc` from the hover fixed
-    // point and passed here via this field.
+    // Effective body-to-body rest length, chosen so the linearised
+    // nominal hover tension evaluates to the true static load share
+    // (≈ 8 N per rope for the 5-drone reference case) rather than the
+    // naïve geometric d_body − L_rest value. Populated by the harness
+    // from the hover fixed point.
     double L_eff_body = 1.448;
   };
 

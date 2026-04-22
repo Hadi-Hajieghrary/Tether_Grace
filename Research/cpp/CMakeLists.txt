@@ -67,17 +67,10 @@ set(TETHER_LIFT_SOURCES
 )
 
 # ---------------------------------------------------------------------------
-# Active target:
-# Decentralized Fault-Aware 4-Drone Simulation
-#   Fully-local QP-based DecentralizedLocalController per drone, on top of
-#   Tether_Lift's proven physics + URDF visualisation + Meshcat recording.
-#
-# Intermediate / earlier-phase targets (Phase 1 MPC, Phase 2 two-drone MPC,
-# Phase 2.5 inter-drone comms, box-only 4-drone, peer-aware controller, GPAC
-# baselines) have been archived at:
-#    Research/archive_obsolete_designs/
-# together with NOTES.txt files describing each phase. If you need to revive
-# one of them, move the sources back and reinstate its add_executable block.
+# Active target: the decentralised fault-aware cooperative-lift simulator.
+# Per-drone controllers (baseline QP + MPC) wire into Tether_Lift's
+# MultibodyPlant, bead-chain rope model, and Meshcat visualiser.
+# Superseded targets from earlier design phases live under archive/.
 # ---------------------------------------------------------------------------
 add_executable(decentralized_fault_aware_sim
     src/decentralized_fault_aware_sim_main.cc

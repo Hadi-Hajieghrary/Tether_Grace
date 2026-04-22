@@ -958,8 +958,8 @@ scenario's README.md.
 
 ### 8.3 Headline results
 
-From the final campaign, 2026-04-21 (all **[O]** from
-[`campaign_metrics.csv`](../../output/Tether_Grace/07_cross_scenario_comparison/campaign_metrics.csv)):
+From the five-drone baseline campaign (all **[O]** from
+[`campaign_metrics.csv`](../../output/5drone_baseline_campaign/07_cross_scenario_comparison/campaign_metrics.csv)):
 
 | Scenario | RMS [m] | Peak [m] | $T_{\max}$ [N] | $\|F\|_{\max}$ [N] | $\sigma_T$ [N] |
 |---|---:|---:|---:|---:|---:|

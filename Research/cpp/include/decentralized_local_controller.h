@@ -14,28 +14,16 @@
 
 namespace quad_rope_lift {
 
-/// Fully local, peer-free, QP-based quadrotor controller for cooperative
-/// payload lift with under-slung load. Each drone uses only:
+/// Decentralised, QP-based controller for a single drone in a cooperative
+/// cable-suspended payload lift. Each instance consumes only local signals —
+/// own pose, own rope-tension measurement, the observable payload pose, and
+/// a shared feed-forward reference — so the formation scales to arbitrary N
+/// without peer-to-peer communication.
 ///
-///   * Its OWN state (pose + velocity from plant),
-///   * Its OWN rope-tension measurement (scalar + 3D force vector),
-///   * The PAYLOAD state (pose + velocity — physically observable on each
-///     drone via an onboard IR range sensor or visual tracking of the
-///     payload, simulated here as ground-truth payload-body pose from the
-///     MultibodyPlant),
-///   * A SHARED feed-forward payload-reference trajectory (no feedback, no
-///     peer communication — the reference is the mission plan that every
-///     drone is given before flight).
-///
-/// At each control step the drone solves a local quadratic program that
-/// jointly minimises (i) payload-tracking error, (ii) payload swing, and
-/// (iii) the drone's own control effort, subject to tilt-envelope and
-/// thrust-envelope constraints. The QP output is a commanded acceleration
-/// that is mapped to thrust + desired tilt + a fast attitude PD inner loop.
-///
-/// This is the IEEE-paper's target controller: truly decentralised (no peer
-/// tensions input, no N_alive estimate, no peer-state estimator) and
-/// explicitly tracking + anti-swing + effort-minimising at every step.
+/// Every tick solves a 3-variable QP that projects a PD+anti-swing
+/// acceleration target onto the actuator envelope (tilt and thrust box
+/// constraints), then synthesises thrust and desired tilt fed to a Lee-style
+/// attitude inner loop.
 class DecentralizedLocalController final
     : public drake::systems::LeafSystem<double> {
  public:
@@ -59,23 +47,17 @@ class DecentralizedLocalController final
     double attitude_kd = 4.0;
 
     // Anti-swing --------------------------------------------------------
-    /// Coefficient multiplying -v_payload_xy; larger → more aggressive
-    /// damping of under-slung-payload pendulum motion.
-    /// Canonical experiment value: 0.8 (tuned to 4-drone traverse/figure-8
-    /// campaign; see decentralized_fault_aware_sim_main.cc:L573 for override
-    /// site, which sets the same value as this default).
+    /// Proportional gain on −v_{L,xy}; larger ⇒ more aggressive damping
+    /// of the under-slung pendulum.
     double swing_kd = 0.8;
-    /// Saturation on the anti-swing slot offset (metres), to keep the
-    /// drone inside the formation radius.
-    double swing_offset_max = 0.3;  ///< m (tuned; was 0.5 in early dev)
+    /// Saturation (m) on the anti-swing slot offset; keeps the drone
+    /// inside the formation radius.
+    double swing_offset_max = 0.3;
 
     // Per-drone QP weights ---------------------------------------------
-    /// Tracking cost weight (dominant). w_track=1 is normalised to 1
-    /// so that w_swing and w_effort are relative.
-    double w_track = 1.0;
-    /// Anti-swing acceleration weight. Canonical experiment value: 0.3.
-    double w_swing = 0.3;
-    /// Effort regularisation weight. Canonical experiment value: 0.02.
+    /// Normalised to 1; w_swing and w_effort are relative to w_track.
+    double w_track  = 1.0;
+    double w_swing  = 0.3;
     double w_effort = 0.02;
 
     // Actuation limits --------------------------------------------------
@@ -91,39 +73,32 @@ class DecentralizedLocalController final
     double pickup_target_tension_nominal = 7.36;       ///< N (m_L·g/N_nominal)
     double tension_feedback_kp = 1.5;                  ///< during pickup only
 
-    /// If true, the controller assumes the rope starts PRE-TENSIONED at the
-    /// static hover equilibrium (i.e. the sim IC is a pre-tautened chord).
-    /// In that case the pickup ramp is initialised as already-complete so
-    /// that T_ff = measured_tension immediately at t = 0 and the drone
-    /// counteracts the payload-share of gravity from the first tick — no
-    /// drone free-fall while the rope engages. Use this whenever the sim
-    /// harness spawns the payload suspended rather than on the ground.
+    /// When true, the rope is assumed taut at the hover equilibrium from
+    /// t = 0, so T_ff = measured_tension on the very first tick and no
+    /// drone free-falls while the rope engages.
     bool initial_pretensioned = true;
 
-    // ── L1 Adaptive outer loop (theory_l1_extension.md) ─────────────────
-    /// Master enable (default off → backward-compatible, existing
-    /// scenarios S1–S6 and A–D are byte-for-byte reproducible).
+    // L1 adaptive outer loop -------------------------------------------
+    /// Master enable; default off so baseline runs are bit-identical to
+    /// pre-L1 behaviour.
     bool   l1_enabled           = false;
-    /// Adaptive gain Γ. Per-step gain T_s·Γ·p_{22}.
-    /// Stability bound for Euler discretisation: Γ < 2/(T_s·p_{22}) ≈ 47 500.
+    /// Adaptive gain Γ. Euler-discretisation stability bound
+    /// Γ < 2/(T_s · p_{22}) ≈ 4.75e4 (see Supplementary §A).
     double l1_gamma             = 2000.0;
-    /// Low-pass-filter bandwidth ω_c (rad/s). Separation ratio ω_c/ω_n^z.
-    /// Must be ≥ 3 for the L1 architecture (25 / 8.16 ≈ 3.06).
+    /// Low-pass bandwidth ω_c (rad/s); ω_c/ω_n^z ≥ 3 required.
     double l1_omega_c           = 25.0;
-    /// Projection bounds on σ̂ (m/s²). Spans ΔmL ≈ ±3 kg for N = 4.
+    /// Projection bounds on σ̂ (m/s²).
     double l1_sigma_min         = -5.0;
     double l1_sigma_max         =  5.0;
-    /// Seed for k̂_eff (N/m). Nominal series-stiffness of the 9-segment rope.
+    /// Seed and bounds for the rope-stiffness estimate k̂_eff (N/m).
     double l1_k_eff_nominal     = 2777.8;
-    /// Projection bounds on k̂_eff (N/m). Spans 0.2× … 1.8× nominal.
     double l1_k_eff_min         =  500.0;
     double l1_k_eff_max         = 5000.0;
-    /// k_eff gradient gain γ_k (empirical; persistence-of-excitation-sensitive).
+    /// Gradient gain for the k̂_eff estimator.
     double l1_gamma_k           = 5000.0;
-    /// Minimum rope stretch to enable the k̂_eff update (m).
-    /// Guards against a zero-regressor rank-deficiency at slack times.
+    /// Minimum stretch (m) below which the k̂_eff update is disabled.
     double l1_stretch_threshold = 5e-4;
-    /// Control period shared with the discrete-update event (s).
+    /// Control period (s) of the L1 discrete-update event.
     double l1_control_step      = 2e-4;
   };
 
@@ -141,10 +116,9 @@ class DecentralizedLocalController final
   const drake::systems::InputPort<double>& get_tension_input_port() const {
     return get_input_port(tension_port_);
   }
-  /// Optional dynamic formation-offset override (3-vector). When
-  /// unconnected, ComputeSlotReference falls back to the static
-  /// `Params::formation_offset`. Wired by the
-  /// `FormationCoordinator` supervisor (Phase-H).
+  /// Optional dynamic formation-offset (3-vector). When unconnected,
+  /// ComputeSlotReference falls back to `Params::formation_offset`;
+  /// when connected, it is typically driven by `FormationCoordinator`.
   const drake::systems::InputPort<double>&
   get_formation_offset_override_input_port() const {
     return get_input_port(formation_offset_override_port_);

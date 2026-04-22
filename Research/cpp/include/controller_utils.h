@@ -60,12 +60,12 @@ inline void ComputeSlotReferenceAt(
   *v_slot = v_L_ref;
 }
 
-/// Solve the discrete algebraic Riccati equation (DARE)
-///     P = Qs + As' P As - As' P Bs (Rs + Bs' P Bs)^{-1} Bs' P As
-/// for a 2-state scalar-input scalar-axis double integrator. Iterated
-/// fixed-point (theory-doc Eq. 40). Converges in ~30 iterations to
-/// machine precision when (As, Bs) is stabilisable and (Qs^{1/2}, As)
-/// is detectable. Returns the unique PD solution Ps.
+/// Solve the discrete algebraic Riccati equation
+///     P = Qs + Asᵀ P As − Asᵀ P Bs (Rs + Bsᵀ P Bs)^{-1} Bsᵀ P As
+/// for a 2-state scalar-input double integrator via fixed-point
+/// iteration. Converges in ≈30 iterations to machine precision
+/// provided (As, Bs) is stabilisable and (Qs^{1/2}, As) detectable;
+/// returns the unique positive-definite solution.
 inline Eigen::Matrix2d SolveScalarDARE(const Eigen::Matrix2d& As,
                                        const Eigen::Vector2d& Bs,
                                        const Eigen::Matrix2d& Qs,

@@ -1,47 +1,35 @@
-# Extension 2 — Receding-Horizon MPC with Hard Tension-Ceiling Constraint
+# Receding-Horizon MPC with Linearised Tension-Ceiling Constraint
 
-> **Status:** ✅ **Implemented** (2026-04-22, Phase-G + G-2).
-> Active as the drop-in replacement class `MpcLocalController` in
-> [`mpc_local_controller.cc`](../../cpp/src/mpc_local_controller.cc) /
-> [`mpc_local_controller.h`](../../cpp/include/mpc_local_controller.h).
-> Selected at run-time via `--controller=mpc` (default is the baseline
-> single-step QP — unchanged).
->
-> **Two important implementation-side deviations from the pure §2–§7
-> design, necessary for numerical stability on this plant:**
->
-> 1. **Cost function is reference-tracking, not state-regulator.**
->    At the 2 ms sim step, the state-regulator gradient
->    $f = 2\Omega^\top\bar Q\Phi\,x$ was numerically near-zero because
->    $\|\Omega\|\sim 10^{-7}$, so $U^\star \to 0$ and the drone
->    crashed. Replaced with
->    $J = \sum_k w_t\|U_k - a_{\mathrm{target}}\|^2 + w_e\|U_k\|^2$
->    where $a_{\mathrm{target}}$ is computed identically to the
->    baseline's cascade-PD + anti-swing. This preserves the baseline's
->    proven outer-loop behaviour while the MPC's unique value is the
->    horizon prediction for tension-ceiling enforcement.
->
-> 2. **Tension linearisation uses $(A^j - I)$, not $A^j$**, in the
->    free-response term. Using $A^j\cdot x(k)$ (as the original §4.3
->    formula read) folds the *current* tracking error $x(k)$ into the
->    horizon-forward tension prediction and tightens $d_T$ into
->    infeasibility even at steady-state hover. The corrected row is:
->    $c_j^\top\,\Omega_j\,U \le T_{\max} - T_{\mathrm{meas}}(k) - c_j^\top\,(A^j-I)\,x(k) - j\Delta t\,\dot T_{\mathrm{meas}}$.
->    The $\dot T$ term extrapolates observed bead-chain tension
->    oscillations forward (filtered; positive-only, with a 200-tick
->    warm-up to avoid the ZOH's initial zero→8 N spurious spike).
->
-> **Empirical (4-drone traverse with single fault at t = 4 s):**
-> With $T \le 60$ N ceiling, MPC improves pre-fault tracking
-> from 73 → 39 mm (a 47 % reduction vs baseline) and keeps the real
-> peak rope tension $\le 46$ N during the fault transient. With a
-> tighter $T \le 30$ N ceiling, MPC caps real peak at 24 N (well
-> under ceiling) at the cost of degraded tracking during the fault
-> transient (baseline 0.075 m → MPC 1.09 m post-fault RMS) — a
-> defensible tracking-vs-safety trade-off.
->
-> **Companion theory:** [`theory_decentralized_local_controller.md`](theory_decentralized_local_controller.md),
-> [`theory_rope_dynamics.md`](theory_rope_dynamics.md).
+Implemented as the drop-in replacement class `MpcLocalController` in
+[`mpc_local_controller.cc`](../../cpp/src/mpc_local_controller.cc) and
+[`mpc_local_controller.h`](../../cpp/include/mpc_local_controller.h),
+selected at run-time via `--controller=mpc`.
+
+Two implementation choices deserve up-front notice because they depart
+from the pure textbook MPC derivation:
+
+1. **Reference-tracking cost.** At the 2 ms sim step the
+   state-regulator gradient $f = 2\Omega^\top\bar Q\Phi\,x$ is
+   numerically O($10^{-7}$) so the solver returns $U^\star \approx 0$.
+   The cost is therefore expressed as
+   $J = \sum_k w_t\|U_k - a_{\mathrm{target}}\|^2 + w_e\|U_k\|^2$
+   with $a_{\mathrm{target}}$ identical to the baseline cascade PD +
+   anti-swing output. The MPC's value is in the tension-horizon
+   constraint, not in re-deriving a tracking controller.
+
+2. **Tension linearisation uses $(A^j - I)x(k)$ rather than $A^j x(k)$.**
+   The former folds only the *change* in state over the horizon into
+   the free response; the latter folds the current tracking error
+   into every future step and tightens $d_T$ into infeasibility even
+   at steady-state hover. The row is
+   $c_j^\top\Omega_j U \le T_{\max} - T_{\mathrm{meas}}(k)
+      - c_j^\top(A^j-I)x(k) - j\Delta t\,\dot T_{\mathrm{meas}}$,
+   with the filtered $\dot T$ term extrapolating bead-chain tension
+   oscillations forward.
+
+Companion derivations:
+[`theory_decentralized_local_controller.md`](theory_decentralized_local_controller.md),
+[`theory_rope_dynamics.md`](theory_rope_dynamics.md).
 
 ---
 
@@ -1171,5 +1159,4 @@ for scenario, variant in [("MPC_T1", "baseline"), ("MPC_T1", "mpc_Np5"),
 
 ---
 
-*Document authored: 2026-04-21. Evidence classification: **Inferred** (mathematical derivation from Observed system constants). Implementation status: **Design only — no code yet.**
-All claim-to-code cross-references verified against [`decentralized_local_controller.cc`](../../cpp/src/decentralized_local_controller.cc) and [`decentralized_fault_aware_sim_main.cc`](../../cpp/src/decentralized_fault_aware_sim_main.cc).*
+

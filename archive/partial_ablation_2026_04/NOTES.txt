@@ -1,0 +1,20 @@
+Partial ablation run, 2026-04-22
+---------------------------------
+
+Configurations completed (out of 4 * 4 = 16 scheduled):
+
+  baseline / A_nominal       : complete
+  baseline / B_single_fault  : complete
+  baseline / C_dual_5sec     : complete
+  baseline / D_dual_10sec    : complete
+  l1       / A_nominal       : complete
+  l1       / B_single_fault  : not started
+  l1       / C_dual_5sec     : not started
+  l1       / D_dual_10sec    : not started
+  mpc      / *               : not started
+  fullstack / *              : not started
+
+Stopped by user request at 5 / 16 before the full Monte-Carlo campaign
+was designed. Superseded by the 494-run IEEE-Transactions campaign
+whose results live under output/. These partial results are kept for
+sanity cross-checks only; no paper claim should cite them.

@@ -39,8 +39,8 @@ MpcLocalController::MpcLocalController(
       .get_index();
   tension_port_ = DeclareVectorInputPort(
       "rope_tension", BasicVector<double>(4)).get_index();
-  // Optional Phase-H formation-offset override (same semantics as the
-  // baseline controller). Unconnected ⇒ falls back to Params::formation_offset.
+  // Optional dynamic formation-offset override; same semantics as the
+  // baseline controller's port. Unconnected ⇒ use params_.formation_offset.
   DeclareVectorInputPort("formation_offset_override",
                          BasicVector<double>(3));
 
@@ -178,8 +178,8 @@ void MpcLocalController::CalcControlForce(
     pickup_start_time_ = -params_.pickup_ramp_duration;
   }
 
-  // Slot reference (t) + anti-swing correction. Apply dynamic
-  // formation-offset override (Phase-H) if the port is connected.
+  // Slot reference plus horizontal anti-swing, honouring the optional
+  // formation-offset override port when connected.
   Eigen::Vector3d formation_offset = params_.formation_offset;
   const auto& offset_override_port =
       GetInputPort("formation_offset_override");
@@ -224,17 +224,11 @@ void MpcLocalController::CalcControlForce(
   const double a_z_min = (params_.min_thrust - T_ff) / mass_ - params_.gravity;
   const double a_z_max = (params_.max_thrust - T_ff) / mass_ - params_.gravity;
 
-  // ── Update tension-rate observation (first-order LP-filtered) ──
-  // Used by the tension-ceiling rows to extrapolate T forward over the
-  // horizon, so the MPC anticipates a bead-chain oscillation rather
-  // than only seeing it at the nominal slot.
-  //
-  // Two gotchas handled here: (i) the ZOH on `rope_tension` outputs 0
-  // on its first sample and the real value on the second, producing a
-  // spurious huge numerical derivative — we warm-up-skip the first
-  // kWarmupTicks updates; (ii) high-frequency simulation ticks produce
-  // noisy T_dot — the kTDotTau LPF smooths it.
-  constexpr int kWarmupTicks = 50;  // ≈ 10 ms at the sim step
+  // First-order low-pass filter on dT/dt, used to extrapolate the
+  // tension forward along the horizon. The filter is disabled for the
+  // first few ticks so the ZOH warm-up transient (initial output 0
+  // followed by the true tension) does not produce a spurious spike.
+  constexpr int kWarmupTicks = 50;
   if (last_tick_time_ < 0.0) {
     last_T_meas_ = measured_tension;
     last_tick_time_ = t;
@@ -255,24 +249,18 @@ void MpcLocalController::CalcControlForce(
     ++warmup_ticks_;
   }
 
-  // ── Build per-step tension-ceiling rows ────────────────────────
-  // Richer linearisation (Phase-G.2):
-  //   T(k+j) ≈ T_meas(k) + j·Δt·(dT/dt)_filtered
-  //             + k_eff · n_hat(k)^T · (p_drone(k+j) − p_drone(k))
-  // where n_hat(k) is the CURRENT payload→drone unit vector, so the
-  // linearisation tracks where the drone actually is, not the nominal
-  // slot. The dT/dt term captures bead-chain wave propagation that the
-  // simple quasi-static model missed during fault transients.
+  // Assemble per-step tension-ceiling rows. The linearisation is
+  //   T(k+j) ≈ T(k) + jΔt · (dT/dt)_filt + c_jᵀ (A^j − I) x(k)
+  //                                    + c_jᵀ Ω_{row j} U,
+  // with c_j = [−k_eff n̂(k); 0]. Using (A^j − I) rather than A^j
+  // folds only the *change* in state into the free response; without
+  // this the current non-zero slot-tracking error would tighten d_T
+  // into infeasibility at steady state.
   const double k_eff = params_.k_eff;
   const Eigen::Vector3d chord_now = p_self - p_payload;
   const double d_now = chord_now.norm();
   const Eigen::Vector3d n_hat_now =
       (d_now > 1e-6) ? (chord_now / d_now) : Eigen::Vector3d(0, 0, 1);
-  // Chord moves with the drone, so cj^T · e_p(k+j) = cj^T · (−Ω_rows U
-  // − A^j·x.head<3>()_drone_motion). Since x = slot−drone and Ω has the
-  // double-integrator double-negative sign, the sign convention matches
-  // the baseline linearisation: Δp_drone(k+j) relative to p_drone(k) is
-  //   Δp = −[I_3, 0] · (A^j x − x) ≈ Ω_rows · U   (for small horizon)
   Eigen::VectorXd cj(6);
   cj.head(3) = -k_eff * n_hat_now;
   cj.tail(3).setZero();
@@ -281,11 +269,6 @@ void MpcLocalController::CalcControlForce(
   Eigen::VectorXd dT = Eigen::VectorXd::Zero(Np);
   Eigen::MatrixXd Aj = Eigen::MatrixXd::Identity(6, 6);
   double horizon_T_max_nom = measured_tension;
-  // Linearise around p_drone(k): T(k+j) ≈ T(k) + c^T·(A^j − I)·x(k)
-  // + c^T·Ω_row_j·U. This is key: using A^j (not A^j − I) would fold
-  // the CURRENT error x(k) into the horizon free-response and
-  // artificially tighten d_T into infeasibility at steady state. Only
-  // the CHANGE in x from k to k+j matters for the linearised ΔT.
   // T_dot feed-forward is additive: extrapolates observed oscillatory
   // tension ringing forward (clipped to T_dot ≥ 0 to avoid unphysical
   // bias during benign cruise).

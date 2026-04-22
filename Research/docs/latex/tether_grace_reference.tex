@@ -12,6 +12,7 @@
 % on minimal TeX Live installs. Compile result is unaffected.
 \usepackage[margin=1in]{geometry}
 \usepackage{amsmath, amssymb, amsthm, mathtools}
+\usepackage{siunitx}  % \SI{...}{...} used in methods/results sections
 \usepackage{empheq}   % \begin{empheq}[box=...]{equation}
 \usepackage{bm}
 \usepackage{booktabs}
@@ -125,7 +126,7 @@
   \large\emph{Graduate Reference and Reproducibility Companion}
 }
 \author{Tether\_Grace Project Team}
-\date{Final campaign: 2026-04-21}
+\date{\today}
 
 %% =================================================================
 \begin{document}
@@ -201,8 +202,8 @@ the full audit log is in \Cref{chap:evidence}.
 
 Paths such as
 \texttt{decentralized\_local\_controller.cc:L199} point into the
-companion repository. The document was written against the code state
-at campaign 2026-04-21 (git tree at the top-level commit).
+companion repository. The document tracks the state of the code in
+the top-level commit of the accompanying tree.
 
 %% ===============================================================
 \part{Problem Formulation}
@@ -992,9 +993,9 @@ Research/
  |       |- safe_hover_controller.h
  |       |- control_mode_switcher.h
  |- analysis/ieee/              # figure-generation pipeline
- |- run_ieee_campaign.sh        # one-shot campaign runner
+ |- scripts/                    # campaign runners
  |- docs/                       # all documentation (including this one)
- |- archive_obsolete_designs/   # in-repo provenance of earlier iterations
+ ../archive/                    # centralised provenance of earlier iterations
 \end{lstlisting}
 
 \section{Key classes}
@@ -1296,22 +1297,50 @@ L8 & No hardware validation
 \bottomrule
 \end{longtable}
 
-\chapter{Extension Ideas for a Student Project}
+\chapter{Controller Extensions}
+\label{chap:ext-impl}
+
+Three controller-layer extensions compose on top of the baseline: an
+$L_1$ adaptive outer loop, a receding-horizon MPC with a linearised
+tension-ceiling constraint, and a supervisor that reshapes the
+formation after a cable severance. Their derivations and empirical
+validation are reproduced below from
+\texttt{methods\_section.tex} and \texttt{results\_section.tex}; each
+cross-references the implementing files under
+\texttt{Research/cpp/src/} and is the canonical source for the IEEE
+T-CST manuscript.
+
+\input{methods_section}
+
+\input{results_section}
+
+\chapter{Remaining Extension Ideas for a Student Project}
 \label{chap:ext}
 
+Now that the $L_1$ / MPC / formation-reshaping stack is merged, the
+natural next-step projects are:
+
 \begin{enumerate}
-\item \emph{Adaptive outer loop} ($L_1$ or MRAC) to track
-uncertain payload mass and rope stiffness online.
-\item \emph{Receding-horizon MPC} replacing the single-step QP,
-including a hard tension-ceiling constraint.
-\item \emph{Formation re-shaping} after a fault: have the survivors
-relocate to minimise $\max_j T_j$. Requires knowing their positions,
-so it breaks the fully-local property cleanly.
-\item \emph{Decentralised payload-mass estimation} from a drone's own
-$T_i$ history, reconciled with peers via a consensus round.
+\item \emph{Decentralised payload-mass consensus}: let each drone share
+its local $\hat{m}_L$ estimate from the CL observer (the
+\texttt{--adaptive} diagnostic channel) and run a consensus-ADMM round
+every 50~ms. Compare convergence speed against the in-controller L1
+on a time-varying $m_L$ disturbance.
 \item \emph{Hardware-in-the-loop}: the controller on a Raspberry Pi
 talking to the Drake simulator over loopback TCP---measure the
-real-time budget.
+real-time budget (currently MPC~$<0.5$~ms / baseline~$<0.1$~ms).
+\item \emph{High-fidelity rope-dynamic MPC}: augment the MPC prediction
+model with a segment-axial spring-damper state so the linearised
+tension rows match the Drake bead-chain's transient behaviour during
+fault transients (see \texttt{theory\_mpc\_extension.md} caveat in \S\ref{chap:ext-impl}).
+\item \emph{Reshaping benefit on lemniscate3D}: theory-doc \S F predicts
+a \(-25.8\%\) peak-tension reduction for reshaping on the 5-drone
+lemniscate inner loop; this claim is scenario-dependent and has not
+yet been reproduced in simulation. Joint tuning of the quintic
+transition time and the descent profile is an open problem.
+\item \emph{Formal ISS proof} for the fully-local baseline and each
+extension, upgrading the current Lyapunov-style arguments to a
+published theorem with explicit gain bounds.
 \end{enumerate}
 
 %% ===============================================================

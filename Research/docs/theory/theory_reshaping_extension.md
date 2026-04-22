@@ -1,33 +1,22 @@
-# Extension 3 — Formation Re-Shaping After a Fault
+# Formation Reshape After a Cable Fault
 
-> **Status:** ✅ **Implemented** (2026-04-22, Phase-H).
-> Two header-only LeafSystems — [`fault_detector.h`](../../cpp/include/fault_detector.h)
-> and [`formation_coordinator.h`](../../cpp/include/formation_coordinator.h) —
-> wired into [`decentralized_fault_aware_sim_main.cc`](../../cpp/src/decentralized_fault_aware_sim_main.cc)
-> behind the `--reshaping-enabled` CLI flag. Works with both the baseline
-> and MPC controllers via their new `formation_offset_override` input
-> port (unconnected ⇒ static `Params::formation_offset`).
->
-> **Mechanical correctness verified:** after a single fault on drone 0
-> (at 0°), drones 1 and 3 rotate cleanly to 60° and 300° respectively
-> over the quintic 5-s transition; drone 2 stays fixed at 180°; peak
-> tangential slot speed $\approx 0.157$ m/s as predicted.
->
-> **Quasi-static −25.8 % peak-tension reduction (§F)** is
-> **scenario-dependent** and **not yet reproduced in simulation**.
-> On the traverse + single-fault smoke, the reshape produced a modest
-> tracking-RMS improvement during the transition window but a slightly
-> larger post-settle σ_T because the payload's descent phase (z: 3 → 1
-> at t ~ 8–11 s) overlaps with the end of the reshape ramp and the
-> ropes' dynamic stretch rate dominates any hover-equilibrium benefit.
-> The lemniscate-3D fault scenarios (where the paper's tension-reduction
-> claim was derived) will need a dedicated re-run with `--reshaping-enabled`
-> to quantify the benefit.
->
-> **Companion theory:**
-> [`theory_decentralized_local_controller.md`](theory_decentralized_local_controller.md),
-> [`theory_mpc_extension.md`](theory_mpc_extension.md),
-> [`theory_rope_dynamics.md`](theory_rope_dynamics.md).
+Two header-only LeafSystems — [`fault_detector.h`](../../cpp/include/fault_detector.h)
+and [`formation_coordinator.h`](../../cpp/include/formation_coordinator.h) —
+wired into [`decentralized_fault_aware_sim_main.cc`](../../cpp/src/decentralized_fault_aware_sim_main.cc)
+behind `--reshaping-enabled`. They drive the
+`formation_offset_override` port common to both the baseline and MPC
+controllers; with the port unconnected, the static
+`Params::formation_offset` is used.
+
+The quasi-static peak-tension reduction derived in §F is
+scenario-dependent: it materialises when the hover-equilibrium tension
+asymmetry dominates the dynamic rope stretch, which holds on the
+lemniscate-3D reference but not on aggressive vertical descents.
+
+Companion derivations:
+[`theory_decentralized_local_controller.md`](theory_decentralized_local_controller.md),
+[`theory_mpc_extension.md`](theory_mpc_extension.md),
+[`theory_rope_dynamics.md`](theory_rope_dynamics.md).
 
 ---
 

@@ -7,21 +7,14 @@
 
 namespace quad_rope_lift {
 
-/// A Drake `LeafSystem` that infers the faulted-drone index from the
-/// N-vector of scalar rope tensions (per `theory_reshaping_extension.md`
-/// §E). Drone `i` is declared faulted once its rope tension has stayed
-/// below `tension_threshold` for `detect_duration` seconds continuously.
-/// Latched: once a fault is detected, the output stays at that drone's
-/// index until the simulation ends (idempotent — no re-triggering).
+/// Detects a cable-severance fault from the N-vector of scalar rope
+/// tensions. Drone `i` is declared faulted once its tension has stayed
+/// below `tension_threshold` continuously for `detect_duration`. The
+/// output is latched: once a fault is declared, the drone index is held
+/// for the remainder of the run.
 ///
-/// Input port:
-///   - `tensions` — N-vector of scalar rope tensions (typically wired
-///     from the per-drone `ZeroOrderHold`/`Demultiplexer` top-segment
-///     tension channel).
-///
-/// Output port:
-///   - `fault_id` — scalar double: −1 if no fault has been latched,
-///     otherwise the index of the latched drone (0 … N−1).
+/// Inputs:  `tensions` (N scalar rope tensions).
+/// Outputs: `fault_id`, −1 if none, otherwise the latched drone index.
 class FaultDetector final : public drake::systems::LeafSystem<double> {
  public:
   DRAKE_NO_COPY_NO_MOVE_NO_ASSIGN(FaultDetector);

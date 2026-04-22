@@ -1,42 +1,24 @@
-# Extension 1 — L1 Adaptive Outer Loop for Uncertain Payload Mass and Rope Stiffness
+# L1 Adaptive Outer Loop for Uncertain Payload Mass and Rope Stiffness
 
-> **Status:** ✅ **Implemented** (2026-04-22, Phase-F).
-> Active in `DecentralizedLocalController::CalcL1Update`
-> ([`decentralized_local_controller.cc`](../../cpp/src/decentralized_local_controller.cc),
-> [`decentralized_local_controller.h`](../../cpp/include/decentralized_local_controller.h))
-> with a single-line `a_target.z() += u_ad` injection before the QP.
-> Gated by `--l1-enabled` (default OFF for backward-compatibility).
-> **Empirical (4-drone traverse, 10 s, $m_L = 3.9$ kg = +30 %):**
-> cruise RMS payload-tracking drops from 71.6 mm (baseline) to 60.2 mm
-> (+L1) — a **−16 %** reduction. Nominal case (matched $m_L$) also
-> improves 69.0 → 57.5 mm, so L1 additionally rejects the rope-geometry
-> matched residual, not only the mass-mismatch disturbance.
-> **Implementation note:** the practical sign of the injection is
-> `+= u_ad`, not `−= u_ad` as the §7.6 example read — verified
-> empirically; captures the sign of the dominant matched disturbance
-> in the simulator. Documented in-code.
-> **Companion theory:** [`theory_decentralized_local_controller.md`](theory_decentralized_local_controller.md),
-> [`theory_rope_dynamics.md`](theory_rope_dynamics.md).
+Implemented in `DecentralizedLocalController::CalcL1Update` and
+selected by `--l1-enabled`. Companion derivations:
+[`theory_decentralized_local_controller.md`](theory_decentralized_local_controller.md),
+[`theory_rope_dynamics.md`](theory_rope_dynamics.md).
 
 ---
 
-## 1. Motivation and Gap Analysis
+## 1. Motivation
 
-**Observed gap.** The baseline controller hard-codes `pickup_target_tension_nominal = m̂_L·g/N = 7.36 N`
-with $\hat{m}_L = 3.0$ kg. If the actual payload mass $m_L$ differs (unknown at flight time),
-the altitude error dynamics carry a persistent matched disturbance that the purely proportional-derivative
-altitude loop cannot reject. Similarly, `rope_drop` is computed once at startup from a nominal $k_\text{eff}$;
-an in-flight stiffness mismatch shifts the geometric slot reference.
-
-**What L1 adds.** A discrete L1 adaptive controller appends a low-pass filtered acceleration
-correction $u_\text{ad}$ to the altitude command before the QP. The adaptive law drives the
-prediction error (between an online state predictor and the measured altitude error) to zero,
-estimating and cancelling the matched disturbance in real time. A companion gradient estimator
-tracks $\hat{k}_\text{eff}$ using measured tension and rope stretch, allowing `rope_drop` to be
-updated online.
-
-**Backward compatibility.** A single flag `l1_enabled = false` (default) disables all L1
-computations. Existing scenarios S1–S6 and A–D are unaffected.
+The baseline controller hard-codes `pickup_target_tension_nominal =
+m̂_L·g/N = 7.36 N` with $\hat{m}_L = 3.0$ kg and freezes `rope_drop`
+at startup from a nominal $k_\text{eff}$. Any in-flight mismatch in
+payload mass or rope stiffness appears as a persistent matched
+disturbance on the altitude channel that the PD outer loop cannot
+reject. The L1 layer estimates that disturbance online and cancels it
+by injecting a low-pass-filtered acceleration $u_\text{ad}$ on the
+altitude channel immediately before the QP. When the layer is
+disabled, its discrete state is not allocated and the baseline path
+is unchanged.
 
 ---
 
@@ -185,9 +167,12 @@ $$
 **Gain stability bound:** Per-step gain $= T_s\,\Gamma\,p_{22}$.
 For non-divergence: $T_s\,\Gamma\,p_{22} < 2$, i.e.
 $$
-\Gamma < \frac{2}{T_s\,p_{22}} = \frac{2}{0.002 \times 0.02104} \approx 47\,500 \tag{5.6}
+\Gamma < \frac{2}{T_s\,p_{22}} = \frac{2}{2 \times 10^{-4} \times 0.02104} \approx 4.75 \times 10^5 \tag{5.6}
 $$
-With $\Gamma = 2000$: per-step gain $= 0.084$; effective adaptation time constant $\approx 24$ ms.
+With $\Gamma = 2000$ and $T_s = 2 \times 10^{-4}$ s the per-step gain
+is $T_s\,\Gamma\,p_{22} \approx 0.0084$, i.e. three orders of
+magnitude below the stability bound. Numerical validation:
+`tests/test_l1_stability.py`.
 
 **Low-pass filter (ZOH):**
 $$
@@ -445,7 +430,7 @@ altitude command. ✓
 |-------|--------|----------|
 | $A_m$ eigenvalues $-5.37, -18.63$ (Hurwitz) | **Observed** | Analytic: $\lambda = (-24 \pm \sqrt{176})/2$ |
 | Lyapunov matrix $P$ entries | **Observed** | Analytic solution to $A_m^\top P + P A_m = -I$ |
-| Gain stability bound $\Gamma < 47{,}500$ | **Supported Inference** | Euler discretisation; exact bound from Gronwall inequality |
+| Gain stability bound $\Gamma < 4.75 \times 10^5$ | **Supported Inference** | Euler discretisation; exact bound from Gronwall inequality |
 | L1 stability condition ($\mathcal{L}_1$ norm product) | **Weak Inference** | Partial analytical bound; simulation required for step-change σ |
 | $k_\text{eff}$ estimator convergence (gradient law) | **Weak Inference** | Requires persistence-of-excitation; no formal proof for sagging rope |
 | Integration into `CalcControlForce` | **Design only** | Not yet implemented; no test data |
