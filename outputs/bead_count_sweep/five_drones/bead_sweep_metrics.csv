@@ -1,6 +1,0 @@
-num_beads,whole_run_rmse_cm,final_load_error_cm,peak_load_speed_m_s,peak_cable_tension_N,fault1_baseline_rmse_cm,fault1_peak_error_cm,fault1_post_fault_rmse_cm,fault1_recovery_time_s,fault2_baseline_rmse_cm,fault2_peak_error_cm,fault2_post_fault_rmse_cm,fault2_recovery_time_s,wall_time_seconds
-2,43.220,52.831,2.770,22.152,16.538,31.781,30.817,4.090,31.608,43.358,44.175,3.670,283.9
-4,43.158,52.812,2.765,21.913,16.448,31.683,30.717,4.100,31.576,43.247,44.091,3.670,342.6
-8,43.078,52.787,2.754,21.730,16.651,31.474,30.602,4.090,31.538,43.209,43.951,3.670,592.7
-12,43.086,52.793,2.758,21.748,16.732,31.484,30.724,4.090,31.672,43.234,43.942,3.670,1144.3
-16,43.057,52.779,2.755,21.787,16.737,31.504,30.790,4.090,31.704,43.359,43.894,3.670,2003.2
