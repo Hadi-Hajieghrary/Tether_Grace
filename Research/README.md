@@ -1,10 +1,29 @@
 # Tether_Grace — Research
 
-Workspace for the new control-systems research built on top of the
-Tether_Lift baseline. The current active contribution is a
-**decentralised, fully-local, QP-based fault-aware controller** for 4-drone
-cooperative payload lift, with its C++ simulation and its IEEE-paper
-figure pipeline.
+Workspace for the control-systems research built on top of the
+Tether_Lift baseline. The active contribution is a
+**decentralised, fully-local, QP-based fault-aware controller** for
+4- and 5-drone cooperative payload lift, with three composable
+extensions, its C++ simulation, a 12-figure IEEE publication pipeline,
+and a printable LaTeX reference.
+
+> **For the authoritative "what is in the codebase right now" map,
+> see** [`docs/IMPLEMENTATION_STATUS.md`](docs/IMPLEMENTATION_STATUS.md).
+> For the roadmap status see [`docs/EXTENSION_PLAN.md`](docs/EXTENSION_PLAN.md).
+
+## Implemented controllers + extensions
+
+| Layer | What | CLI flag | Theory doc |
+|---|---|---|---|
+| Baseline | cascade PD + single-step QP + anti-swing + smoothstep pickup + per-segment tension probe + 13-signal diagnostics | (default) | [`docs/theory/theory_decentralized_local_controller.md`](docs/theory/theory_decentralized_local_controller.md) |
+| Phase-F | L1 adaptive outer loop (in-controller) | `--l1-enabled` | [`docs/theory/theory_l1_extension.md`](docs/theory/theory_l1_extension.md) |
+| Phase-F (CL) | Two-channel concurrent-learning observer (diagnostics) | `--adaptive` | [`docs/theory/theory_l1_extension.md`](docs/theory/theory_l1_extension.md) §6 |
+| Phase-G | Receding-horizon MPC with hard tension-ceiling | `--controller=mpc` | [`docs/theory/theory_mpc_extension.md`](docs/theory/theory_mpc_extension.md) |
+| Phase-H | FaultDetector + FormationCoordinator supervisor | `--reshaping-enabled` | [`docs/theory/theory_reshaping_extension.md`](docs/theory/theory_reshaping_extension.md) |
+
+All extensions compose orthogonally — running
+`--controller=mpc --l1-enabled --reshaping-enabled` produces the full
+stack.
 
 ## Boundaries
 
@@ -18,46 +37,72 @@ figure pipeline.
 
 | Path | What it is |
 |------|------------|
-| [`cpp/`](cpp/) | Drake-based C++ sim. Single active executable target `decentralized_fault_aware_sim` (see [cpp/CMakeLists.txt](cpp/CMakeLists.txt)). |
-| [`cpp/src/decentralized_local_controller.cc`](cpp/src/decentralized_local_controller.cc) | The fully-local QP controller — **the paper's contribution**. |
-| [`cpp/src/decentralized_fault_aware_sim_main.cc`](cpp/src/decentralized_fault_aware_sim_main.cc) | Simulation harness: plant, rope model, Meshcat, logging. |
-| [`cpp/src/fault_aware_rope_visualizer.cc`](cpp/src/fault_aware_rope_visualizer.cc) | Rope polyline that cleanly hides after a cable fault. |
-| [`analysis/ieee/`](analysis/ieee/) | IEEE Transactions-style figure pipeline (one PNG per plot). |
-| [`run_ieee_campaign.sh`](run_ieee_campaign.sh) | One-shot runner: builds → runs 6 scenarios → generates figures + READMEs. |
-| [`DECENTRALIZED_FAULT_AWARE_README.md`](DECENTRALIZED_FAULT_AWARE_README.md) | Full design document — architecture, scenarios, parameters, results. |
+| [`cpp/`](cpp/) | Drake C++ sim; one executable target `decentralized_fault_aware_sim`. |
+| [`cpp/src/`](cpp/src/) + [`cpp/include/`](cpp/include/) | 5 `.cc` + 12 `.h` files — see [`docs/IMPLEMENTATION_STATUS.md`](docs/IMPLEMENTATION_STATUS.md) for the file-by-file map. |
+| [`analysis/ieee/`](analysis/ieee/) | IEEE-Transactions figure pipeline + `plot_publication.py` (12-figure suite) + `PUBLICATION_FIGURES.md` + `fill_results_placeholders.py`. |
+| [`run_ieee_campaign.sh`](run_ieee_campaign.sh), [`run_5drone_campaign.sh`](run_5drone_campaign.sh), [`run_mc_interfault_sweep.sh`](run_mc_interfault_sweep.sh) | End-to-end campaign runners. |
+| [`docs/IMPLEMENTATION_STATUS.md`](docs/IMPLEMENTATION_STATUS.md) | **Single source of truth** for which file does what. |
+| [`docs/EXTENSION_PLAN.md`](docs/EXTENSION_PLAN.md) | Cross-extension roadmap + status table. |
+| [`docs/INDEX.md`](docs/INDEX.md) | Navigation hub for docs / output / theory. |
+| [`docs/theory/`](docs/theory/) | 7 theory markdown files (baseline + L1 + MPC + reshaping + rope dynamics + fault model + figure-8). |
+| [`docs/case_study_tether_grace.md`](docs/case_study_tether_grace.md) | Graduate-level self-contained case study. |
+| [`docs/latex/`](docs/latex/) | Printable PDF reference + `methods_section.tex` + `results_section.tex`. |
+| [`DECENTRALIZED_FAULT_AWARE_README.md`](DECENTRALIZED_FAULT_AWARE_README.md) | Historical design narrative — the "why" behind every choice. |
 | [`baseline/`](baseline/) | Orientation notes on the Tether_Lift baseline. |
 
-## Design documentation (read these)
+## Design documentation (read in order)
 
-1. [`DECENTRALIZED_FAULT_AWARE_README.md`](DECENTRALIZED_FAULT_AWARE_README.md) — principal design document for the active system.
+1. [`docs/IMPLEMENTATION_STATUS.md`](docs/IMPLEMENTATION_STATUS.md) — code map (fastest onboarding).
+2. [`DECENTRALIZED_FAULT_AWARE_README.md`](DECENTRALIZED_FAULT_AWARE_README.md) — architectural narrative.
 2. [`baseline/tether_lift_baseline.md`](baseline/tether_lift_baseline.md), [`baseline/paper_vs_code_matrix.md`](baseline/paper_vs_code_matrix.md) — context on the inherited Tether_Lift codebase.
 
 ## Where history lives
 
 During development this controller went through several design iterations
 (Phase 1 single-drone MPC → Phase 2 two-drone → Phase 2.5 inter-drone
-comms → box-only 4-drone → peer-aware → fully-local QP). The obsolete
-source files and runners are preserved in-repo for provenance:
+comms → box-only 4-drone → peer-aware → fully-local QP → Phase-F L1 →
+Phase-G MPC → Phase-H reshape). Superseded material is preserved for
+provenance, never deleted:
 
-- **Source code of superseded designs:** [`archive_obsolete_designs/`](archive_obsolete_designs/) (each phase has its own sub-folder with a `NOTES.txt`).
-- **Prior campaign outputs (~0.5 GB of replays, CSVs, logs):** [`../output/Tether_Grace/archive_prior_campaigns/`](../output/Tether_Grace/archive_prior_campaigns/).
-- **Research-planning docs from earlier sessions** (PHASE_*.md, delivery manifests): [`../output/Tether_Grace/archive_phase_docs/`](../output/Tether_Grace/archive_phase_docs/).
+- **Source code of prior-phase designs:** [`archive_obsolete_designs/`](archive_obsolete_designs/)
+  (Phase 1/2/2.5/4/peer-aware; each sub-folder has a `NOTES.txt`).
+- **Prior campaign outputs (~0.5 GB of replays, CSVs, logs):**
+  [`../output/Tether_Grace/archive_prior_campaigns/`](../output/Tether_Grace/archive_prior_campaigns/).
+- **Early research-planning docs:**
+  [`../output/Tether_Grace/archive_phase_docs/`](../output/Tether_Grace/archive_phase_docs/).
+- **Session-level 2026-04 planning/progress notes + superseded LaTeX drafts:**
+  [`archive_session_notes_2026-04/`](archive_session_notes_2026-04/)
+  (one `NOTES.txt` file explaining each archived doc).
 
-## Reproducing the active campaign
+All active code and docs are in the top-level `Research/` tree, with
+[`docs/IMPLEMENTATION_STATUS.md`](docs/IMPLEMENTATION_STATUS.md) as
+the canonical entry point.
+
+## Reproducing the campaigns
 
 ```bash
 # 1. build
 cd Research/cpp
 cmake -B build -DCMAKE_BUILD_TYPE=Release
-make -C build decentralized_fault_aware_sim -j4
+cmake --build build --target decentralized_fault_aware_sim -j4
 
-# 2. run all 6 scenarios + generate IEEE figures & per-scenario READMEs
+# 2. pick a campaign
 cd ..
-./run_ieee_campaign.sh
+./run_ieee_campaign.sh           # 4-drone S1-S6  → output/Tether_Grace/
+./run_5drone_campaign.sh         # 5-drone A-D   → output/Tether_Grace_5drone/
+./run_mc_interfault_sweep.sh     # MC Δt-sweep   → .../monte_carlo/
 
-# Outputs land under ../output/Tether_Grace/ (one sub-folder per scenario + a
-# cross-scenario comparison folder + an archive folder).
+# 3. run ablations (composable)
+./run_5drone_campaign.sh --l1-enabled               # +L1 adaptive
+./run_5drone_campaign.sh --controller=mpc           # +MPC
+./run_5drone_campaign.sh --reshaping-enabled        # +formation reshape
+./run_5drone_campaign.sh --controller=mpc --l1-enabled --reshaping-enabled
 ```
+
+Each runner ends with the full figure pipeline (12 publication figures
++ 2 supplementary, plus per-scenario 10-figure sets). See
+[`docs/IMPLEMENTATION_STATUS.md`](docs/IMPLEMENTATION_STATUS.md) for
+the CLI-flag reference.
 
 ## Design intent
 

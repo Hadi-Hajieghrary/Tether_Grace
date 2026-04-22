@@ -1,157 +1,331 @@
-# Decentralized Fault-Aware 4-Drone Lift — Campaign & Analysis Pipeline
+# Decentralized Fault-Aware 4-Drone Lift — Design Document
 
-This builds on Tether_Lift's proven simulation infrastructure (URDF quadrotor
-meshes, bead-chain ropes, ground plane, `MeshcatVisualizer` + HTML recording)
-and swaps in a **peer-aware controller** that infers peer failures from rope
-tensions alone (no centralized fault signal) and rebalances the load share.
+> Companion to the active simulation harness
+> [`cpp/src/decentralized_fault_aware_sim_main.cc`](cpp/src/decentralized_fault_aware_sim_main.cc)
+> and the per-drone controller
+> [`cpp/src/decentralized_local_controller.cc`](cpp/src/decentralized_local_controller.cc).
+> This document is the high-level design narrative; formal derivations and
+> parameter justifications are in [`docs/theory/`](docs/theory/).
 
-## What's in this pipeline
+---
 
-1. **C++ simulation** ([decentralized_fault_aware_sim](cpp/src/decentralized_fault_aware_sim_main.cc)) — one executable, CLI-configurable trajectory and fault schedule
-2. **Per-scenario plotting** ([analysis/scenario_plots.py](analysis/scenario_plots.py)) — 15-panel figure covering all signals
-3. **Cross-scenario summary** ([analysis/campaign_summary.py](analysis/campaign_summary.py)) — comparative bar charts + overlay plots + metrics CSV
-4. **One-shot runner** ([run_full_campaign.sh](run_full_campaign.sh)) — executes all 6 scenarios + generates all plots
+## 1. Scope
 
-## The Controller's Peer-Aware Fault Tolerance
+Four quadrotors cooperatively lift a 3 kg payload using a 4-rope sling
+configuration, simulated in Drake with URDF-welded quadrotor visuals,
+an 8-bead spring-damper rope model per leg, and a ground plane.
+A single active executable (`decentralized_fault_aware_sim`) runs any
+of six scenarios, produces a 15-signal CSV log, and saves a
+self-contained Meshcat HTML replay.
 
-Cascade PD (position → tilt → torque) identical to Tether_Lift's baseline,
-**plus** one new input and one new computation:
+The controller is **fully local**. Every drone reads only:
 
-```cpp
-// New input: every rope's scalar tension, from the other drones' rope systems
-peer_tensions: Eigen::VectorXd (size = N)
+- its own plant state (from the simulator's state output port),
+- its own rope tension (scalar, measured at the top segment),
+- the payload pose and velocity (a locally observable signal — onboard
+  camera / IR rangefinder in real deployment),
+- a shared feed-forward payload-reference trajectory (mission plan).
 
-// New computation (only active once pickup has completed)
-n_alive = Σᵢ clamp(T_peer[i] / T_nominal, 0, 1)   // smooth count
-target_tension = m_L * g / n_alive                 // adapts to failures
+There is **no peer-drone state, no peer-tension vector, no `N_alive`
+estimator, no fault flag broadcast**. Cable-fault tolerance is emergent
+from the coupled rope-payload physics under $N-1$ identical local
+controllers.
+
+## 2. Controller (one-paragraph theory)
+
+Each drone executes a cascade of three concentric loops, all
+implemented inside `DecentralizedLocalController::CalcControlForce`:
+
+1. **Slot-tracking PD + anti-swing** — the drone's target position is
+   a formation slot above the payload reference, modulated by a
+   velocity-proportional correction that pulls the drone against the
+   payload's pendulum swing. PD gains $(K_p^{xy},K_d^{xy}) = (30,15)$,
+   $(K_p^{z}, K_d^{z}) = (100,24)$.
+2. **Per-step quadratic program** — a 3-variable QP takes the
+   tracking+swing target acceleration, adds a light effort penalty,
+   and projects onto the feasible acceleration set defined by the
+   tilt envelope ($|a_{x,y}| \le g\tan\theta_{\max}$,
+   $\theta_{\max} = 0.6$ rad) and the thrust envelope
+   ($f \in [f_{\min}, f_{\max}]$, net of the measured rope-tension
+   feed-forward). Solved at every control step by Drake's
+   `MathematicalProgram` — well under 1 ms per drone.
+3. **Attitude inner loop** — a diagonal PD on roll/pitch/yaw errors
+   derived from the commanded tilt, gains $(K_p^{\text{att}},
+   K_d^{\text{att}}) = (25, 4)$, with per-axis torque saturation.
+
+The detailed derivation, block diagram, and code-line citations are in
+[`docs/theory/theory_decentralized_local_controller.md`](docs/theory/theory_decentralized_local_controller.md).
+
+## 3. Scenarios
+
+| ID | Trajectory | Duration | Injected faults | Demonstrates |
+|----|------------|---------:|-----------------|--------------|
+| S1 | traverse (lift → +3 m in x → descend) | 25 s | — | Nominal cooperative lift |
+| S2 | traverse | 25 s | drone 0 @ t=12 s | Single-fault graceful degradation |
+| S3 | traverse | 25 s | drones 0 @ 8 s, 2 @ 16 s | Sequential double failure |
+| S4 | figure-8 lemniscate ($a=3$ m, $T=16$ s) | 40 s | — | Agile trajectory under load |
+| S5 | figure-8 | 40 s | drone 0 @ t=20 s | Fault mid-manoeuvre (t=1.25×T) |
+| S6 | traverse | 25 s | drones 0/2/3 @ 7/13/18 s | Stress test — N = 4 → 3 → 2 → 1 |
+
+The exact fault injection times are set by the runner script
+[`run_ieee_campaign.sh`](run_ieee_campaign.sh); each scenario folder's
+README.md in [`../output/Tether_Grace/`](../output/Tether_Grace/) also
+lists the exact times used in the last executed run.
+
+## 4. System diagram
+
+```mermaid
+flowchart LR
+    subgraph Plant["Drake MultibodyPlant + SceneGraph"]
+      Q["4 × quadrotor (URDF)"]
+      P["payload (sphere, 3 kg)"]
+      B["4 × rope (8-bead chain each)"]
+    end
+
+    subgraph Rope["Per-rope subsystems"]
+      R1["RopeForceSystem"]
+      CG["CableFaultGate"]
+      TG["TensionFaultGate"]
+      ZH["ZeroOrderHold"]
+    end
+
+    subgraph Ctrl["Per-drone fully-local controller"]
+      DC["DecentralizedLocalController<br/>(cascade PD + QP + anti-swing)"]
+      SH["SafeHoverController<br/>(post-fault retreat)"]
+      SW["ControlModeSwitcher"]
+    end
+
+    RF["ReferenceSource<br/>(payload waypoints)"] --> Ctrl
+    Plant --"state"--> R1
+    Plant --"state"--> Ctrl
+    Plant --"state"--> RV["TrajectoryVisualizer + FaultAwareRopeVisualizer"]
+    R1 --"forces"--> CG --> Plant
+    R1 --"tension"--> TG --> ZH --> DC
+    DC --> SW --> Plant
+    SH --> SW
 ```
 
-A peer's tension → 0 fades its `n_alive` contribution → surviving drones'
-`target_tension` rises → they pick up more load. No consensus protocol, no
-central failure flag. The `TensionFaultGate` on the faulted rope zeroes both
-the force signal (physics) and the tension reading (telemetry) simultaneously.
+Fault gates and supervisory switch activate at each faulted drone's
+prescribed $t_{\text{fault}}$. Details in
+[`docs/theory/theory_fault_model.md`](docs/theory/theory_fault_model.md).
 
-## The 6 Scenarios
+## 5. Rope model and parameters (current settings)
 
-| # | Name | Trajectory | Faults | Why it's interesting |
-|---|------|-----------|--------|----------------------|
-| A | `A_nominal`          | Straight traverse (0,0,1) → (3,0,3) | none | Baseline: shows balanced load sharing |
-| B | `B_single_fault`     | Straight traverse                    | Quad 0 @ t=10s | One-fault graceful degradation |
-| C | `C_dual_fault`       | Straight traverse                    | Quad 0 @ t=8s, Quad 2 @ t=14s | Two sequential faults |
-| D | `D_figure8_nominal`  | Lemniscate (Bernoulli figure-8)      | none | Agile trajectory under load |
-| E | `E_figure8_fault`    | Lemniscate                           | Quad 0 @ t=12s | Fault during aggressive lateral turn |
-| F | `F_triple_fault`     | Straight traverse                    | Quads 0,2,3 sequentially | Stress test — drops to 1 lift drone |
+| Parameter | Symbol | Value | Rationale |
+|-----------|:-:|------:|-----------|
+| Drones | $N$ | 4 | |
+| Payload mass | $m_L$ | 3.0 kg | |
+| Quadrotor mass | $m_q$ | 1.5 kg | |
+| Formation radius | $r_f$ | 0.8 m | |
+| Rope rest length | $L$ | 1.25 m | |
+| Beads per rope | $N_{\text{beads}}$ | 8 | 8 intermediate beads → $N_{\text{seg}}=9$ segments, $k_{\text{eff}}=25000/9\approx 2778$ N/m |
+| Per-segment stiffness | $k_s$ | **25 000 N/m** | Aramid-core 6 mm sling, end-to-end $k_{\text{eff}}\approx 2.78$ kN/m |
+| Per-segment damping | $c_s$ | **60 N·s/m** | $\zeta \approx 1.2$, slightly over-damped |
+| Altitude PD | $K_p, K_d$ | 100, 24 | $\omega_n \approx 8.2$ rad/s, $\zeta \approx 1$ |
+| Position (xy) PD | $K_p, K_d$ | 30, 15 | $\omega_n \approx 4.5$ rad/s |
+| Attitude PD | $K_p, K_d$ | 25, 4 | faster than outer loop (cascade rule) |
+| Max tilt | $\theta_{\max}$ | 0.6 rad (34°) | Gives 6.71 m/s² lateral authority ($g\tan 0.6$) |
+| Simulation step | $\Delta t$ | $2 \times 10^{-4}$ s | 10× margin below rope $\omega_n$ bound |
 
-## Outputs (per scenario)
+Full parameter justification and numerical-stability analysis in
+[`docs/theory/theory_rope_dynamics.md`](docs/theory/theory_rope_dynamics.md).
 
-Each scenario writes three files to [decentralized_replays/](decentralized_replays/):
+## 6. Campaign results (final run — 2026-04-21)
 
-| File | Contents |
-|------|----------|
-| `scenario_<NAME>.html` | Standalone Meshcat replay (~5 MB). Open in any browser → press ▶ in Animations panel |
-| `scenario_<NAME>.csv`  | 30 kHz signal log: positions, velocities, rope tensions, controller diagnostics, force commands (~70 MB/20s) |
-| `scenario_<NAME>.png`  | 15-panel diagnostic plot: trajectory, tensions, thrust, N_alive, etc. |
+| Scenario | RMS err [m] | Peak err [m] | Imbal $\sigma_T$ [N] | Peak $T$ [N] | Peak $f_i$ [N]$^\dagger$ |
+|:-:|---:|---:|---:|---:|---:|
+| S1 nominal       | **0.16** | 0.40 |  **3.1** | 163 | 150 |
+| S2 cruise fault  |     0.17 | 0.40 |      6.8 | 163 | 150 |
+| S3 dual          |     0.18 | 0.40 |      7.9 | 163 | 150 |
+| S4 figure-8 nom  |     0.43 | 2.90 |      6.1 | 258 | 150 |
+| S5 figure-8 fault|     0.43 | 2.90 |      8.5 | 258 | 150 |
+| S6 triple        |     0.50 | 1.16 | **10.6** | 163 | 150 |
 
-Plus campaign-wide:
-- `campaign_metrics.csv` — summary table
-- `campaign_summary.png` — bar charts comparing RMS error, peak tension, thrust, impulse, imbalance across scenarios
-- `campaign_overlay.png` — overlay of tracking error and load imbalance vs. time
+$^\dagger$ All metrics computed for $t \ge 0.5$ s (startup transient
+excluded via `ieee_style.trim_start(t\_start=0.5)`). The column
+"Peak $f_i$" reports the maximum **per-drone** thrust command, which
+reaches the actuator ceiling (`max\_thrust = 150` N); it is not the
+combined payload-resultant force.
 
-## Campaign Results — 2026-04-19 (stiff-rope configuration)
+Full interpretation + 75 diagnostic PNGs + 6 HTML replays:
+[`output/Tether_Grace/`](../output/Tether_Grace/).
 
-| Scenario | RMS err | Peak err | Max T | Max ‖F‖ | Σ impulse | Load imbal. | Faults |
-|---|---:|---:|---:|---:|---:|---:|---|
-| A_nominal          | **1.19** | 1.31 | 217 | 45.8 | 2374 | **0.72** | — |
-| B_single_fault     | 1.23     | 1.40 | 217 | 45.8 | 2127 | 4.14 | 1 |
-| C_dual_fault       | 1.23     | 1.40 | 217 | 45.8 | 1936 | 5.22 | 2 |
-| D_figure8_nominal  | 1.39     | 2.40 | 217 | 60.1 | 3716 | 4.37 | — |
-| E_figure8_fault    | 1.45     | 2.40 | 217 | 60.1 | 3278 | 6.60 | 1 |
-| F_triple_fault     | 1.36     | 2.28 | 217 | 67.7 | 2061 | **6.99** | 3 |
-
-*(RMS/peak in m; tensions/thrust in N; impulse in N·s; imbalance = RMS std(T) across ropes in N.)*
-
-**Takeaways:**
-- Stiff-rope configuration improves **tracking RMS by 19–25 %** across all scenarios and cuts steady-state payload bounce from ~10 cm to ~0.5 cm std.
-- The nominal imbalance is **0.72 N** — each fault **unambiguously** raises imbalance to ≥ 4 N (5.7× baseline or more). Fault signature is now clearly visible against background.
-- Figure-8 agility raises peak thrust demand from 46 N (traverse) to **60–68 N** (lemniscate); triple-fault peaks at 68 N because surviving drones carry the failed peers' loads.
-- **Peak rope tension = 217 N** during horizontal-acceleration transients — uniform across all scenarios because it's a property of the rope stiffness × payload mass × max acceleration, not the fault pattern. Still well within structural limits for a braided-nylon rope (rated 3–5 kN).
-- Tracking-error RMS is ≈ 1.2–1.5 m in all scenarios. *Note:* the "reference" logged is the **drone formation centre**, which sits ~1 m above the payload because of rope length; subtract ~1 m to compare payload to its effective hang point.
-
-## Rope stiffness — why it matters for fault visibility
-
-The rope is modelled as a bead chain with spring-damper segments. With a
-**soft rope** (`segment_stiffness = 200 N/m`), the payload sags ~30 cm per
-rope under static load and oscillates at the rope's bending-mode
-frequency (~10 Hz); fault transients get lost in that background.
-
-Current configuration is **stiff + near-critically damped**:
-
-| Parameter | Value | Rationale |
-|-----------|------:|-----------|
-| `segment_stiffness` | 2000 N/m | Static stretch ~3 cm (realistic braided nylon) |
-| `segment_damping`   |    45 N·s/m | ζ ≈ 1.0 (kills oscillations) |
-| Bead mass           | 0.025 kg | Same as baseline |
-| Bead count / rope   | 8 | Same as baseline |
-
-Results: hover-state payload bounce **std 0.46 cm** (≈20× reduction), dominant
-frequency shifts from rope bending to the pendulum-swing mode (~5 Hz), and
-fault transients become visually distinct from background motion.
-
-Trade-off: peak rope tension during horizontal acceleration rises from
-23 N → 217 N (stiff ropes transmit transient accelerations more sharply).
-This stays well within typical 3–5 kN braided-nylon rope ratings.
-
-## Build
+## 7. How to build and run
 
 ```bash
-cd /workspaces/Tether_Grace/Research/cpp/build
-cmake ..                                     # only needed first time
-make decentralized_fault_aware_sim -j4
+cd /workspaces/Tether_Grace/Research/cpp
+cmake -B build -DCMAKE_BUILD_TYPE=Release
+make -C build decentralized_fault_aware_sim -j4
+
+cd ..
+./run_ieee_campaign.sh         # ≈45 min for all 6 scenarios + plots
 ```
 
-## Run the full campaign
+Outputs land in `output/Tether_Grace/`. See that folder's
+[`README.md`](../output/Tether_Grace/README.md) for the per-scenario
+layout.
 
-```bash
-cd /workspaces/Tether_Grace/Research
-./run_full_campaign.sh                       # ~45 min wall-time (6 × ~7 min)
-```
+## 7.5. Publication-grade analysis (2026-04-21)
 
-Takes ~5–8 min per scenario at `target_realtime_rate=0.5`; plots generate in seconds.
+The Phase-A/B refinements introduce:
 
-## Run a single custom scenario
+* **Pre-tensioned, free-fall-free initial conditions.** The sim harness
+  analytically solves the hover-equilibrium fixed point
+  $\delta = T(\delta)/k_{\text{eff}}$ with
+  $T = m_L g L_{\text{chord}} / (N \Delta z_{\text{attach}})$, placing
+  every drone at its static-hover slot with the rope already
+  pre-stretched to its hover value ($\delta \approx 3$ mm, $T_{\text{hover}}
+  \approx 8$ N). The controller's `initial_pretensioned` flag marks the
+  pickup ramp as already-complete so $T_{\text{ff}} = T_{\text{meas}}$
+  from tick 0 — no payload droop, no bead-chain snap-taut.
+* **Smoothstep ($C^1$-continuous) pickup ramp** — $\alpha(\tau) =
+  3\tau^2 - 2\tau^3$ replaces the original linear ramp, eliminating the
+  step-discontinuity that previously excited the 5 Hz bead-chain axial
+  mode.
+* **Expanded controller diagnostics** (13-signal output port):
+  `{swing_speed, swing_offset_mag, qp_cost, qp_solve_time_us, T_ff,
+  thrust_cmd, tilt_mag, 6×active-set-bits}` — enables active-set
+  occupancy plots, QP solver-latency histograms, and thrust-envelope
+  visualisation.
+* **Per-segment tension probe** ([`cpp/include/rope_segment_tension_probe.h`](cpp/include/rope_segment_tension_probe.h))
+  — observer-only `LeafSystem` that exposes $T_{i,j}(t)$ for every
+  rope $i$ and segment $j$, enabling the bead-chain tension waterfall
+  figure F04 without modifying the Tether_Lift baseline.
+* **12-figure IEEE publication suite** ([`analysis/ieee/plot_publication.py`](analysis/ieee/plot_publication.py))
+  — architecture diagram, 3-D trajectory tubes, error overlays,
+  per-rope tension waterfalls, $\sigma_T(t)$ STFT spectrograms,
+  QP active-set stackplots, thrust/tilt saturation timelines,
+  closed-loop pole locus vs. $N_{\text{alive}}$, Monte-Carlo
+  inter-fault-gap scatter, metric heatmaps, grouped bars, pickup-stretch
+  time series, settling-time ECDF.
+* **Monte-Carlo inter-fault-gap sweep** ([`run_mc_interfault_sweep.sh`](run_mc_interfault_sweep.sh))
+  — adversarial robustness evidence: peak rope tension as a function of
+  the inter-fault gap $\Delta t_{12}$ for compound failures, with the
+  first fault fixed at $t = 15$ s and the second sweeping
+  $\Delta t \in \{2, 4, …, 20\}$ s.
 
-```bash
-cd /workspaces/Tether_Grace/Research/cpp/build
-./decentralized_fault_aware_sim \
-    --num-quads 4 \
-    --duration 20 \
-    --trajectory figure8 \
-    --scenario my_run \
-    --fault-0-quad 1 --fault-0-time 15 \
-    --output-dir /tmp/my_run
-python3 /workspaces/Tether_Grace/Research/analysis/scenario_plots.py \
-    /tmp/my_run/scenario_my_run.csv
-```
+Publication figures land in
+[`../output/Tether_Grace_5drone/09_publication_figures/`](../output/Tether_Grace_5drone/09_publication_figures/).
 
-## CLI reference
+## 7.6. Advanced extensions (Phase-F, G, H — 2026-04-22)
 
-| Flag | Meaning |
-|------|---------|
-| `--num-quads N`         | Number of drones (default 4) |
-| `--duration T`          | Seconds to simulate |
-| `--trajectory NAME`     | `traverse` (default) or `figure8` |
-| `--scenario NAME`       | Label used in output filenames |
-| `--fault-{0,1,2}-quad I`| Which drone's cable to sever |
-| `--fault-{0,1,2}-time T`| When to sever [s] |
-| `--output-dir DIR`      | Destination for `.html` + `.csv` |
+Three controller-layer extensions are now merged into the active tree,
+each gated by a CLI flag (default OFF so the baseline campaign remains
+byte-for-byte reproducible):
 
-## Key source files
+* **Phase-F — L1 adaptive outer loop** inside `DecentralizedLocalController`
+  ([`cpp/src/decentralized_local_controller.cc`](cpp/src/decentralized_local_controller.cc)
+  `::CalcL1Update`). Runs a 5-state discrete predictor + Lyapunov-
+  projection adaptive law + LP filter at the sim step and injects a
+  single scalar $u_\mathrm{ad}$ onto the altitude command before the QP.
+  Empirical: **−16 % payload tracking-error** under a 30 % $m_L$ bias;
+  also improves nominal-case tracking (rope-geometry residual rejection).
+  Derivation in [`docs/theory/theory_l1_extension.md`](docs/theory/theory_l1_extension.md).
+  Flag `--l1-enabled`.
 
-| File | Role |
-|------|------|
-| [cpp/src/decentralized_fault_aware_sim_main.cc](cpp/src/decentralized_fault_aware_sim_main.cc) | Simulation harness (physics + vis + recording + CSV dump) |
-| [cpp/include/decentralized_fault_aware_controller.h](cpp/include/decentralized_fault_aware_controller.h) | Controller interface |
-| [cpp/src/decentralized_fault_aware_controller.cc](cpp/src/decentralized_fault_aware_controller.cc) | Controller: cascade PD + peer-aware `N_alive` feedforward |
-| [cpp/include/cable_fault_gate.h](cpp/include/cable_fault_gate.h) | `CableFaultGate` (forces) + `TensionFaultGate` (telemetry) |
-| [analysis/scenario_plots.py](analysis/scenario_plots.py) | Per-scenario diagnostic figure |
-| [analysis/campaign_summary.py](analysis/campaign_summary.py) | Cross-scenario comparative figures + metrics |
+* **Phase-G / G-2 — Receding-horizon MPC** drop-in class
+  `MpcLocalController` ([`cpp/src/mpc_local_controller.cc`](cpp/src/mpc_local_controller.cc)).
+  Pre-computes $\Phi$, $\Omega$, DARE terminal cost at construction;
+  per-tick builds a linearised tension-ceiling constraint
+  $c_j^\top\,\Omega_j\,U \le T_{\max} - T_\mathrm{meas} - c_j^\top\,(A^j - I)\,x - j\Delta t\,\dot T_\mathrm{meas}$
+  with soft slack for feasibility. Empirical: with $T \le 60$ N ceiling,
+  MPC cuts cruise tracking error 73 → 39 mm while keeping real peak
+  rope tension ≤ 46 N during single-fault transient. Derivation in
+  [`docs/theory/theory_mpc_extension.md`](docs/theory/theory_mpc_extension.md).
+  Flags `--controller=mpc`, `--mpc-horizon`, `--mpc-tension-max`.
+
+* **Phase-H — Formation-Reshaping supervisor**: two header-only
+  LeafSystems, [`cpp/include/fault_detector.h`](cpp/include/fault_detector.h)
+  (latches `fault_id` after sustained sub-threshold tension) and
+  [`cpp/include/formation_coordinator.h`](cpp/include/formation_coordinator.h)
+  (closed-form 30° rotation for $N=4 \to M=3$; quintic $C^2$
+  smoothstep transition over 5 s). Broadcasts one scalar `fault_id`
+  and a 3N-vector of dynamic formation offsets; each controller's
+  new `formation_offset_override` input port picks up its own slot.
+  Mechanically verified (drones reach the equiangular 60°/180°/300°
+  layout); the quasi-static tension-reduction claim is scenario-dependent
+  and needs joint tuning with the descent profile before being
+  reported in the paper. Derivation in
+  [`docs/theory/theory_reshaping_extension.md`](docs/theory/theory_reshaping_extension.md).
+  Flag `--reshaping-enabled`.
+
+For the complete file-by-file active-code map (what each `.cc`/`.h`
+does, which theory doc matches it), see
+[`docs/IMPLEMENTATION_STATUS.md`](docs/IMPLEMENTATION_STATUS.md).
+
+## 8. 5-Drone Lemniscate Campaign
+
+A second campaign extends the fault-tolerance evaluation to **five
+drones** and a **3-D lemniscate** reference trajectory — a strictly
+harder task than the four-drone scenarios.
+
+### 8.1 Formation and trajectory
+
+| Parameter | Value |
+|---|---|
+| Number of drones | 5 |
+| Formation type | Symmetric pentagonal, $r_f = 0.8$ m |
+| Trajectory shape | `lemniscate3d` (Bernoulli lemniscate + vertical oscillation) |
+| Horizontal scale $a$ | 3 m |
+| Vertical oscillation amplitude $A_z$ | 0.35 m |
+| Period $T$ | 12 s |
+| Mission duration | 40 s |
+
+See [`docs/theory/theory_figure8_trajectory.md`](docs/theory/theory_figure8_trajectory.md) §5
+for the parametric equations and waypoint schedule.
+
+### 8.2 Scenarios
+
+| ID | Fault event(s) | Fault time(s) | Notes |
+|---|---|---|---|
+| A | None | — | Nominal 5-drone lemniscate3d |
+| B | Drone 0 fails | $t = 15$ s | Single fault mid-manoeuvre |
+| C | Drone 0 + Drone 2 fail | $t = 15$ s, $t = 20$ s | 5 s inter-fault gap |
+| D | Drone 0 + Drone 2 fail | $t = 15$ s, $t = 25$ s | 10 s inter-fault gap |
+
+Campaign entry point: [`run_5drone_campaign.sh`](run_5drone_campaign.sh).
+Outputs land in `output/Tether_Grace_5drone/`.
+
+### 8.3 Key results
+
+| Scenario | Payload RMS [m] | Peak err [m] | Peak $f_i$ [N]† |
+|---|---|---|---|
+| A (nominal) | — | — | — |
+| B (1 fault) | — | — | — |
+| C (2 faults, 5 s gap) | — | — | — |
+| D (2 faults, 10 s gap) | — | — | — |
+
+† All metrics computed for $t \geq 0.5$ s (startup transient excluded).
+Peak $f_i$ reports maximum per-drone thrust command; max\_thrust = 150 N.
+
+> **Note:** Metric cells are placeholders — run `run_5drone_campaign.sh`
+> followed by `python3 analysis/ieee/fill_results_placeholders.py` to
+> populate them from logged CSVs.
+
+### 8.4 Monte-Carlo inter-fault-gap sweep
+
+The script [`run_mc_interfault_sweep.sh`](run_mc_interfault_sweep.sh)
+fixes drone 0 fault at $t = 15$ s and sweeps the inter-fault gap
+$\Delta t \in \{2, 4, 6, 8, 10, 12, 14, 16, 18, 20\}$ s. Each
+configuration is run 1 time (deterministic Drake sim; Monte-Carlo in
+the sense of the parameter sweep). The primary adversarial robustness
+metric is peak rope tension vs. $\Delta t$.
+
+---
+
+## 9. Where to go next
+
+| You want to… | Go to |
+|---|---|
+| Read the derivation of the controller | [`docs/theory/theory_decentralized_local_controller.md`](docs/theory/theory_decentralized_local_controller.md) |
+| Understand the rope model | [`docs/theory/theory_rope_dynamics.md`](docs/theory/theory_rope_dynamics.md) |
+| Understand the fault-response mechanism | [`docs/theory/theory_fault_model.md`](docs/theory/theory_fault_model.md) |
+| Understand the figure-8 / lemniscate references | [`docs/theory/theory_figure8_trajectory.md`](docs/theory/theory_figure8_trajectory.md) |
+| **Extension 1: L1 adaptive outer loop** | [`docs/theory/theory_l1_extension.md`](docs/theory/theory_l1_extension.md) |
+| **Extension 2: Receding-horizon MPC** | [`docs/theory/theory_mpc_extension.md`](docs/theory/theory_mpc_extension.md) |
+| **Extension 3: Formation reshaping after fault** | [`docs/theory/theory_reshaping_extension.md`](docs/theory/theory_reshaping_extension.md) |
+| **Master extension plan (all three)** | [`docs/EXTENSION_PLAN.md`](docs/EXTENSION_PLAN.md) |
+| See 4-drone campaign results | [`output/Tether_Grace/README.md`](../output/Tether_Grace/README.md) |
+| See 5-drone campaign results | `output/Tether_Grace_5drone/` |
+| Browse the code | [`cpp/src/`](cpp/src/), [`cpp/include/`](cpp/include/), [`cpp/CMakeLists.txt`](cpp/CMakeLists.txt) |
+| See older design iterations | [`archive_obsolete_designs/`](archive_obsolete_designs/) |

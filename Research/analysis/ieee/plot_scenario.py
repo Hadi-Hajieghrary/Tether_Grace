@@ -25,6 +25,14 @@ from ieee_style import (
 setup_style()
 
 
+def num_drones(df):
+    """Infer the drone count N from the CSV schema (quad0_x, quad1_x, …)."""
+    n = 0
+    while f'quad{n}_x' in df.columns:
+        n += 1
+    return n
+
+
 # ====================================================================
 #  INDIVIDUAL PLOT GENERATORS
 # ====================================================================
@@ -35,7 +43,7 @@ def plot_3d_trajectory(df, out, faults):
     ax.plot(df["ref_x"], df["ref_y"], df["ref_z"], **REF_STYLE)
     ax.plot(df["payload_x"], df["payload_y"], df["payload_z"],
             color=PAYLOAD_STYLE["color"], lw=1.3, label="Payload")
-    for i in range(4):
+    for i in range(num_drones(df)):
         ax.plot(df[f"quad{i}_x"], df[f"quad{i}_y"], df[f"quad{i}_z"],
                 color=COLORS[i], lw=0.8, alpha=0.75, label=f"Drone {i}")
     ax.set_xlabel("x [m]"); ax.set_ylabel("y [m]"); ax.set_zlabel("z [m]")
@@ -48,7 +56,7 @@ def plot_xy_top(df, out, faults):
     fig, ax = plt.subplots(figsize=SINGLE_COL)
     ax.plot(df["ref_x"], df["ref_y"], **REF_STYLE)
     ax.plot(df["payload_x"], df["payload_y"], **PAYLOAD_STYLE)
-    for i in range(4):
+    for i in range(num_drones(df)):
         ax.plot(df[f"quad{i}_x"], df[f"quad{i}_y"], color=COLORS[i], lw=0.9,
                 alpha=0.8, label=f"Drone {i}")
     ax.set_xlabel(r"$x$ [m]"); ax.set_ylabel(r"$y$ [m]")
@@ -91,7 +99,7 @@ def plot_tracking_error(df, out, faults):
 
 def plot_tensions(df, out, faults):
     fig, ax = plt.subplots(figsize=DOUBLE_COL)
-    for i in range(4):
+    for i in range(num_drones(df)):
         ax.plot(df["time"], df[f"tension_{i}"], color=COLORS[i],
                 lw=1.0, label=f"Drone {i}")
     annotate_faults(ax, faults)
@@ -103,7 +111,7 @@ def plot_tensions(df, out, faults):
 
 def plot_thrust_magnitude(df, out, faults):
     fig, ax = plt.subplots(figsize=DOUBLE_COL)
-    for i in range(4):
+    for i in range(num_drones(df)):
         F = np.sqrt(df[f"fx_{i}"] ** 2 + df[f"fy_{i}"] ** 2 + df[f"fz_{i}"] ** 2)
         ax.plot(df["time"], F, color=COLORS[i], lw=1.0, label=f"Drone {i}")
     annotate_faults(ax, faults)
@@ -118,7 +126,7 @@ def plot_swing_speed(df, out, faults):
     proxy. Each drone computes this from its own payload observation; the
     four curves should be identical in the absence of measurement noise."""
     fig, ax = plt.subplots(figsize=SINGLE_COL)
-    for i in range(4):
+    for i in range(num_drones(df)):
         ax.plot(df["time"], df[f"swing_speed_{i}"], color=COLORS[i], lw=0.9,
                 alpha=0.85, label=f"Drone {i}")
     annotate_faults(ax, faults)
@@ -132,7 +140,7 @@ def plot_swing_offset(df, out, faults):
     """Per-drone anti-swing slot-offset magnitude — the size of the local
     QP's swing-damping correction on top of the formation slot."""
     fig, ax = plt.subplots(figsize=SINGLE_COL)
-    for i in range(4):
+    for i in range(num_drones(df)):
         ax.plot(df["time"], df[f"swing_offset_{i}"], color=COLORS[i],
                 lw=0.9, alpha=0.85, label=f"Drone {i}")
     annotate_faults(ax, faults)
@@ -143,7 +151,7 @@ def plot_swing_offset(df, out, faults):
 
 
 def plot_load_imbalance(df, out, faults):
-    T = np.column_stack([df[f"tension_{i}"] for i in range(4)])
+    T = np.column_stack([df[f"tension_{i}"] for i in range(num_drones(df))])
     imb = np.std(T, axis=1)
     fig, ax = plt.subplots(figsize=SINGLE_COL)
     ax.plot(df["time"], imb, color="#444444", lw=1.1)

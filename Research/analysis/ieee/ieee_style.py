@@ -22,12 +22,16 @@ DOUBLE_COL = (7.16, 2.8)
 DOUBLE_COL_TALL = (7.16, 4.2)
 SQUARE = (3.5, 3.3)
 
-# Wong colour-blind safe palette for 4 drones.
+# Wong colour-blind safe palette, extended up to 6 drones.
+# Colours chosen from Wong (2011) "Points of view: Color blindness", Nat.Meth.,
+# skipping #E69F00 (used for payload trails) and #CC0000 (fault markers).
 COLORS = [
-    "#D55E00",   # drone 0 — vermilion/orange
+    "#D55E00",   # drone 0 — vermilion
     "#009E73",   # drone 1 — bluish-green
     "#0072B2",   # drone 2 — blue
     "#CC79A7",   # drone 3 — reddish-purple
+    "#56B4E9",   # drone 4 — sky blue
+    "#F0E442",   # drone 5 — yellow (reserved for future 6-drone campaigns)
 ]
 
 # Other signals
@@ -81,8 +85,30 @@ def annotate_faults(ax, faults, label_each=False):
                    label=(f"Fault @ t={t_fault:.1f}s" if label_each and i == 0 else None))
 
 
-def trim_start(df, t_start=0.5):
-    """Drop initial simulation samples (startup transient)."""
+# ---------------------------------------------------------------------------
+# Single-source-of-truth for the startup-transient burn-in window used by
+# every metric-computing script. Changing this constant updates every
+# downstream script simultaneously — resolves the A3 drift risk flagged in
+# the 2026-04-21 doc audit. Do NOT hard-code 0.5 anywhere else; import this
+# constant instead.
+# ---------------------------------------------------------------------------
+BURN_IN_SECONDS = 0.5
+
+
+def trim_start(df, t_start=None):
+    """Drop initial simulation samples before *t_start* seconds.
+
+    Removes the startup transient so that computed metrics (RMS, Peak,
+    PeakT) reflect steady cruise/fault behaviour rather than the brief
+    IC-settling spike.  **All published metrics** in
+    ``DECENTRALIZED_FAULT_AWARE_README.md`` §6 and
+    ``theory_decentralized_local_controller.md`` §9 are computed with
+    the default cutoff ``BURN_IN_SECONDS`` (0.5 s). Any script that
+    computes paper-grade metrics should either call ``trim_start`` OR
+    import ``BURN_IN_SECONDS`` directly — never hard-code the literal.
+    """
+    if t_start is None:
+        t_start = BURN_IN_SECONDS
     return df[df["time"] >= t_start].reset_index(drop=True)
 
 

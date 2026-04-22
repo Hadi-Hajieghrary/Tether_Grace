@@ -43,10 +43,15 @@
 #include <drake/systems/primitives/zero_order_hold.h>
 
 #include "cable_fault_gate.h"
+#include "cl_param_estimator.h"
 #include "decentralized_local_controller.h"
 #include "fault_aware_rope_visualizer.h"
+#include "fault_detector.h"
+#include "formation_coordinator.h"
 #include "meshcat_fault_hider.h"
+#include "mpc_local_controller.h"
 #include "rope_force_system.h"
+#include "rope_segment_tension_probe.h"
 #include "rope_utils.h"
 #include "safe_hover_controller.h"
 #include "control_mode_switcher.h"
@@ -81,13 +86,27 @@ struct CliOptions {
   double duration = 20.0;
   std::string output_dir = "/workspaces/Tether_Grace/Research/decentralized_replays";
   std::string scenario_name = "A_nominal";
-  std::string trajectory = "traverse";  // "traverse" | "figure8"
+  std::string trajectory = "traverse";  // "traverse" | "figure8" | "lemniscate3d"
   int fault_quad_0 = -1;
   double fault_time_0 = -1.0;
   int fault_quad_1 = -1;
   double fault_time_1 = -1.0;
   int fault_quad_2 = -1;
   double fault_time_2 = -1.0;
+  // Phase-F: run CL parameter estimator alongside each drone.
+  bool adaptive = false;
+  // Phase-F (L1): enable L1 adaptive inside the controller.
+  bool l1_enabled = false;
+  // Optional payload mass override for testing adaptation convergence.
+  // Negative → use default (3.0 kg).
+  double payload_mass_override = -1.0;
+  // Phase-G: choose controller. Default "baseline" keeps existing runs
+  // byte-for-byte reproducible; "mpc" selects MpcLocalController.
+  std::string controller = "baseline";
+  int    mpc_horizon = 5;
+  double mpc_tension_max = 100.0;
+  // Phase-H: enable FaultDetector + FormationCoordinator supervisor.
+  bool reshaping_enabled = false;
 };
 
 CliOptions ParseCli(int argc, char** argv) {
@@ -105,6 +124,13 @@ CliOptions ParseCli(int argc, char** argv) {
     else if (eq("--fault-2-quad") && i + 1 < argc) o.fault_quad_2 = std::atoi(argv[++i]);
     else if (eq("--fault-2-time") && i + 1 < argc) o.fault_time_2 = std::atof(argv[++i]);
     else if (eq("--trajectory") && i + 1 < argc) o.trajectory = argv[++i];
+    else if (eq("--adaptive")) o.adaptive = true;
+    else if (eq("--l1-enabled")) o.l1_enabled = true;
+    else if (eq("--controller") && i + 1 < argc) o.controller = argv[++i];
+    else if (eq("--mpc-horizon") && i + 1 < argc) o.mpc_horizon = std::atoi(argv[++i]);
+    else if (eq("--mpc-tension-max") && i + 1 < argc) o.mpc_tension_max = std::atof(argv[++i]);
+    else if (eq("--reshaping-enabled")) o.reshaping_enabled = true;
+    else if (eq("--payload-mass") && i + 1 < argc) o.payload_mass_override = std::atof(argv[++i]);
   }
   return o;
 }
@@ -127,7 +153,58 @@ std::vector<TrajectoryWaypoint> BuildTrajectory(
     const std::string& shape, double duration,
     double z_low, double z_high) {
   std::vector<TrajectoryWaypoint> wps;
-  if (shape == "figure8") {
+  if (shape == "lemniscate3d") {
+    // 3-D lemniscate: a Bernoulli figure-8 in (x,y) with superimposed
+    // vertical oscillation, so the payload traces a continuously-
+    // varying 3-D path. Designed for the 5-drone N=5 campaign: gives a
+    // non-trivial dynamic reference that is in quasi-steady motion by
+    // t=10s and stays dynamic throughout.
+    //
+    //   x(phi) = a * cos(phi)     / (1 + sin²(phi))
+    //   y(phi) = a * sin(phi)cos(phi) / (1 + sin²(phi))
+    //   z(phi) = z_high + Az * sin(phi)             (altitude once per loop)
+    //
+    const double a = 3.0;
+    const double T = 12.0;              // lemniscate period (shorter than 2-D
+                                        //   figure8 T=16 so each loop is
+                                        //   more dynamic)
+    const double Az = 0.35;             // altitude oscillation amplitude [m]
+    TrajectoryWaypoint w;
+    // Pickup & lift: reach (a, 0, z_high) by t=5 s so the system can
+    // settle into steady motion before the first fault at t>=10.
+    w.position = {a, 0, z_low};  w.arrival_time = 0.0; w.hold_time = 2.0; wps.push_back(w);
+    w.position = {a, 0, z_high}; w.arrival_time = 5.0; w.hold_time = 1.0; wps.push_back(w);
+
+    // Trace the 3-D lemniscate densely for the bulk of the mission.
+    const double traj_start = 6.0;
+    const double traj_end   = duration - 3.0;
+    const double sample_dt  = 0.2;
+    for (double t = traj_start; t < traj_end; t += sample_dt) {
+      const double phi   = (t - traj_start) * 2.0 * M_PI / T;
+      const double denom = 1.0 + std::sin(phi) * std::sin(phi);
+      const double x     = a * std::cos(phi) / denom;
+      const double y     = a * std::sin(phi) * std::cos(phi) / denom;
+      const double z     = z_high + Az * std::sin(phi);
+      TrajectoryWaypoint wp;
+      wp.position = {x, y, z};
+      wp.arrival_time = t;
+      wp.hold_time = 0.0;
+      wps.push_back(wp);
+    }
+    // Return to start + descend
+    TrajectoryWaypoint wp_return;
+    wp_return.position = {a, 0, z_high};
+    wp_return.arrival_time = duration - 2.0;
+    wp_return.hold_time = 0.5;
+    wps.push_back(wp_return);
+
+    TrajectoryWaypoint wpf;
+    wpf.position = {a, 0, z_low};
+    wpf.arrival_time = duration - 0.1;
+    wpf.hold_time = 2.0;
+    wps.push_back(wpf);
+
+  } else if (shape == "figure8") {
     // Lemniscate of Bernoulli. Larger scale (a = 3 m span of ±3 in x) and
     // longer period (T = 16 s ⇒ peak speed ≈ 1 m/s, peak lateral accel
     // ≈ 0.9 m/s²) so the underslung payload can track the reference
@@ -236,7 +313,7 @@ int DoMain(int argc, char** argv) {
   const CliOptions opts = ParseCli(argc, argv);
   const int N = opts.num_quads;
 
-  std::cout << "=== Decentralized Fault-Aware 4-Drone Sim ===\n"
+  std::cout << "=== Decentralized Fault-Aware Cooperative-Lift Sim ===\n"
             << "Scenario: " << opts.scenario_name << "\n"
             << "Duration: " << opts.duration << " s\n"
             << "Drones:   " << N << "\n";
@@ -249,7 +326,12 @@ int DoMain(int argc, char** argv) {
   // ============ PHYSICS CONFIG (aligned with Tether_Lift baseline) ============
   const double quadcopter_mass = 1.5;
   const Eigen::Vector3d quadcopter_dimensions(0.3, 0.3, 0.08);
-  const double payload_mass = 3.0;
+  // Payload mass defaults to 3.0 kg; the `--payload-mass` CLI flag
+  // overrides it so the Phase-F adaptive estimator can be tested
+  // against a known bias (e.g. --payload-mass 4.5 → 50 % heavier
+  // payload than the nominal controller design value).
+  const double payload_mass =
+      (opts.payload_mass_override > 0.0) ? opts.payload_mass_override : 3.0;
   const double payload_radius = 0.15;
   // Rope length chosen so drones start with rope slightly slack (no
   // startup impulse): drone-to-payload distance at t=0 is √(r² + Δz²)
@@ -278,13 +360,64 @@ int DoMain(int argc, char** argv) {
   const double simulation_time_step = 2e-4;  // Matches Tether_Lift baseline
   const double load_per_rope = (payload_mass * gravity) / static_cast<double>(N);
 
-  // ============ TRAJECTORY ============
-  // `waypoints` describes the PAYLOAD target trajectory. For the controller,
-  // the drones must fly a formation above the payload so the payload hangs
-  // down onto it. Empirically the effective hang distance matches the rope
-  // rest length (the catenary drape of the 8-bead chain pulls the payload
-  // slightly below the √(L² − r²) ideal), so use `rope_length` directly.
-  const double rope_drop = rope_length;
+  // ============ TRAJECTORY + HOVER-EQUILIBRIUM GEOMETRY ============
+  //
+  // `waypoints` describes the PAYLOAD target trajectory. The drones fly in
+  // formation directly above the payload. The physical rope does not run
+  // between body centres but between attachment points:
+  //
+  //   drone attach  =  drone_center + quad_attachment_offset
+  //                 = drone_center + (0, 0, -dz_quad) where
+  //                   dz_quad = quad_half_thickness + rope_stub
+  //
+  //   payload attach = payload_center + (0.3·r cos φᵢ, 0.3·r sin φᵢ, 0)
+  //
+  // Therefore the effective horizontal rope span is
+  //         r_eff = 0.7 · formation_radius
+  // and the effective vertical span is
+  //         Δz_attach = rope_drop - dz_quad
+  // where rope_drop denotes the drone-centre to payload-centre vertical
+  // offset that the controller uses for its slot reference.
+  //
+  // At static hover equilibrium the rope chord between attachments must
+  // slightly exceed the rest length L to carry the payload weight:
+  //
+  //   L_chord = √(r_eff² + Δz_attach²) = L + δ,
+  //   T       = m_L g · L_chord / (N · Δz_attach),
+  //   δ       = T / k_eff   (k_eff = k_seg / N_seg).
+  //
+  // Solving the fixed point gives δ ≈ 3 mm and rope_drop ≈ 1.20 m
+  // (matching the original empirical calibration). Spawning the drones at
+  // p_payload + (r cos φ, r sin φ, rope_drop) with beads linearly
+  // interpolated between the attachment endpoints places the system
+  // directly at its static-hover fixed point — no free-fall, no
+  // snap-taut, no excitation of the 5 Hz bead-chain axial mode.
+  const Eigen::Vector3d quad_attachment_offset(
+      0, 0, -quadcopter_dimensions[2] / 2.0 - 0.05);
+  const double dz_quad_attach = -quad_attachment_offset.z();  // 0.09 m
+  const double r_eff = formation_radius * 0.7;  // 0.7 · r because payload
+                                                //   attach is offset by 0.3·r
+                                                //   in the same radial direction
+                                                //   as the drone slot.
+  const double k_seg_eff = segment_stiffness / (num_rope_beads + 1);  // series
+
+  // Fixed-point iteration for δ — converges in <5 iterations.
+  double rope_stretch_eq = 0.0;
+  double dz_attach_eq = std::sqrt(rope_length * rope_length - r_eff * r_eff);
+  for (int it = 0; it < 20; ++it) {
+    const double L_chord = rope_length + rope_stretch_eq;
+    dz_attach_eq = std::sqrt(std::max(1e-9,
+        L_chord * L_chord - r_eff * r_eff));
+    const double T_rope = payload_mass * gravity * L_chord / (N * dz_attach_eq);
+    rope_stretch_eq = T_rope / k_seg_eff;
+  }
+  const double L_chord_eq = rope_length + rope_stretch_eq;
+  const double rope_drop = dz_attach_eq + dz_quad_attach;
+  std::cout << "Hover equilibrium: r_eff = " << r_eff
+            << " m, rope stretch δ = " << rope_stretch_eq * 1000
+            << " mm, L_chord = " << L_chord_eq * 1000
+            << " mm, Δz_attach = " << dz_attach_eq * 1000
+            << " mm, rope_drop = " << rope_drop * 1000 << " mm\n";
 
   std::vector<TrajectoryWaypoint> waypoints =
       BuildTrajectory(opts.trajectory, opts.duration,
@@ -386,14 +519,16 @@ int DoMain(int argc, char** argv) {
   plant.Finalize();
 
   // ============ PER-QUAD ROPE SYSTEMS + TENSION GATES + SCALAR TENSIONS ============
-  const Eigen::Vector3d quad_attachment_offset(
-      0, 0, -quadcopter_dimensions[2] / 2.0 - 0.05);
+  // quad_attachment_offset is declared earlier (used in geometry solve).
 
   std::vector<RopeForceSystem*> rope_systems(N);
+  std::vector<RopeSegmentTensionProbe*> segment_probes(N);
   std::vector<ZeroOrderHold<double>*> tension_holds(N);
   std::vector<Demultiplexer<double>*> tension_demuxes(N);
   std::vector<CableFaultGate*> force_gates(N, nullptr);
   std::vector<TensionFaultGate*> tension_gates(N, nullptr);
+  std::vector<CLParamEstimator*> cl_estimators(N, nullptr);
+  const int num_rope_segments = num_rope_beads + 1;  // N_beads + 1 segments
 
   for (int q = 0; q < N; ++q) {
     const double angle = 2.0 * M_PI * q / N;
@@ -408,6 +543,33 @@ int DoMain(int argc, char** argv) {
         rope_params_vec[q].segment_damping);
     builder.Connect(plant.get_state_output_port(),
                     rope_systems[q]->get_plant_state_input_port());
+
+    // Per-segment tension diagnostic probe (N_seg outputs, observer only).
+    segment_probes[q] = builder.AddSystem<RopeSegmentTensionProbe>(
+        plant, *quadcopter_bodies[q], payload_body, bead_chains[q],
+        quad_attachment_offset, payload_attach, rope_length,
+        rope_params_vec[q].segment_stiffness,
+        rope_params_vec[q].segment_damping);
+    builder.Connect(plant.get_state_output_port(),
+                    segment_probes[q]->get_plant_state_input_port());
+
+    // Phase-F: per-drone extended-CL parameter estimator (observer only).
+    // Off by default; enabled via `--adaptive`. Connected after the
+    // tension demux below.
+    if (opts.adaptive) {
+      CLParamEstimatorParams ep;
+      ep.rope_rest_length = rope_length;
+      ep.formation_radius = formation_radius;
+      ep.quad_attachment_z_offset = -quad_attachment_offset.z();
+      ep.update_period = simulation_time_step;
+      ep.initial_theta << 3.0 / N, rope_params_vec[q].segment_stiffness
+                                      / static_cast<double>(num_rope_beads + 1);
+      cl_estimators[q] = builder.AddSystem<CLParamEstimator>(
+          plant, *quadcopter_bodies[q], payload_body,
+          quad_attachment_offset, payload_attach, ep);
+      builder.Connect(plant.get_state_output_port(),
+                      cl_estimators[q]->get_plant_state_input_port());
+    }
 
     tension_holds[q] = builder.AddSystem<ZeroOrderHold<double>>(
         simulation_time_step, 4);
@@ -428,55 +590,145 @@ int DoMain(int argc, char** argv) {
     tension_demuxes[q] = builder.AddSystem<Demultiplexer<double>>(4, 1);
     builder.Connect(tension_holds[q]->get_output_port(),
                     tension_demuxes[q]->get_input_port(0));
+
+    // Wire the CL estimator's tension input (if enabled for this drone)
+    // to the gated, held rope tension — same signal the controller sees.
+    if (cl_estimators[q]) {
+      builder.Connect(tension_holds[q]->get_output_port(),
+                      cl_estimators[q]->get_tension_input_port());
+    }
   }
 
-  // ============ DECENTRALIZED LOCAL CONTROLLERS ============
-  // Fully local QP-based controller: each drone uses only its own state,
-  // its own rope tension, the (physically observable) payload state, and a
-  // shared payload-reference trajectory. NO peer-drone information is
-  // subscribed. Load rebalancing after a cable severance is EMERGENT from
-  // the coupled rope-payload physics under N-1 identical local controllers.
-  std::vector<DecentralizedLocalController*> controllers(N);
+  // ============ PER-DRONE CONTROLLERS ============
+  // Two backends, selected at runtime via `--controller`:
+  //   baseline — DecentralizedLocalController (single-step QP).
+  //   mpc      — MpcLocalController (N-step receding horizon, hard
+  //              linearised tension-ceiling, DARE terminal cost).
+  // Both publish the same abstract `control_force` output and the same
+  // 6-scalar `control_vector` + 13-scalar `diagnostics` signatures, so
+  // the rest of the diagram is controller-agnostic.
+  const bool use_mpc = (opts.controller == "mpc");
+  std::vector<DecentralizedLocalController*> controllers(N, nullptr);
+  std::vector<MpcLocalController*>           mpc_controllers(N, nullptr);
+  // Uniform accessor — returns the LeafSystem pointer regardless of
+  // backend. Used only for wiring / log connections.
+  auto ctrl_system = [&](int q) -> drake::systems::LeafSystem<double>* {
+    return use_mpc
+        ? static_cast<drake::systems::LeafSystem<double>*>(mpc_controllers[q])
+        : static_cast<drake::systems::LeafSystem<double>*>(controllers[q]);
+  };
+
   for (int q = 0; q < N; ++q) {
     const double angle = 2.0 * M_PI * q / N;
-    DecentralizedLocalController::Params cp;
-    cp.formation_offset = Eigen::Vector3d(
+    const Eigen::Vector3d formation_offset(
         formation_radius * std::cos(angle),
         formation_radius * std::sin(angle), 0);
-    cp.waypoints = waypoints;             // PAYLOAD waypoints (not lifted)
-    cp.rope_length = rope_length;
-    cp.rope_drop = rope_drop;
-    cp.pickup_target_tension_nominal = load_per_rope;
-    // Tracking gains (tuned for under-slung load)
-    cp.altitude_kp = 100.0;   cp.altitude_kd = 24.0;
-    cp.position_kp = 30.0;    cp.position_kd = 15.0;
-    cp.attitude_kp = 25.0;    cp.attitude_kd = 4.0;
-    cp.max_tilt = 0.6;        // rad (34°)
-    // Anti-swing — gentle damping so tracking is preserved.
-    // k_swing = 0.8 (small velocity-feedback gain); combined with
-    // w_swing = 0.3 yields an effective horizontal-accel correction of
-    // 0.24·v_L per m/s of payload swing — enough to damp without
-    // exciting the pendulum.
-    cp.swing_kd = 0.8;
-    cp.swing_offset_max = 0.3;
-    // QP weights — tracking dominant, swing moderate, effort light
-    cp.w_track = 1.0;
-    cp.w_swing = 0.3;
-    cp.w_effort = 0.02;
-    // Limits
-    cp.min_thrust = 0.0;
-    cp.max_thrust = 150.0;
-    cp.max_torque = 10.0;
 
-    controllers[q] = builder.AddSystem<DecentralizedLocalController>(
-        plant, *quadcopter_bodies[q], payload_body, cp);
-    controllers[q]->set_mass(quadcopter_bodies[q]->default_mass());
+    if (!use_mpc) {
+      DecentralizedLocalController::Params cp;
+      cp.formation_offset = formation_offset;
+      cp.waypoints = waypoints;
+      cp.rope_length = rope_length;
+      cp.rope_drop = rope_drop;
+      cp.pickup_target_tension_nominal = load_per_rope;
+      cp.altitude_kp = 100.0;   cp.altitude_kd = 24.0;
+      cp.position_kp = 30.0;    cp.position_kd = 15.0;
+      cp.attitude_kp = 25.0;    cp.attitude_kd = 4.0;
+      cp.max_tilt = 0.6;
+      cp.swing_kd = 0.8;
+      cp.swing_offset_max = 0.3;
+      cp.w_track = 1.0;
+      cp.w_swing = 0.3;
+      cp.w_effort = 0.02;
+      cp.min_thrust = 0.0;
+      cp.max_thrust = 150.0;
+      cp.max_torque = 10.0;
+      cp.l1_enabled = opts.l1_enabled;
+      cp.l1_control_step = simulation_time_step;
+      controllers[q] = builder.AddSystem<DecentralizedLocalController>(
+          plant, *quadcopter_bodies[q], payload_body, cp);
+      controllers[q]->set_mass(quadcopter_bodies[q]->default_mass());
+    } else {
+      MpcLocalController::Params mp;
+      mp.formation_offset = formation_offset;
+      mp.waypoints = waypoints;
+      mp.rope_length = rope_length;
+      mp.rope_drop = rope_drop;
+      mp.pickup_target_tension_nominal = load_per_rope;
+      mp.altitude_kp = 100.0;   mp.altitude_kd = 24.0;
+      mp.position_kp = 30.0;    mp.position_kd = 15.0;
+      mp.attitude_kp = 25.0;    mp.attitude_kd = 4.0;
+      mp.max_tilt = 0.6;
+      mp.swing_kd = 0.8;
+      mp.swing_offset_max = 0.3;
+      mp.min_thrust = 0.0;
+      mp.max_thrust = 150.0;
+      mp.max_torque = 10.0;
+      mp.horizon_steps = opts.mpc_horizon;
+      // MPC prediction step is decoupled from the sim step: 10 ms per
+      // horizon step gives a useful 50-ms lookahead at N_p = 5 (the
+      // payload pendulum period is ~2.4 s so we still only see ~2 %
+      // of a cycle, but the DARE terminal cost absorbs the remainder).
+      mp.dt_mpc = 0.01;
+      mp.T_max_safe = opts.mpc_tension_max;
+      mp.L_eff_body = std::sqrt(
+          formation_radius * formation_radius + rope_drop * rope_drop)
+          - rope_stretch_eq;          // hover-equilibrium correction
+      mp.k_eff = segment_stiffness / (num_rope_beads + 1);
+      mpc_controllers[q] = builder.AddSystem<MpcLocalController>(
+          plant, *quadcopter_bodies[q], payload_body, mp);
+      mpc_controllers[q]->set_mass(quadcopter_bodies[q]->default_mass());
+    }
 
     builder.Connect(plant.get_state_output_port(),
-                    controllers[q]->get_plant_state_input_port());
+                    ctrl_system(q)->GetInputPort("plant_state"));
     builder.Connect(tension_holds[q]->get_output_port(),
-                    controllers[q]->get_tension_input_port());
-    // NO peer-tensions connection — the controller has no such input port.
+                    ctrl_system(q)->GetInputPort("rope_tension"));
+  }
+
+  // ============ PHASE-H: FORMATION RESHAPING (optional) ============
+  // Closed-form equiangular-assignment supervisor: subscribes to the
+  // N scalar tensions (post-fault-gate demuxes), broadcasts a
+  // 3N-vector of dynamic formation offsets interpolated with a quintic
+  // smoothstep over T_trans = 5 s. Enabled by `--reshaping-enabled`.
+  if (opts.reshaping_enabled) {
+    // Build an N-vector of scalar tensions → FaultDetector input.
+    auto* tension_mux = builder.AddSystem<Multiplexer<double>>(
+        std::vector<int>(N, 1));
+    for (int q = 0; q < N; ++q) {
+      builder.Connect(tension_demuxes[q]->get_output_port(0),
+                      tension_mux->get_input_port(q));
+    }
+    FaultDetector::Params fd_p;
+    fd_p.num_drones = N;
+    fd_p.update_period = simulation_time_step;
+    auto* fault_detector = builder.AddSystem<FaultDetector>(fd_p);
+    builder.Connect(tension_mux->get_output_port(0),
+                    fault_detector->get_tensions_input_port());
+
+    FormationCoordinator::Params fc_p;
+    fc_p.num_drones = N;
+    fc_p.formation_radius = formation_radius;
+    fc_p.t_trans = 5.0;
+    fc_p.update_period = 5.0e-3;  // 200 Hz update rate for the supervisor
+    auto* formation_coord = builder.AddSystem<FormationCoordinator>(fc_p);
+    builder.Connect(fault_detector->get_fault_id_output_port(),
+                    formation_coord->get_fault_id_input_port());
+
+    // Demux the 3N-vector into per-drone 3-vectors and wire each to
+    // its controller's `formation_offset_override` port.
+    auto* offset_demux = builder.AddSystem<Demultiplexer<double>>(
+        3 * N, 3);
+    builder.Connect(
+        formation_coord->get_formation_offsets_output_port(),
+        offset_demux->get_input_port());
+    for (int q = 0; q < N; ++q) {
+      builder.Connect(offset_demux->get_output_port(q),
+                      ctrl_system(q)->GetInputPort(
+                          "formation_offset_override"));
+    }
+    std::cout << "FormationCoordinator wired: T_trans="
+              << fc_p.t_trans << " s, N=" << N << "\n";
   }
 
   // ============ FORCE COMBINER (Controller + Rope forces) ============
@@ -511,14 +763,14 @@ int DoMain(int argc, char** argv) {
       builder.Connect(plant.get_state_output_port(),
                       safe_ctrls[q]->get_plant_state_input_port());
       switchers[q] = builder.AddSystem<ControlModeSwitcher>(FaultTimeFor(opts, q));
-      builder.Connect(controllers[q]->get_control_output_port(),
+      builder.Connect(ctrl_system(q)->GetOutputPort("control_force"),
                       switchers[q]->get_normal_input_port());
       builder.Connect(safe_ctrls[q]->get_control_output_port(),
                       switchers[q]->get_safe_input_port());
       builder.Connect(switchers[q]->get_active_output_port(),
                       force_combiner.get_input_port(2 * q));
     } else {
-      builder.Connect(controllers[q]->get_control_output_port(),
+      builder.Connect(ctrl_system(q)->GetOutputPort("control_force"),
                       force_combiner.get_input_port(2 * q));
     }
   }
@@ -544,15 +796,16 @@ int DoMain(int argc, char** argv) {
   std::vector<VectorLogSink<double>*> control_logs(N);
   for (int q = 0; q < N; ++q) {
     control_logs[q] = builder.AddSystem<VectorLogSink<double>>(6);
-    builder.Connect(controllers[q]->get_control_vector_output_port(),
+    builder.Connect(ctrl_system(q)->GetOutputPort("control_vector"),
                     control_logs[q]->get_input_port());
   }
 
-  // Log per-drone diagnostics [N_alive, target_tension, peer_tension_sum]
+  // Log per-drone diagnostics (13 signals; layout documented in each
+  // controller's CalcDiagnostics method).
   std::vector<VectorLogSink<double>*> diag_logs(N);
   for (int q = 0; q < N; ++q) {
-    diag_logs[q] = builder.AddSystem<VectorLogSink<double>>(3);
-    builder.Connect(controllers[q]->get_diagnostics_output_port(),
+    diag_logs[q] = builder.AddSystem<VectorLogSink<double>>(13);
+    builder.Connect(ctrl_system(q)->GetOutputPort("diagnostics"),
                     diag_logs[q]->get_input_port());
   }
 
@@ -563,6 +816,53 @@ int DoMain(int argc, char** argv) {
     tension_logs[q] = builder.AddSystem<VectorLogSink<double>>(1);
     builder.Connect(tension_demuxes[q]->get_output_port(0),
                     tension_logs[q]->get_input_port());
+  }
+
+  // Per-rope per-segment tensions (observer; never fed to the controller).
+  // Expose T_{j,q}(t) for j = 1..N_seg, q = 0..N-1.
+  std::vector<VectorLogSink<double>*> segment_tension_logs(N);
+  for (int q = 0; q < N; ++q) {
+    segment_tension_logs[q] =
+        builder.AddSystem<VectorLogSink<double>>(num_rope_segments);
+    builder.Connect(segment_probes[q]->get_tensions_output_port(),
+                    segment_tension_logs[q]->get_input_port());
+  }
+
+  // Phase-F (L1): per-drone L1 adaptive state logs — only meaningful in
+  // the baseline controller (the MPC does not carry an L1 inner loop).
+  std::vector<VectorLogSink<double>*> l1_state_logs(N, nullptr);
+  if (opts.l1_enabled && !use_mpc) {
+    for (int q = 0; q < N; ++q) {
+      l1_state_logs[q] = builder.AddSystem<VectorLogSink<double>>(5);
+      builder.Connect(controllers[q]->get_l1_state_output_port(),
+                      l1_state_logs[q]->get_input_port());
+    }
+  }
+
+  // Phase-F: per-drone CL parameter estimator diagnostics. Logs are
+  // constructed even if the estimator is absent (the vectors stay
+  // nullptr); the CSV write loop skips drones whose estimator pointer
+  // is null.
+  std::vector<VectorLogSink<double>*> cl_theta_logs(N, nullptr);
+  std::vector<VectorLogSink<double>*> cl_innov_logs(N, nullptr);
+  std::vector<VectorLogSink<double>*> cl_rank_logs(N, nullptr);
+  std::vector<VectorLogSink<double>*> cl_hist_logs(N, nullptr);
+  if (opts.adaptive) {
+    for (int q = 0; q < N; ++q) {
+      if (!cl_estimators[q]) continue;
+      cl_theta_logs[q] = builder.AddSystem<VectorLogSink<double>>(2);
+      cl_innov_logs[q] = builder.AddSystem<VectorLogSink<double>>(1);
+      cl_rank_logs[q]  = builder.AddSystem<VectorLogSink<double>>(1);
+      cl_hist_logs[q]  = builder.AddSystem<VectorLogSink<double>>(1);
+      builder.Connect(cl_estimators[q]->get_theta_hat_output_port(),
+                      cl_theta_logs[q]->get_input_port());
+      builder.Connect(cl_estimators[q]->get_innovation_output_port(),
+                      cl_innov_logs[q]->get_input_port());
+      builder.Connect(cl_estimators[q]->get_rank_margin_output_port(),
+                      cl_rank_logs[q]->get_input_port());
+      builder.Connect(cl_estimators[q]->get_history_size_output_port(),
+                      cl_hist_logs[q]->get_input_port());
+    }
   }
 
   // ============ MESHCAT VISUALIZATION ============
@@ -660,33 +960,69 @@ int DoMain(int argc, char** argv) {
   Simulator<double> simulator(*diagram);
   auto& context = simulator.get_mutable_context();
 
-  // Initial configuration: drones hover in formation above payload on ground
+  // Initial configuration: system starts in near-static hover equilibrium.
+  //
+  //   Payload:  spawned at waypoint 0's position (x_p0, y_p0, z_p0), i.e.
+  //             already suspended at the start of the mission. This avoids
+  //             the artefactual pickup-from-ground transient (no contact
+  //             dynamics, no lateral traversal, no bead-chain snap-taut
+  //             excitation of the ω_n ≈ 32 rad/s chain mode).
+  //
+  //   Drones:   each drone spawns at its formation slot directly:
+  //                 (x_p0 + r cos φᵢ,  y_p0 + r sin φᵢ,  z_p0 + Δz_taut)
+  //             with Δz_taut = √(L² − r²). This is the geometric vertical
+  //             offset at which the rope is exactly rest-length — rope
+  //             therefore has zero pre-stretch at t = 0 and the payload is
+  //             statically suspended by the bead chain acting as a rigid
+  //             rod. Quasi-static tension (m_L · g / N) will build up over
+  //             the pickup-ramp window as the controller's T_ff term
+  //             smoothly cosine-ramps from 0 to the nominal value.
+  //
+  //   Beads:    placed on the straight chord between drone attachment and
+  //             payload attachment, equally spaced — the correct zero-
+  //             stretch configuration for a taut rope at t = 0.
   auto& plant_context = diagram->GetMutableSubsystemContext(plant, &context);
   Eigen::VectorXd q0 = plant.GetPositions(plant_context);
+
+  // Waypoint 0 is the initial target payload pose (arrival_time=0).
+  const Eigen::Vector3d p_payload_init = waypoints.front().position;
+
   for (int i = 0; i < N; ++i) {
     const double angle = 2.0 * M_PI * i / N;
     // Drake layout per floating body: q = [quat(4), pos(3)]
     const int off = i * 7;
     q0(off + 0) = 1.0; q0(off + 1) = 0.0; q0(off + 2) = 0.0; q0(off + 3) = 0.0;
-    q0(off + 4) = formation_radius * std::cos(angle);
-    q0(off + 5) = formation_radius * std::sin(angle);
-    q0(off + 6) = initial_altitude;
+    q0(off + 4) = p_payload_init.x() + formation_radius * std::cos(angle);
+    q0(off + 5) = p_payload_init.y() + formation_radius * std::sin(angle);
+    q0(off + 6) = p_payload_init.z() + rope_drop;
   }
-  // Payload position (body N, at ground)
+  // Payload position (body N, suspended at waypoint 0).
   q0(N * 7 + 0) = 1.0;
-  q0(N * 7 + 4) = 0.0; q0(N * 7 + 5) = 0.0; q0(N * 7 + 6) = payload_radius;
+  q0(N * 7 + 4) = p_payload_init.x();
+  q0(N * 7 + 5) = p_payload_init.y();
+  q0(N * 7 + 6) = p_payload_init.z();
 
-  // Interpolate rope beads from quad → payload
+  // Interpolate rope beads on the chord from drone attachment to payload
+  // attachment — zero-stretch taut configuration.
   for (int q = 0; q < N; ++q) {
     const double angle = 2.0 * M_PI * q / N;
-    Eigen::Vector3d quad_pos(formation_radius * std::cos(angle),
-                             formation_radius * std::sin(angle), initial_altitude);
-    Eigen::Vector3d pay_pos(0, 0, payload_radius);
+    const Eigen::Vector3d quad_pos(
+        p_payload_init.x() + formation_radius * std::cos(angle),
+        p_payload_init.y() + formation_radius * std::sin(angle),
+        p_payload_init.z() + rope_drop);
+    // Drone attachment is below the drone body by |quad_attachment_offset|.
+    const Eigen::Vector3d quad_attach = quad_pos + quad_attachment_offset;
+    // Payload attachment is on the payload body, shifted by the small
+    // formation-spread offset used when connecting the rope to the payload.
+    const Eigen::Vector3d payload_attach_offset(
+        formation_radius * std::cos(angle) * 0.3,
+        formation_radius * std::sin(angle) * 0.3, 0.0);
+    const Eigen::Vector3d pay_pos = p_payload_init + payload_attach_offset;
     for (int b = 0; b < num_rope_beads; ++b) {
       const double frac = (b + 1.0) / (num_rope_beads + 1.0);
-      Eigen::Vector3d bp = quad_pos + frac * (pay_pos - quad_pos);
-      int body_idx = N + 1 + q * num_rope_beads + b;
-      int off = body_idx * 7;
+      const Eigen::Vector3d bp = quad_attach + frac * (pay_pos - quad_attach);
+      const int body_idx = N + 1 + q * num_rope_beads + b;
+      const int off = body_idx * 7;
       q0(off + 0) = 1.0;
       q0(off + 4) = bp.x(); q0(off + 5) = bp.y(); q0(off + 6) = bp.z();
     }
@@ -694,6 +1030,7 @@ int DoMain(int argc, char** argv) {
   plant.SetPositions(&plant_context, q0);
   plant.SetVelocities(&plant_context,
                       Eigen::VectorXd::Zero(plant.num_velocities()));
+  (void)initial_altitude;  // now unused (payload spawn determines altitude)
 
   // Draw the payload's expected reference trajectory as a static green line.
   // `waypoints` IS the payload trajectory in this design, so no offset needed.
@@ -741,7 +1078,8 @@ int DoMain(int argc, char** argv) {
   const auto& rvd = ref_vel_data.data();
 
   // Header. Diagnostic signals are now the LOCAL controller's QP/swing
-  // telemetry (swing_speed, swing_offset, qp_cost) — NOT peer information.
+  // telemetry (swing_speed, swing_offset, qp_cost, qp_solve_time_us, T_ff,
+  // thrust_cmd, tilt_mag, 6 active-set bits) — NOT peer information.
   csv << "time";
   for (int i = 0; i < N; ++i) {
     csv << ",quad" << i << "_x,quad" << i << "_y,quad" << i << "_z";
@@ -750,11 +1088,39 @@ int DoMain(int argc, char** argv) {
   csv << ",payload_x,payload_y,payload_z,payload_vx,payload_vy,payload_vz";
   csv << ",ref_x,ref_y,ref_z,ref_vx,ref_vy,ref_vz";
   for (int i = 0; i < N; ++i) csv << ",tension_" << i;
-  for (int i = 0; i < N; ++i)
-    csv << ",swing_speed_" << i << ",swing_offset_" << i << ",qp_cost_" << i;
+  for (int i = 0; i < N; ++i) {
+    csv << ",swing_speed_" << i << ",swing_offset_" << i << ",qp_cost_" << i
+        << ",qp_solve_us_" << i << ",T_ff_" << i << ",thrust_cmd_" << i
+        << ",tilt_mag_" << i
+        << ",act_ax_lo_" << i << ",act_ax_hi_" << i
+        << ",act_ay_lo_" << i << ",act_ay_hi_" << i
+        << ",act_az_lo_" << i << ",act_az_hi_" << i;
+  }
   for (int i = 0; i < N; ++i) {
     csv << ",tau_x_" << i << ",tau_y_" << i << ",tau_z_" << i;
     csv << ",fx_" << i << ",fy_" << i << ",fz_" << i;
+  }
+  // Per-rope per-segment tensions: T_{i,j} for drone i, segment j.
+  for (int i = 0; i < N; ++i) {
+    for (int j = 0; j < num_rope_segments; ++j) {
+      csv << ",seg_T_" << i << "_" << j;
+    }
+  }
+  // Phase-F: per-drone CL estimator outputs (only present if --adaptive).
+  if (opts.adaptive) {
+    for (int i = 0; i < N; ++i) {
+      csv << ",cl_m_hat_" << i << ",cl_k_hat_" << i
+          << ",cl_innovation_" << i << ",cl_rank_margin_" << i
+          << ",cl_history_size_" << i;
+    }
+  }
+  // Phase-F (L1): per-drone L1 adaptive state (only if --l1-enabled).
+  if (opts.l1_enabled && !use_mpc) {
+    for (int i = 0; i < N; ++i) {
+      csv << ",l1_ez_hat_" << i << ",l1_vez_hat_" << i
+          << ",l1_sigma_hat_" << i << ",l1_u_ad_" << i
+          << ",l1_k_eff_hat_" << i;
+    }
   }
   csv << "\n";
 
@@ -795,16 +1161,51 @@ int DoMain(int argc, char** argv) {
       const auto& td = tension_logs[i]->FindLog(context).data();
       csv << "," << td(0, s);
     }
-    // Per-drone diagnostics
+    // Per-drone diagnostics (13 scalars)
     for (int i = 0; i < N; ++i) {
       const auto& d = diag_logs[i]->FindLog(context).data();
-      csv << "," << d(0, s) << "," << d(1, s) << "," << d(2, s);
+      for (int k = 0; k < 13; ++k) csv << "," << d(k, s);
     }
     // Per-drone control vector
     for (int i = 0; i < N; ++i) {
       const auto& c = control_logs[i]->FindLog(context).data();
       csv << "," << c(0, s) << "," << c(1, s) << "," << c(2, s);
       csv << "," << c(3, s) << "," << c(4, s) << "," << c(5, s);
+    }
+    // Per-rope per-segment tensions
+    for (int i = 0; i < N; ++i) {
+      const auto& st = segment_tension_logs[i]->FindLog(context).data();
+      for (int j = 0; j < num_rope_segments; ++j) csv << "," << st(j, s);
+    }
+    // Phase-F: CL estimator outputs per drone (if enabled).
+    if (opts.adaptive) {
+      for (int i = 0; i < N; ++i) {
+        if (!cl_theta_logs[i]) {
+          // Should not happen if --adaptive was set, but keep safe.
+          csv << ",0,0,0,0,0";
+          continue;
+        }
+        const auto& th = cl_theta_logs[i]->FindLog(context).data();
+        const auto& innov = cl_innov_logs[i]->FindLog(context).data();
+        const auto& rank = cl_rank_logs[i]->FindLog(context).data();
+        const auto& hist = cl_hist_logs[i]->FindLog(context).data();
+        csv << "," << th(0, s) << "," << th(1, s)
+            << "," << innov(0, s) << "," << rank(0, s)
+            << "," << hist(0, s);
+      }
+    }
+    // Phase-F (L1): 5-scalar L1 adaptive state (if enabled).
+    if (opts.l1_enabled && !use_mpc) {
+      for (int i = 0; i < N; ++i) {
+        if (!l1_state_logs[i]) {
+          csv << ",0,0,0,0,0";
+          continue;
+        }
+        const auto& ls = l1_state_logs[i]->FindLog(context).data();
+        csv << "," << ls(0, s) << "," << ls(1, s)
+            << "," << ls(2, s) << "," << ls(3, s)
+            << "," << ls(4, s);
+      }
     }
     csv << "\n";
   }

@@ -19,6 +19,14 @@ from ieee_style import (setup_style, COLORS, DOUBLE_COL, DOUBLE_COL_TALL,
 setup_style()
 
 
+def num_drones(df):
+    """Infer the drone count N from the CSV schema (quad0_x, quad1_x, …)."""
+    n = 0
+    while f'quad{n}_x' in df.columns:
+        n += 1
+    return n
+
+
 def load_scenarios(root: Path) -> dict[str, pd.DataFrame]:
     """Search each scenario sub-folder for its CSV in ../08_source_data/."""
     dfs = {}
@@ -38,10 +46,10 @@ def compute_metrics(df: pd.DataFrame) -> dict:
     err = df[["ref_x", "ref_y", "ref_z"]].values - df[["payload_x", "payload_y", "payload_z"]].values
     en = np.linalg.norm(err, axis=1)
 
-    T = np.column_stack([df[f"tension_{i}"] for i in range(4)])
+    T = np.column_stack([df[f"tension_{i}"] for i in range(num_drones(df))])
     F = np.column_stack([
         np.sqrt(df[f"fx_{i}"]**2 + df[f"fy_{i}"]**2 + df[f"fz_{i}"]**2).values
-        for i in range(4)])
+        for i in range(num_drones(df))])
     dt = np.diff(t, prepend=t[0])
     imp = np.sum(F * dt[:, None])
     return dict(
@@ -94,7 +102,7 @@ def plot_imbalance_overlay(dfs, out):
     palette = plt.cm.tab10(np.linspace(0, 1, len(dfs)))
     fig, ax = plt.subplots(figsize=DOUBLE_COL)
     for (name, df), c in zip(dfs.items(), palette):
-        T = np.column_stack([df[f"tension_{i}"] for i in range(4)])
+        T = np.column_stack([df[f"tension_{i}"] for i in range(num_drones(df))])
         ax.plot(df["time"], np.std(T, axis=1), lw=1.0, color=c, label=name)
     ax.set_xlabel(r"Time [s]"); ax.set_ylabel(r"$\sigma_T$ [N]")
     ax.legend(ncol=3, fontsize=7)

@@ -82,7 +82,9 @@ set(TETHER_LIFT_SOURCES
 add_executable(decentralized_fault_aware_sim
     src/decentralized_fault_aware_sim_main.cc
     src/decentralized_local_controller.cc
+    src/mpc_local_controller.cc
     src/fault_aware_rope_visualizer.cc
+    src/cl_param_estimator.cc
     ${TETHER_LIFT_SOURCES}
 )
 

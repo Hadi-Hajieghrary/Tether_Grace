@@ -66,6 +66,7 @@ echo "======================================================"
 PLOT_SCEN=/workspaces/Tether_Grace/Research/analysis/ieee/plot_scenario.py
 PLOT_SYS=/workspaces/Tether_Grace/Research/analysis/ieee/plot_system.py
 PLOT_CMP=/workspaces/Tether_Grace/Research/analysis/ieee/plot_comparison.py
+PLOT_PUB=/workspaces/Tether_Grace/Research/analysis/ieee/plot_publication.py
 
 # Per-scenario plots
 for s in S1_nominal_traverse:01_scenario_S1_nominal_traverse \
@@ -84,6 +85,10 @@ python3 "$PLOT_SYS" "${ROOT}/00_system_architecture"
 
 # Cross-scenario comparison
 python3 "$PLOT_CMP" "${ROOT}" "${ROOT}/07_cross_scenario_comparison"
+
+# Publication-grade multi-agent figure suite (12 main + 2 supplementary).
+mkdir -p "${ROOT}/09_publication_figures"
+python3 "$PLOT_PUB" "${ROOT}" "${ROOT}/09_publication_figures"
 
 echo "All artifacts in: ${ROOT}"
 du -sh "${ROOT}"/*/ 2>/dev/null
