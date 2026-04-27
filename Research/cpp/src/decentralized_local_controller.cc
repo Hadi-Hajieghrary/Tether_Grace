@@ -92,7 +92,6 @@ DecentralizedLocalController::DecentralizedLocalController(
       &DecentralizedLocalController::CalcDiagnostics).get_index();
 }
 
-// -------------------------------------------------------------------------
 void DecentralizedLocalController::ComputePayloadReference(
     double t, Eigen::Vector3d* p_ref, Eigen::Vector3d* v_ref) const {
   const auto& wps = params_.waypoints;
@@ -139,7 +138,6 @@ void DecentralizedLocalController::ComputeSlotReference(
   *v_slot = v_L_ref;  // formation moves rigidly with the payload reference
 }
 
-// -------------------------------------------------------------------------
 void DecentralizedLocalController::CalcControlForce(
     const Context<double>& context,
     std::vector<ExternallyAppliedSpatialForce<double>>* output) const {
@@ -162,10 +160,8 @@ void DecentralizedLocalController::CalcControlForce(
   const Eigen::Vector3d omega_W = self_vel.rotational();
 
   const auto& payload_body = plant_.get_body(payload_body_index_);
-  const auto& payload_pose = plant_.EvalBodyPoseInWorld(*plant_context, payload_body);
   const auto& payload_vel  = plant_.EvalBodySpatialVelocityInWorld(*plant_context, payload_body);
   const Eigen::Vector3d v_L = payload_vel.translational();
-  (void)payload_pose;
 
   // Latch the pickup-ramp start time on the first tick the rope goes
   // taut. Once latched, the value is preserved for the rest of the run.
@@ -237,6 +233,9 @@ void DecentralizedLocalController::CalcControlForce(
     T_ff = std::clamp(measured_tension, 0.0, T_target);
   } else {
     T_ff = measured_tension;
+  }
+  if (params_.disable_tension_ff) {
+    T_ff = 0.0;
   }
 
   const double a_z_min = (params_.min_thrust - T_ff) / mass_ - params_.gravity;
@@ -344,7 +343,6 @@ void DecentralizedLocalController::CalcControlForce(
   output->push_back(w);
 }
 
-// -------------------------------------------------------------------------
 void DecentralizedLocalController::CalcControlVector(
     const Context<double>& context, BasicVector<double>* output) const {
   std::vector<ExternallyAppliedSpatialForce<double>> forces;
@@ -364,6 +362,14 @@ void DecentralizedLocalController::CalcControlVector(
 
 void DecentralizedLocalController::CalcDiagnostics(
     const Context<double>& context, BasicVector<double>* output) const {
+  // Drake does not guarantee the order in which output ports are
+  // evaluated at a given tick. We explicitly refresh the last_*_ cache
+  // by running the full control computation here so the diagnostic
+  // signals are in phase with the command wrench; the extra QP solve
+  // is inexpensive at 3 variables and only happens at logging rate.
+  std::vector<ExternallyAppliedSpatialForce<double>> refresh_forces;
+  CalcControlForce(context, &refresh_forces);
+
   const auto& state_vector = get_input_port(plant_state_port_).Eval(context);
   auto plant_context = plant_.CreateDefaultContext();
   plant_.SetPositionsAndVelocities(plant_context.get(), state_vector);

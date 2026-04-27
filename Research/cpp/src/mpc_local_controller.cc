@@ -94,44 +94,48 @@ MpcLocalController::MpcLocalController(
     Ak = A_ * Ak;
   }
 
-  // ── Terminal cost via DARE on the scalar double-integrator ───────
+  // ── Terminal-cost derivation via DARE on the per-axis double
+  //    integrator. The resulting closed-loop spectral radius is only
+  //    reported for diagnostics — the active cost below is a
+  //    reference-tracking cost, not a state-regulator cost.
   Eigen::Matrix2d As;
   As << 1.0, Ts, 0.0, 1.0;
   Eigen::Vector2d Bs;
   Bs << 0.5 * Ts * Ts, Ts;
   Eigen::Matrix2d Qs;
   Qs << params_.q_pos, 0.0, 0.0, params_.q_vel;
+  bool dare_converged = false;
+  double dare_residual = 0.0;
   const Eigen::Matrix2d Ps =
-      SolveScalarDARE(As, Bs, Qs, params_.r_ctrl);
+      SolveScalarDARE(As, Bs, Qs, params_.r_ctrl,
+                       &dare_converged, &dare_residual);
   const Eigen::RowVector2d Ks =
       DARELqrGain(As, Bs, Ps, params_.r_ctrl);
   dare_spectral_radius_ = DARESpectralRadius(As, Bs, Ks);
 
-  // Reference-tracking cost (not state-regulator): the MPC minimises
-  //   Σ_k  w_t · ‖U_k − a_target‖²  +  w_e · ‖U_k‖²                 (α)
-  // so the cascade PD still sets the target acceleration each tick and
-  // the MPC's horizon prediction is used ONLY for enforcing the
-  // linearised tension ceiling over the next N_p steps. This matches
-  // the baseline's single-step QP philosophy but extends it temporally.
-  // H becomes the trivially-positive-definite block-diag (w_t + w_e)·I.
-  // The linear cost f is rebuilt each tick as f_k = −2 w_t · a_target.
+  // Reference-tracking cost: the MPC minimises
+  //   Σ_k  w_t · ‖U_k − a_target‖²  +  w_e · ‖U_k‖²
+  // so the cascade PD still defines the target acceleration every
+  // tick and the MPC's horizon is used solely to enforce the
+  // linearised tension ceiling. The Hessian is a constant block-
+  // diagonal (w_t + w_e)·I_{3Np}; the linear cost f is rebuilt per
+  // tick as f_k = −2·w_t·a_target.
   const double w_t = 1.0;
-  const double w_e = params_.r_ctrl;  // re-use r_ctrl as effort weight
+  const double w_e = params_.r_ctrl;
   H_ = (w_t + w_e) * Eigen::MatrixXd::Identity(3 * Np, 3 * Np);
-  // QbarOmega_ / QbarPhi_ remain for potential future state-regulator
-  // re-enablement; set them to zero here so the per-tick code path
-  // that builds f via the state-regulator path sees no contribution.
-  QbarOmega_ = Eigen::MatrixXd::Zero(3 * Np, 3 * Np);
-  QbarPhi_ = Eigen::MatrixXd::Zero(3 * Np, 6);
-  // Keep the DARE values cached for diagnostics.
-  (void)Ps;
 
   U_warm_ = Eigen::VectorXd::Zero(3 * Np);
 
   std::cout << "MpcLocalController built: N_p=" << Np
             << ", DARE ρ(A-BK)=" << dare_spectral_radius_
+            << (dare_converged ? "" : " (NON-CONVERGED)")
             << ", L_eff_body=" << params_.L_eff_body
             << " m, T_max_safe=" << params_.T_max_safe << " N\n";
+  if (!dare_converged) {
+    std::cout << "  WARNING: DARE Picard iteration residual="
+              << dare_residual
+              << " after 500 steps; terminal cost may be degraded.\n";
+  }
   if (dare_spectral_radius_ >= 1.0) {
     std::cout << "  WARNING: DARE closed-loop pole outside unit disc — "
               << "MPC terminal cost will NOT guarantee stability!\n";
@@ -298,7 +302,7 @@ void MpcLocalController::CalcControlForce(
   a_track.z() = params_.altitude_kp * e_p.z() + params_.altitude_kd * e_v.z();
   const Eigen::Vector3d a_swing(-params_.swing_kd * v_L.x(),
                                 -params_.swing_kd * v_L.y(), 0.0);
-  const Eigen::Vector3d a_target_ref = a_track + 0.3 * a_swing;
+  const Eigen::Vector3d a_target_ref = a_track + params_.w_swing * a_swing;
 
   // ── Build QP  (primal = [U; s] with slack s ≥ 0, length Np) ─────
   // Cost:   Σ_k (w_t·‖U_k − a_target_ref‖² + w_e·‖U_k‖²) + w_s·1ᵀ·s
@@ -346,9 +350,8 @@ void MpcLocalController::CalcControlForce(
   z.tail(Np) = S;
   prog.AddLinearConstraint(Ac, lb, ub, z);
 
-  // Warm-start primal (U only; shifted by one step).
-  Eigen::VectorXd z0 = Eigen::VectorXd::Zero(3 * Np + Np);
-  z0.head(3 * Np) = U_warm_;
+  // Warm-start primal from the shifted previous solve (slack always
+  // starts at zero; the warm-start is primal-only).
   prog.SetInitialGuess(U, U_warm_);
   prog.SetInitialGuess(S, Eigen::VectorXd::Zero(Np));
 
@@ -453,7 +456,12 @@ void MpcLocalController::CalcControlVector(
 
 void MpcLocalController::CalcDiagnostics(
     const Context<double>& context, BasicVector<double>* output) const {
-  // Mirror the baseline's 13-scalar layout, then append 4 MPC scalars.
+  // Refresh the last_*_ cache by running the control computation; see
+  // the matching note in DecentralizedLocalController::CalcDiagnostics
+  // for the port-ordering rationale.
+  std::vector<ExternallyAppliedSpatialForce<double>> refresh_forces;
+  CalcControlForce(context, &refresh_forces);
+
   const auto& state_vector = get_input_port(plant_state_port_).Eval(context);
   auto plant_context = plant_.CreateDefaultContext();
   plant_.SetPositionsAndVelocities(plant_context.get(), state_vector);

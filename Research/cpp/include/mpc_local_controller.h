@@ -42,9 +42,14 @@ class MpcLocalController final
     double attitude_kp = 25.0;
     double attitude_kd = 4.0;
 
-    // Anti-swing (identical to baseline).
+    // Anti-swing (identical to the baseline controller).
     double swing_kd = 0.8;
     double swing_offset_max = 0.3;
+    /// Weight of the anti-swing term in the MPC reference acceleration
+    /// a_target = a_track + w_swing · a_swing; matches the baseline's
+    /// w_swing so the unconstrained limit of the MPC reduces to the
+    /// baseline command.
+    double w_swing = 0.3;
 
     // Actuation limits.
     double max_tilt = 0.6;
@@ -142,13 +147,11 @@ class MpcLocalController final
   int diagnostics_port_{-1};
 
   // Pre-computed MPC matrices (constant at ctor).
-  Eigen::MatrixXd A_;             // 6x6 (block-diag of 2x2 double-integrator)
-  Eigen::MatrixXd B_;             // 6x3
-  Eigen::MatrixXd Phi_;           // 6 N_p × 6
-  Eigen::MatrixXd Omega_;         // 6 N_p × 3 N_p
-  Eigen::MatrixXd QbarOmega_;     // Qbar · Omega  (cached for f)
-  Eigen::MatrixXd QbarPhi_;       // Qbar · Phi    (cached for f)
-  Eigen::MatrixXd H_;             // Hessian (constant)
+  Eigen::MatrixXd A_;             // 6x6 state-transition (block-diag of 2x2 double integrators)
+  Eigen::MatrixXd B_;             // 6x3 control-input matrix (carries negative signs)
+  Eigen::MatrixXd Phi_;           // 6·N_p × 6 condensed free-response stack
+  Eigen::MatrixXd Omega_;         // 6·N_p × 3·N_p block-lower-triangular prediction matrix
+  Eigen::MatrixXd H_;             // Cost Hessian (= (w_t + w_e)·I_{3·N_p})
 
   // DARE diagnostics cached at ctor.
   double dare_spectral_radius_{0.0};

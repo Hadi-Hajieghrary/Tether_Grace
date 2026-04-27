@@ -1,26 +1,39 @@
-#!/bin/bash
-# 5-Drone Dynamic 3D-Lemniscate Campaign — four scenarios:
-#   A  nominal baseline
-#   B  single fault at t=15 s (mid-trajectory)
-#   C  two faults 5 s apart (t=15, t=20) — rapid compound failure
-#   D  two faults 10 s apart (t=15, t=25) — system settles between faults
+#!/usr/bin/env bash
+# Five-drone A/B/C/D baseline campaign on the 3-D lemniscate reference.
 #
-# All four use a 40-second dynamic 3-D lemniscate reference trajectory
-# and N = 5 drones in a symmetric formation. Output tree is separate
-# from the original 4-drone campaign to avoid clobbering.
+#   A  nominal baseline (no faults)
+#   B  single fault at t = 15 s on drone 0
+#   C  two faults 5 s apart  (drone 0 @ 15 s,  drone 2 @ 20 s)
+#   D  two faults 10 s apart (drone 0 @ 15 s,  drone 2 @ 25 s)
 #
-# Pre-requisite: the Drake sim target is built
-#     Research/cpp/build/decentralized_fault_aware_sim
+# Each run is 40 s long and uses the default controller unless extra
+# flags are passed on the command line (they are forwarded to every
+# run_sim call; see the EXTRA line below). After the four simulations
+# the script calls the per-scenario and cross-scenario plotting
+# pipelines plus the full publication-figure suite.
+#
+# Output tree: output/5drone_baseline_campaign/
+#   01_scenario_A_nominal/       per-scenario plots + replay
+#   02_scenario_B_single_fault/
+#   03_scenario_C_dual_5sec/
+#   04_scenario_D_dual_10sec/
+#   07_cross_scenario_comparison/
+#   08_source_data/              raw CSV + Meshcat HTML files
+#   09_publication_figures/      12-figure publication suite
+#
+# Pre-requisite: Research/cpp/build/decentralized_fault_aware_sim exists
+# (build it with cmake --build Research/cpp/build before running).
 
 EXE=/workspaces/Tether_Grace/Research/cpp/build/decentralized_fault_aware_sim
-ROOT=/workspaces/Tether_Grace/output/Tether_Grace_5drone
+ROOT=/workspaces/Tether_Grace/output/5drone_baseline_campaign
 DATA=${ROOT}/08_source_data
 mkdir -p "${DATA}"
 
-# Clean only this campaign's output (leave 4-drone campaign untouched)
+# Clean only this campaign's output; archived campaigns under archive/
+# are never touched.
 rm -f "${DATA}"/scenario_*.{csv,html}
 rm -rf "${ROOT}"/0{1,2,3,4}_scenario_*
-rm -rf "${ROOT}"/0{0,7}_*
+rm -rf "${ROOT}"/0{0,7,9}_*
 
 run_sim() {
     local id=$1

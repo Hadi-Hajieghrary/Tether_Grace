@@ -1,24 +1,37 @@
-#!/bin/bash
-# Ablation campaign: runs the 4-scenario 5-drone lemniscate matrix
-# (A/B/C/D) under four controller configurations:
+#!/usr/bin/env bash
+# Small ablation campaign: four controller configurations × four fault
+# scenarios on the five-drone lemniscate reference.
 #
-#   baseline      — default single-step QP, no extensions
-#   l1            — +L1 adaptive outer loop
-#   mpc           — +MPC controller, T_max = 100 N
-#   fullstack     — MPC + L1 + formation-reshape (all three composed)
+#   baseline   default single-step QP, no extensions
+#   l1         +L1 adaptive outer loop
+#   mpc        +MPC controller with T_max = 100 N
+#   fullstack  MPC + L1 + formation-reshape (all three composed)
 #
-# Outputs land under output/ablation/<config>/... with the same folder
-# structure as the 5-drone campaign, so plot_publication.py can be run
-# on each config independently. A final cross-config summary CSV is
-# emitted at output/ablation/summary_metrics.csv.
+# Scenarios (same as run_5drone_campaign.sh): A_nominal, B_single_fault,
+# C_dual_5sec, D_dual_10sec. Each run is 40 s long.
 #
-# Wall-time: ~4-8 hours (16 runs × 15-30 min depending on controller).
+# Output tree:
+#   output/ablation/<config>/
+#     08_source_data/                raw CSV + Meshcat HTML per scenario
+#     01_<scenario>/                 per-scenario replay
+#     09_publication_figures/        publication plots + metrics CSV
+#   output/ablation/summary_metrics.csv
+#                                    cross-configuration summary
 #
-# Usage:  ./run_ablation_campaign.sh              # run all 4 configs
-#         ./run_ablation_campaign.sh baseline     # run only one config
-#         ./run_ablation_campaign.sh mpc fullstack
+# Expected wall-time: ~4–8 hours (16 runs × 15–30 min, depending on
+# whether the MPC is active). For the larger pre-registered campaign
+# see run_transactions_campaign.sh; this script is kept for quick-turn
+# sanity checks that do not need the full transactions matrix.
+#
+# Usage:
+#   ./run_ablation_campaign.sh              # all four configs
+#   ./run_ablation_campaign.sh baseline     # a single config
+#   ./run_ablation_campaign.sh mpc fullstack
+#
+# Pre-requisite: Research/cpp/build/decentralized_fault_aware_sim is built.
 
-set -u  # don't -e; a single-scenario failure should not kill the campaign
+# NOTE: no -e; a single-scenario failure should not kill the campaign.
+set -u
 
 EXE=/workspaces/Tether_Grace/Research/cpp/build/decentralized_fault_aware_sim
 ROOT=/workspaces/Tether_Grace/output/ablation

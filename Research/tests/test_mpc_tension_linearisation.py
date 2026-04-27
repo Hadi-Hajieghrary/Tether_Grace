@@ -24,10 +24,14 @@ def sample_e_p(rng: np.random.Generator) -> np.ndarray:
 
 def test_linearisation_bound() -> None:
     rng = np.random.default_rng(12345)
-    # Nominal chord deliberately taut with ample stretch so the rope
-    # stays taut across the perturbation ball; this is the regime in
-    # which the MPC tension constraint actively binds.
-    chord_nominal = np.array([0.56, 0.0, 1.4])  # |chord| = 1.508 m
+    # The actual hover chord is 1.451 m with stretch δ ≈ 3 mm — too
+    # small for 2-cm perturbations to stay inside the taut regime.
+    # The theorem's bound is only meaningful when the rope is taut at
+    # every sampled perturbation, so we use a slightly longer nominal
+    # chord (|chord| ≈ 1.508 m, stretch ≈ 6 cm); this does not change
+    # the tightness of the bound, only the feasibility region over
+    # which it is evaluated.
+    chord_nominal = np.array([0.56, 0.0, 1.4])
     d_nom = float(np.linalg.norm(chord_nominal))
     n_hat = chord_nominal / d_nom
     delta_nom = d_nom - L_EFF

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <limits>
 #include <vector>
 
 #include <Eigen/Core>
@@ -62,27 +63,35 @@ inline void ComputeSlotReferenceAt(
 
 /// Solve the discrete algebraic Riccati equation
 ///     P = Qs + Asᵀ P As − Asᵀ P Bs (Rs + Bsᵀ P Bs)^{-1} Bsᵀ P As
-/// for a 2-state scalar-input double integrator via fixed-point
-/// iteration. Converges in ≈30 iterations to machine precision
-/// provided (As, Bs) is stabilisable and (Qs^{1/2}, As) detectable;
-/// returns the unique positive-definite solution.
+/// for a 2-state scalar-input double integrator via Kleinman-style
+/// fixed-point iteration on the Riccati operator. The solution is the
+/// unique positive-definite P provided (As, Bs) is stabilisable and
+/// (Qs^{1/2}, As) is detectable; callers should check `converged`
+/// before using the returned P (a non-convergence typically means
+/// Qs or Rs are badly scaled for Kleinman iteration).
 inline Eigen::Matrix2d SolveScalarDARE(const Eigen::Matrix2d& As,
                                        const Eigen::Vector2d& Bs,
                                        const Eigen::Matrix2d& Qs,
                                        double Rs,
-                                       int max_iter = 200,
-                                       double tol = 1e-12) {
+                                       bool* converged = nullptr,
+                                       double* residual = nullptr,
+                                       int max_iter = 500,
+                                       double tol = 1e-10) {
   Eigen::Matrix2d P = Qs;
+  double diff = std::numeric_limits<double>::infinity();
+  bool did_converge = false;
   for (int k = 0; k < max_iter; ++k) {
     const Eigen::Matrix2d AtP = As.transpose() * P;
     const Eigen::Vector2d BtP = Bs.transpose() * P;
     const double denom = Rs + BtP.dot(Bs);
     const Eigen::Matrix2d P_new = Qs + AtP * As
         - (AtP * Bs) * (BtP.transpose() * As) / denom;
-    const double diff = (P_new - P).cwiseAbs().maxCoeff();
+    diff = (P_new - P).cwiseAbs().maxCoeff();
     P = P_new;
-    if (diff < tol) break;
+    if (diff < tol) { did_converge = true; break; }
   }
+  if (converged != nullptr) *converged = did_converge;
+  if (residual  != nullptr) *residual  = diff;
   return P;
 }
 

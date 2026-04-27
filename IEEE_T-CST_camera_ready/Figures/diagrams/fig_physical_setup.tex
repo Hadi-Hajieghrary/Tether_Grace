@@ -1,0 +1,92 @@
+% ============================================================
+%  Figure 1 — Physical configuration of the cooperative
+%             aerial transport system. (Cleaned layout.)
+% ============================================================
+\begin{figure}[t]
+\centering
+\begin{tikzpicture}[
+    >={Stealth[length=2mm,width=1.6mm]},
+    drone/.style={draw, thick, fill=blue!12, rounded corners=1pt,
+                  minimum width=11mm, minimum height=4mm,
+                  font=\footnotesize, inner sep=1pt},
+    payload/.style={draw, thick, fill=orange!30, circle, minimum size=9mm,
+                    inner sep=0pt, font=\footnotesize\bfseries},
+    cable/.style={thick, gray!70!black},
+    cablesev/.style={thick, gray!50!black, dash pattern=on 2pt off 1.5pt},
+    wind/.style={->, thick, teal!60!black, decorate,
+                 decoration={snake, amplitude=0.5mm, segment length=2mm,
+                             post length=1mm}},
+    framelab/.style={font=\scriptsize\itshape},
+    lab/.style={font=\scriptsize, inner sep=1pt}
+  ]
+
+  %====== payload at origin ======
+  \node[payload] (L) at (0,0) {$m_L$};
+  \node[lab, below=1pt of L] {payload, \SI{10}{\kilo\gram}};
+
+  %====== five drones evenly spaced overhead ======
+  \node[drone] (D1) at (-3.0, 2.4) {drone 1};
+  \node[drone] (D2) at (-1.5, 2.9) {drone 2};
+  \node[drone] (D3) at ( 0.0, 3.1) {drone 3};
+  \node[drone] (D4) at ( 1.5, 2.9) {drone 4};
+  \node[drone] (D5) at ( 3.0, 2.4) {drone 5};
+
+  %====== cables: 4 taut, 1 severed (drone 3) ======
+  \draw[cable] (D1.south) --
+        node[lab, left=-1pt, pos=0.55] {$T_1$} ($(L.north)+(-0.3, 0)$);
+  \draw[cable] (D2.south) --
+        node[lab, left=-1pt, pos=0.55] {$T_2$} ($(L.north)+(-0.15, 0.05)$);
+  \draw[cablesev] (D3.south) --
+        node[lab, midway, right=2pt, red!70!black] {severed}
+        ($(L.north)+(0, 0.05)$);
+  \draw[cable] (D4.south) --
+        node[lab, right=-1pt, pos=0.55] {$T_4$} ($(L.north)+(0.15, 0.05)$);
+  \draw[cable] (D5.south) --
+        node[lab, right=-1pt, pos=0.55] {$T_5$} ($(L.north)+(0.3, 0)$);
+
+  %====== world frame (bottom left, away from cables) ======
+  \draw[->, thick] (-3.6,-1.4) -- ++(0.7,0)
+        node[framelab, right=-1pt] {$\hat{e}_1$};
+  \draw[->, thick] (-3.6,-1.4) -- ++(0,0.7)
+        node[framelab, above=-1pt] {$\hat{e}_3$};
+  \node[framelab] at (-3.55,-1.6) {$\mathcal{W}$};
+
+  %====== Dryden wind arrow (right side) ======
+  \draw[wind] (3.6, 0.6) -- ++(-1.3, 0.0);
+  \node[lab, teal!60!black, anchor=west] at (3.6, 0.6) {$\mathbf{F}_{w,L}(t)$};
+  \node[lab, teal!60!black, anchor=west] at (3.6, 0.25)
+        {Dryden, $\SI{4}{\metre\per\second}$};
+
+  %====== rope length marker on outermost cable ======
+  \draw[<->, dashed, gray]
+        ($(D1.south)+(-0.18, 0.02)$) -- ($(L.north)+(-0.45, 0.05)$)
+        node[lab, midway, sloped, fill=white, inner sep=1pt]
+        {$L = \SI{1.25}{\metre}$};
+
+  %====== complementarity callout (placed BELOW everything) ======
+  \node[draw, thick, rounded corners=2pt, fill=yellow!15,
+        font=\scriptsize, align=left, anchor=north west]
+       at (-3.7, -1.95)
+       {Cable $i$ unilateral:\;
+        $T_i \ge 0,\;\; \ell_i - L \le 0,\;\; T_i\,(\ell_i - L) = 0$};
+
+  %====== survivor set transition (placed BELOW, right) ======
+  \node[draw, thick, rounded corners=2pt, fill=blue!5,
+        font=\scriptsize, align=left, anchor=north east]
+       at (3.9, -2.45)
+       {At fault $t_k^\star$:\;
+        $\mathcal{S}(t^{\star+}) = \mathcal{S}(t^{\star-}) \setminus \{i_k^\star\}$};
+
+\end{tikzpicture}
+\caption{Cooperative transport configuration. Five quadrotors carry
+a \SI{10}{\kilo\gram} point-mass payload through unilateral cables of
+rest length $L = \SI{1.25}{\metre}$. Each drone $i$ measures only its
+own state, its own scalar tension $T_i$, and the local payload state
+$x_L$; no peer drone or peer-cable signal is exchanged. The plant is
+driven by a bounded Dryden wind realisation
+($\SI{4}{\metre\per\second}$ mean) and an unannounced cable-severance
+fault schedule $\sigma \in \mathcal{F}$ that decrements the survivor
+set $\mathcal{S}(t)$ at each event $t_k^\star$ (here drone $i^\star$, shown
+dashed).}
+\label{fig:physical-setup}
+\end{figure}

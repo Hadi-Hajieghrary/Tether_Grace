@@ -1,0 +1,140 @@
+% ============================================================
+%  Figure — Fault timeline (top), survivor cardinality decrement,
+%  and Lyapunov sawtooth (bottom).  On-figure labels are SHORT
+%  ("flow", "jump", "contraction") and the math expressions and
+%  lemma references are deferred to the caption.  This keeps
+%  every label legible and never overlapping the plot curves.
+% ============================================================
+\begin{figure}[t]
+\centering
+\begin{tikzpicture}[
+    >={Stealth[length=2mm,width=1.6mm]},
+    axislab/.style={font=\footnotesize},
+    tick/.style={font=\scriptsize},
+    fault/.style={dashed, red!70!black, thick},
+    flow/.style={thick, blue!60!black},
+    jump/.style={thick, red!70!black},
+    annot/.style={font=\scriptsize}
+  ]
+
+  % Plot occupies x in [0, 8] s.  Top panel translated up.
+
+  % ===== TOP PANEL: survivor cardinality |S(t)| ==============
+  \begin{scope}[yshift=2.6cm]
+    \draw[->, thick] (-0.2, 0) -- (8.4, 0)
+          node[axislab, below right=-1pt] {$t$};
+    \draw[->, thick] (0, -0.2) -- (0, 1.85)
+          node[axislab, above right=-1pt] {$|\mathcal{S}(t)|$};
+
+    \draw[flow] (0.0, 1.5) -- (2.0, 1.5);
+    \draw[flow, dotted] (2.0, 1.5) -- (2.0, 1.0);
+    \draw[flow] (2.0, 1.0) -- (5.0, 1.0);
+    \draw[flow, dotted] (5.0, 1.0) -- (5.0, 0.5);
+    \draw[flow] (5.0, 0.5) -- (8.0, 0.5);
+
+    \node[tick, anchor=east] at (-0.1, 1.5) {$N{=}5$};
+    \node[tick, anchor=east] at (-0.1, 1.0) {$4$};
+    \node[tick, anchor=east] at (-0.1, 0.5) {$3$};
+
+    \draw[fault] (2.0, -0.1) -- (2.0, 1.85);
+    \draw[fault] (5.0, -0.1) -- (5.0, 1.85);
+    \node[tick, red!70!black, anchor=south] at (2.0, 1.85)
+          {$t_1^\star$};
+    \node[tick, red!70!black, anchor=south] at (5.0, 1.85)
+          {$t_2^\star$};
+  \end{scope}
+
+  % ===== BOTTOM PANEL: Lyapunov sawtooth V(t) ================
+  \draw[->, thick] (-0.2, 0) -- (8.4, 0)
+        node[axislab, below right=-1pt] {$t$};
+  \draw[->, thick] (0, -0.2) -- (0, 2.45)
+        node[axislab, above right=-1pt]
+        {$V(\boldsymbol{\xi}(t))$};
+
+  % flow segment 1
+  \draw[flow]
+    plot[smooth, samples=40, domain=0:2]
+      (\x, {0.4 + 0.9*exp(-0.7*\x)});
+  % jump 1
+  \draw[jump, ->] (2.0, {0.4 + 0.9*exp(-1.4)})
+                -- (2.0, 1.55);
+  % flow segment 2
+  \draw[flow]
+    plot[smooth, samples=40, domain=2:5]
+      (\x, {0.4 + 1.15*exp(-0.7*(\x-2))});
+  % jump 2
+  \draw[jump, ->] (5.0, {0.4 + 1.15*exp(-2.1)})
+                -- (5.0, 1.10);
+  % flow segment 3
+  \draw[flow]
+    plot[smooth, samples=40, domain=5:8]
+      (\x, {0.4 + 0.7*exp(-0.7*(\x-5))});
+
+  % faults — bottom labels
+  \draw[fault] (2.0, -0.1) -- (2.0, 2.45);
+  \draw[fault] (5.0, -0.1) -- (5.0, 2.45);
+  \node[tick, red!70!black, anchor=north] at (2.0, -0.1)
+        {$t_1^\star$};
+  \node[tick, red!70!black, anchor=north] at (5.0, -0.1)
+        {$t_2^\star$};
+
+  % H2 dwell brace below the bottom panel
+  \draw[decorate, decoration={brace, amplitude=2pt, mirror},
+        thin] (2.0, -0.6) -- (5.0, -0.6)
+        node[annot, midway, below=2pt]
+        {$\tau_{d,1} \ge \tau_{\mathrm{pend}}$ (H2)};
+
+  % ===== Short on-figure labels =============================
+  % Each label is a single word + lemma tag.  Math expressions
+  % are in the caption.  Labels live in the upper band, well
+  % above the curves (the curves stay below y=1.6).
+
+  % FLOW label — placed above the first decaying segment.
+  \node[annot, blue!60!black, anchor=south]
+        at (1.0, 1.95)
+        {\textbf{flow} (Lem.~\ref{lem:altitude-iss})};
+
+  % JUMP label — placed slightly to the right of jump 1 in
+  % white space above the second decaying segment.
+  \node[annot, red!70!black, anchor=south]
+        at (3.5, 1.85)
+        {\textbf{jump} (Lem.~\ref{lem:jump-continuity})};
+
+  % CONTRACTION label — above the third flow segment.
+  \node[annot, red!70!black, anchor=south]
+        at (6.5, 1.55)
+        {\textbf{contraction} (Lem.~\ref{lem:dwell-decay})};
+
+  % chi labels — small white-backed labels left of each jump
+  \node[annot, red!70!black, anchor=east, fill=white,
+        inner sep=1.2pt] at (1.95, 1.10)
+        {$\chi(\Delta_{f,1})$};
+  \node[annot, red!70!black, anchor=east, fill=white,
+        inner sep=1.2pt] at (4.95, 0.80)
+        {$\chi(\Delta_{f,2})$};
+
+\end{tikzpicture}
+\caption{Hybrid sawtooth structure of the closed-loop Lyapunov
+function across two unannounced cable-severance events.
+\emph{Top:} the survivor set $\mathcal{S}(t)$ steps down by one
+at each fault $t_k^\star$; cardinality is right-continuous.
+\emph{Bottom:} $V(\boldsymbol{\xi})$ exhibits three regimes,
+labelled inline. \textbf{Flow:} between events the continuous-time
+decay of Lemma~\ref{lem:altitude-iss} gives
+$\dot V \le -\lambda V + \gamma_w(\|w\|) +
+\gamma_\theta(\|\theta-\theta^\ast\|) + \gamma_\eta(\eta)$.
+\textbf{Jump:} at each fault $t_k^\star$ the post-redistribution
+geometry term satisfies
+$V(t_k^{\star,+}) \le V(t_k^{\star,-}) + \chi(\Delta_f)$
+(Lemma~\ref{lem:jump-continuity}). \textbf{Contraction:} composing
+flow with jumps over one inter-fault dwell yields the
+per-cycle bound
+$V(t_{k+1}^-) \le \rho\,V(t_k^-) + c$ with
+$\rho = \exp(-\alpha_{\min}\tau_{\mathrm{pend}}) \approx 0.005$
+(Lemma~\ref{lem:dwell-decay}). The H2 hypothesis
+$\tau_{d,k} \ge \tau_{\mathrm{pend}}$ is structural: it is the
+minimum window over which the feed-forward identity
+$T_i^{\mathrm{ff}} = T_i$ contracts the post-jump overshoot
+back below $V(t_k^-)$.}
+\label{fig:lyapunov-sawtooth}
+\end{figure}

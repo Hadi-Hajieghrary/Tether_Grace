@@ -1,0 +1,147 @@
+\documentclass[lettersize,journal]{IEEEtran}
+
+% ======================== ENCODING & FONTS ======================
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{textcomp}
+
+% ======================== MATH & THEOREMS =======================
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{amsthm}
+\usepackage{mathtools}
+\usepackage{bm}
+
+\newtheorem{theorem}{Theorem}
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{proposition}{Proposition}
+\newtheorem{corollary}[theorem]{Corollary}
+\newtheorem{definition}{Definition}
+\newtheorem{remark}{Remark}
+
+% ======================== ALGORITHMS ============================
+\usepackage{algorithm}
+\usepackage{algorithmic}
+
+% ======================== FLOATS, TABLES & LISTS ================
+\usepackage{array}
+\usepackage{booktabs}
+\usepackage{enumitem}
+\usepackage[caption=false,font=normalsize,labelfont=sf,textfont=sf]{subfig}
+\usepackage{stfloats}
+
+% ======================== GRAPHICS & COLORS =====================
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta, positioning, fit, calc,
+                decorations.pathmorphing, decorations.markings,
+                decorations.text, decorations.pathreplacing,
+                shapes.geometric, backgrounds}
+
+% ======================== UNITS =================================
+\usepackage{siunitx}
+
+% ======================== UTILITIES =============================
+\usepackage{url}
+\usepackage{verbatim}
+\usepackage{cite}
+\usepackage{hyperref}
+\hypersetup{colorlinks=true, linkcolor=black, citecolor=black, urlcolor=blue, pdfborder={0 0 0}}
+\usepackage[capitalise,noabbrev]{cleveref}  
+\crefname{proposition}{Proposition}{Propositions}
+\Crefname{proposition}{Proposition}{Propositions}
+
+\hyphenation{op-tical net-works semi-conduc-tor IEEE-Xplore}
+
+
+% ======================== FLOAT SPACING ========================
+\setlength{\textfloatsep}{8pt plus 2pt minus 2pt}   % between float and text
+\setlength{\floatsep}{6pt plus 2pt minus 2pt}       % between consecutive floats
+\setlength{\belowcaptionskip}{-6pt}                  % below caption (inside float)
+
+% ======================== CUSTOM MACROS =========================
+% Lie groups and manifolds
+\newcommand{\SOthree}{\mathrm{SO}(3)}
+\newcommand{\SEthree}{\mathrm{SE}(3)}
+\newcommand{\sothree}{\mathfrak{so}(3)}
+\newcommand{\Sph}{\mathbb{S}}
+
+% Linear algebra
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\norm}[1]{\lVert #1 \rVert}
+\newcommand{\abs}[1]{\lvert #1 \rvert}
+\newcommand{\diag}{\mathrm{diag}}
+\newcommand{\tr}{\mathrm{tr}}
+\newcommand{\argmin}{\operatornamewithlimits{argmin}}
+% Vector and matrix notation
+\newcommand{\vect}[1]{\boldsymbol{#1}}
+\newcommand{\mat}[1]{\boldsymbol{#1}}
+
+
+\begin{document}
+
+\title{Passive Fault Tolerance through Tension-to-Thrust Feed-Forward: Hybrid Input-to-State Stability for Decentralized Multi-UAV Slung-Load Transport under Abrupt Cable Severance}
+\author{Hadi Hajieghrary$^{1}$
+\thanks{$^{1}$Hadi.Hajieghrary@Torc.ai}, %
+Paul Schmitt$^{2}$
+\thanks{$^{2}$pauls@massrobotics.org}}
+
+
+% The paper headers
+\markboth{IEEE TRANSACTIONS ON CONTROL SYSTEMS TECHNOLOGY}%
+{Hajieghrary and Schmitt: Passive Fault Tolerance through Tension-to-Thrust Feed-Forward}
+
+\maketitle
+
+\begin{abstract}
+Cooperative aerial manipulation under unannounced cable severance demands a fault response on the payload-pendulum timescale ($\approx \SI{2}{\second}$), well below the latency of any detection--classification--reconfiguration pipeline. For this class of self-announcing structural transitions, we show that the entire fault response collapses into a single decentralized feed-forward identity, $T_i^{\mathrm{ff}} = T_i$, equating each drone's altitude thrust feed-forward to its own measured rope tension. The identity delivers hybrid practical input-to-state stability (ISS) across unannounced severance events without any estimator, detector, or peer communication.
+
+We prove three closed-form guarantees. First, a taut-cable reduction theorem with $O(\delta + \eta_{\max})$ admissibility on a slack-excursion-bounded domain replaces the distributed Kelvin--Voigt rope dynamics with a lumped reduced-order plant. Second, a hybrid practical-ISS theorem yields an explicit recovery envelope with closed-loop Lyapunov decay rate $\lambda$ and per-fault-cycle contraction $\rho \in (0,1)$, both in closed form. Third, a discrete-time gain-selection bound for an optional $L_1$ adaptive altitude augmentation removes the dominant hyper-parameter of the architecture from empirical tuning. Because each drone's closed loop is identical pre- and post-fault and contains no peer-coupled term, the architecture admits a sequence of $F \le N{-}2$ unannounced severances by induction on the fault counter, subject only to the actuator-margin envelope $m_L g/(N{-}F) \le \kappa_{\mathrm{act}} f_{\max}$.
+
+In Drake multibody simulation across a pre-declared six-variant capability sequence and four ablation campaigns at $N=5$, $m_L = \SI{10}{\kilo\gram}$, and \SI{4}{\metre\per\second} Dryden wind, the controller absorbs single and dual unannounced severances within one payload-pendulum period. The feed-forward ablation isolates the identity as the causal mechanism: disabling it inflates cruise RMSE by $34$--$39\,\%$ and post-fault altitude sag by $3.6$--$4.0\times$. Two null findings --- that the model-predictive-control tension-ceiling layer and the post-fault reshape supervisor remain structurally inactive on the demonstrated trajectory family --- confirm that the conventional active fault-tolerance machinery is not the mechanism doing the work.
+\end{abstract}
+
+\begin{IEEEkeywords}
+Cooperative aerial manipulation, cable-suspended payload transport, decentralized fault-tolerant control, passive fault tolerance, hybrid practical input-to-state stability, Lyapunov contraction analysis, $L_1$ adaptive augmentation, receding-horizon model predictive control, anti-swing control, structural-transition systems.
+\end{IEEEkeywords}
+
+
+\section{Introduction}
+\label{sec:Introduction}
+\input{./Sections/Section_I_Introduction.tex}
+
+\section{Problem Statement}
+\label{sec:ProblemStatement}
+\label{sec:Problem_Statement}
+\input{./Sections/Section_II_Problem_Statement.tex}
+
+\section{Proposed Method}
+\label{sec:ProposedMethod}
+\label{sec:proposed}
+\input{./Sections/Section_III_Proposed_Method.tex}
+
+\section{Stability Analysis}
+\label{sec:StabilityAnalysis}
+\label{sec:stability}
+\input{./Sections/Section_IV_Stability_Analysis.tex}
+
+\section{Parameter Adaptation, Tension Constraints, and Post-Fault Formation Reshape}
+\label{sec:Parameter_Adaptation_Tension_Constraints_and_Post-Fault_Formation_Reshape}
+\label{sec:extensions}
+\input{./Sections/Section_V_Parameter_Adaptation_Tension_Constraints_and_Post-Fault_Formation_Reshape.tex}
+
+\section{Simulation Campaign and Results}
+\label{sec:simulation}
+\input{./Sections/Section_VI_Simulation_Campaign_and_Results.tex}
+
+\section{Discussion}
+\input{./Sections/Section_VII_Discussion.tex}
+
+\section{Conclusion}
+\input{./Sections/Section_VIII_Conclusion.tex}
+
+% ======================== REFERENCES ============================
+\bibliographystyle{IEEEtran}
+\bibliography{./References/References}
+
+\end{document}

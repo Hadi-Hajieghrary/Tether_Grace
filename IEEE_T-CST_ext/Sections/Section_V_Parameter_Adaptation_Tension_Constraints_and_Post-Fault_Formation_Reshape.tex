@@ -1,0 +1,317 @@
+In this section, we introduce three targeted components that extend the baseline architecture of \cref{sec:proposed}: an $L_1$-adaptive altitude augmentation for parameter adaptation, a receding-horizon MPC with a \emph{penalized} tension-ceiling constraint (implemented through a slack variable; see \cref{sec:mpc-layer}), and a fault-triggered formation-reshape supervisor. Each component targets a distinct design regime. The $L_1$ layer compensates in-flight deviations of the true payload parameters $(m_L, k_{\mathrm{eff}})$ from the nominal $q^\star$, addressing the matched-disturbance channel that the outer-loop PD cannot cancel to zero steady-state error. The MPC layer enforces a horizon-aware, linearized tension-ceiling constraint at each prediction step. It serves as the binding mechanism when the safe working load of a rope is the dominant performance requirement. The reshape supervisor reassigns the surviving drones' angular slots to a closed-form tension-optimal configuration after a fault, addressing the hover-equilibrium asymmetry that governs the worst-case rope load on high-centripetal trajectories. Together, the three components are intended to broaden the admissibility domain of \cref{thm:hybrid-stability} along three orthogonal axes; \cref{sec:theorem-preservation} establishes that each preserves hypotheses H1--H3 on the baseline theorem's domain, so the recovery envelope \eqref{eq:iss-envelope-explicit} continues to hold under the full architecture, with the relevant $\gamma$-gain reduced on the channel the component addresses.
+
+The campaigns of this paper exercise the three components in their design regimes to different degrees. The $L_1$ layer is probed by P2-B (mass-mismatch sweep with feed-forward disabled), where it recovers approximately $40\%$ of the induced altitude sag. The MPC layer is probed by P2-C (tension-ceiling sweep on the V4 dual-fault schedule), and the reshape supervisor by P2-D (lemniscate-period sweep, also on V4). On the demonstrated schedule, the peak post-fault tension is dominated by the trajectory-induced pre-fault spike rather than by the hover-equilibrium asymmetry or by the steady-state tension ceiling; neither the MPC nor the reshape layer is the binding mechanism in these particular campaigns. Each subsection below identifies the regime in which its component becomes binding; \cref{sec:theorem-preservation} then shows that enabling a component outside its binding regime leaves the recovery envelope of \cref{thm:hybrid-stability} unchanged.
+
+\subsection{$L_1$-Adaptive Altitude Augmentation}
+\label{sec:l1-augmentation}
+
+The passive identity $T_i^{\mathrm{ff}} = T_i$ absorbs the dominant tension-redistribution component of the altitude channel to leading order (Lemma~\ref{lem:tension-cancel}). It still does not cancel matched disturbances that enter through parameter deviations between the true payload characteristics $(m_L, k_{\mathrm{eff}})$ and the nominal $q^\star$ used by the outer-loop synthesis. The $L_1$-adaptive component estimates this residual matched disturbance online and injects an additive correction at the altitude-acceleration input of the QP. It is active at every control tick, with a projection that confines the estimate to an admissible interval and a low-pass filter that separates the estimator bandwidth from the bandwidth of the closed-loop reference dynamics (the $L_1$ reference system, formalized below).
+
+\paragraph{Altitude-channel error dynamics.}
+Substituting the thrust synthesis \eqref{eq:qp} into the drone vertical equation of motion \eqref{eq:drone-eom} and working in altitude-tracking error coordinates $\tilde z_i(t) \triangleq p_{\mathrm{slot},i,z}(t) - p_{i,z}(t)$, the closed-loop altitude error under the baseline is
+\begin{equation}
+  \ddot{\tilde z}_i(t) \;=\; -K_p^z\,\tilde z_i(t)
+    - K_d^z\,\dot{\tilde z}_i(t)
+    + \delta_m(t),
+  \label{eq:l1-channel}
+\end{equation}
+where $\delta_m(t)$ collects every unmodelled altitude-channel input: a payload-mass mismatch component, a rope-stiffness mismatch component, aerodynamic drag uncaptured by the feed-forward, and higher-order rope-dynamic residuals. The matched disturbance $\delta_m(t)$ is the same residual channel as $r_i(t)$ of \eqref{eq:alt-dynamics-residual} in Lemma~\ref{lem:tension-cancel}, augmented by the parameter-mismatch components (mass, stiffness, drag) that the $L_1$ layer specifically targets and that are not present in the baseline ISS analysis. By construction, $\delta_m$ is matched with the control input (it appears in the same equation as the thrust command) and bounded, $|\delta_m(t)| \le \delta_{m,\max}$ for some known $\delta_{m,\max} > 0$ under the admissible-disturbance and parameter-mismatch sets of \cref{sec:Problem_Statement}.
+
+\paragraph{Reference system, predictor, and adaptive law.} Let $\vect{x}_m = (\tilde z_i, \dot{\tilde z}_i)^\top \in \R^2$ denote the altitude error state. The reference system is the
+Hurwitz closed-loop of Lemma~\ref{lem:altitude-iss},
+\begin{align}
+\label{eq:l1-reference}
+  \dot{\vect x}_m(t) \;=\; A_m\,\vect x_m(t)
+    + \vect b\,\bigl(\delta_m(t) - u_{\mathrm{ad}}(t)\bigr),~
+  \vect b = \begin{bmatrix}0 \\ 1\end{bmatrix},
+\end{align}
+with $A_m$ the Hurwitz closed-loop matrix of Lemma~\ref{lem:altitude-iss} and $u_{\mathrm{ad}}(t)$. The $L_1$ predictor mirrors \eqref{eq:l1-reference} but carries an estimate $\hat\delta_m(t)$ of the matched disturbance,
+\begin{equation}
+  \dot{\hat{\vect x}}(t) \;=\;
+    A_m\,\hat{\vect x}(t)
+    + \vect b\,\bigl(\hat\delta_m(t) - u_{\mathrm{ad}}(t)\bigr).
+  \label{eq:l1-predictor}
+\end{equation}
+The predictor error $\vect{\tilde x}(t) \triangleq \hat{\vect x}(t) - \vect x_m(t)$ satisfies $\dot{\vect{\tilde x}}  = A_m\,\vect{\tilde x} + \vect b(\hat\delta_m - \delta_m)$. Let $P_v \succ 0$ be the solution of the Lyapunov equation \eqref{eq:Pv-numeric} from Lemma~\ref{lem:altitude-iss}. The adaptive law is a gradient step on the composite Lyapunov function
+$V_{L_1}(\vect{\tilde x}, \tilde\delta_m) = \vect{\tilde x}^\top P_v\,\vect{\tilde x}  + \Gamma^{-1}\tilde\delta_m^2$, projected onto the admissible interval $[\delta_{m,\min}, \delta_{m,\max}]$:
+\begin{align}
+\label{eq:l1-adaptive}
+  \dot{\hat{\delta}}_{m}(t)
+    \;=\; -\Gamma\,\operatorname{Proj}\!\Bigl(
+      \hat\delta_m(t),\;
+      \vect b^\top P_v\,\vect{\tilde x}(t)
+    \Bigr),\\
+  \hat\delta_m(t) \in [\delta_{m,\min}, \delta_{m,\max}].\nonumber
+\end{align}
+Using the closed-form $P_v$ of \eqref{eq:Pv-numeric}, $\vect b^\top P_v\,\vect{\tilde x}
+= p_{12}\tilde z_i + p_{22}\dot{\tilde z}_i$ with $p_{12} \approx 0.005$ and $p_{22} \approx 0.0210$. The raw estimate $\hat\delta_m$ is high-gain and noise-sensitive; we pass it through a first-order low-pass filter with bandwidth $\omega_c$,
+\begin{equation}
+  \dot u_{\mathrm{ad}}(t) \;=\;
+    -\omega_c\,u_{\mathrm{ad}}(t)
+    + \omega_c\,\hat\delta_m(t).
+  \label{eq:l1-lpf}
+\end{equation}
+The canonical value $\omega_c = \SI{25}{\radian\per\second}$ separates the filter
+bandwidth from the reference-system natural frequency $\omega_n^z = \sqrt{K_p^z} = \SI{10}{\radian\per\second}$ by a factor of $2.5$. The adaptive correction enters the baseline at
+exactly one point: immediately before the QP solve, the altitude component of $\vect a_{\mathrm{target}}$ in \eqref{eq:a-target} is shifted by $u_{\mathrm{ad}}$.
+
+\paragraph{Scalar sampling-rate bound (C3).} Contribution C3 is a scalar necessary condition on the adaptive gain, obtained by isolating the dominant loop of the Euler-discretized predictor update and asking that its diagonal map be contractive. Discretize \eqref{eq:l1-adaptive} with Euler step $T_s$; the scalar contribution of the update is $|1 - T_s\Gamma p_{22}| < 1$, which yields the following proposition.
+
+\begin{proposition}[Scalar $L_1$ sampling-rate bound]
+\label{prop:gamma-star}
+A necessary condition for contractivity of the scalar component of the Euler-discretized adaptive-law update \eqref{eq:l1-adaptive} is
+\begin{equation}
+  \Gamma \;<\; \Gamma^\star
+    \;\triangleq\; \frac{2}{T_s\,p_{22}}.
+  \label{eq:gamma-star}
+\end{equation}
+For the canonical $T_s = \SI{2e-4}{\second}$ and
+$p_{22} \approx 0.0210$,
+$\Gamma^\star \approx 4.76\times 10^5$.
+\end{proposition}
+
+\begin{proof}
+Isolating the scalar $\hat\delta_m$-update in the absence of predictor error, projection activation, and filter dynamics, we obtain $\hat\delta_m \mapsto (1 - T_s\Gamma p_{22})\,\hat\delta_m + \mathrm{const}$. Contractivity of this scalar map requires $|1 - T_s\Gamma p_{22}| < 1$, i.e.\
+$T_s\Gamma p_{22} \in (0, 2)$, which rearranges to \eqref{eq:gamma-star}.
+\end{proof}
+
+\begin{remark}[Scope of Proposition~\ref{prop:gamma-star}]
+The bound \eqref{eq:gamma-star} is a necessary sampling-rate condition: it isolates the dominant diagonal coefficient of the Euler update and ignores the predictor error dynamics, the projection operator, the cross-coupling through $p_{12}\tilde z_i$, and the first-order low-pass filter. The full discrete interconnection is verified empirically. The canonical operating value $\Gamma = 2{,}000$ lies three orders of magnitude below $\Gamma^\star$, which removes the dominant hyper-parameter of the $L_1$ architecture from empirical tuning while leaving the full-loop stability argument to be completed by the composite Lyapunov analysis that follows.
+\end{remark}
+
+Along the closed-loop trajectories, the composite Lyapunov function $V_{L_1}$ satisfies $\dot V_{L_1} \le -\tfrac{1}{2}\|\vect{\tilde x}\|^2 + \tfrac{2}{\omega_c}\|\vect b^\top P_v\|^2 \|d_\perp\|^2$, where $d_\perp$ is the residual unmatched disturbance; consequently the altitude channel is input-to-state stable with respect to $d_\perp$ alone, and the matched component $\delta_m$ is rejected up to the filter-induced cutoff frequency. The combination of Proposition~\ref{prop:gamma-star} and the $V_{L_1}$ decay argument provides the component-level stability guarantee that Section~\ref{sec:theorem-preservation} uses to establish preservation of the baseline theorem's hypotheses.
+
+\paragraph{Empirical validation (P2-B).} A mass-mismatch sweep was performed at canonical wind conditions ($\SI{0}{\metre\per\second}$ mean, no faults) with actual payload mass $m_L \in \{2.5, 3.0, 3.5, 3.9\}\,\mathrm{kg}$ and the controller's nominal mass held at $\SI{3.0}{\kilo\gram}$. The P2-B operating point is deliberately set at a lighter payload than the nominal $\SI{10}{\kilo\gram}$ configuration used elsewhere in the paper. At lower payload mass, a given \emph{fractional} mismatch produces a proportionally larger matched-disturbance component in \eqref{eq:l1-channel} relative to the available per-drone thrust envelope, making the $L_1$ layer's effect on the steady-state altitude sag visible above the baseline PD's residual. Three modes were compared at each operating point: mode~(i) baseline with feed-forward on, mode~(ii) baseline with feed-forward off, and mode~(iii) mode~(ii) augmented with the $L_1$ layer. Mode~(i) is essentially insensitive to mass mismatch because the feed-forward identity absorbs the redistribution, as expected from Remark~\ref{rem:passive-ft}. Mode~(ii) exhibits linear growth of RMS altitude sag with mass error, rising from $\SI{0.056}{\ meter}$ at $m_L = \SI{2.5}{\kilo\gram}$ to $\SI{0.112}{\ meter}$ at $m_L = \SI{3.9}{\kilo\gram}$. Mode~(iii) reduces the RMS sag by approximately $40\%$ at each mismatch level, confirming the $L_1$ component as an effective recovery mechanism whenever the feed-forward identity is unavailable, or the matched-disturbance content of $\delta_m$ is non-zero. Canonical parameters are $\Gamma = 2{,}000$, $\omega_c = \SI{25}{\radian\per\second}$, projection range $[\delta_{m,\min}, \delta_{m,\max}] = [-5, 5]\,\mathrm{m/s^2}$, and update period $T_s = \SI{2e-4}{\second}$ ($5$~kHz). /
+
+\subsection{Receding-Horizon MPC with a Penalized Tension-Ceiling Constraint}
+\label{sec:mpc-layer}
+
+\paragraph{Role in the architecture.} The single-step QP \eqref{eq:qp} projects the current-tick acceleration target onto the actuator envelope; it cannot, by construction, foresee a tension spike one or more ticks ahead. When the safe working load of a rope is the dominant performance requirement, we replace the single-step QP with an $N_p$-step receding-horizon MPC that carries a penalized, linearized tension-ceiling constraint at every horizon step. The constraint is soft: a non-negative slack variable $\vect s \ge \vect 0$ is added to the right-hand side of the ceiling inequality and penalized with weight $w_s = 10^4$ in the objective, trading unconditional recursive feasibility against the possibility of ceiling excursions when the envelope is tight. The MPC reduces to the baseline outer-loop QP whenever the tension ceiling is loose (so that the slack is inactive); it becomes the binding mechanism whenever the predicted tension approaches the ceiling and the slack incurs a positive penalty.
+
+\paragraph{Prediction model and condensed horizon.}
+We define drone $i$'s error state relative to its slot as
+\begin{equation}
+  \vect x[k] \;\triangleq\;
+    \begin{bmatrix}
+      \vect p_{\mathrm{slot},i}(t_k) - \vect p_i(t_k) \\[2pt]
+      \vect v_{\mathrm{slot},i}(t_k) - \vect v_i(t_k)
+    \end{bmatrix}
+    \;\in\; \R^6,
+  \label{eq:mpc-x}
+\end{equation}
+where $t_k = k\,\Delta t_{\mathrm{MPC}}$. Assuming $\dot{\vect v}_{\mathrm{slot}} \approx \vect 0$ over the horizon window $N_p\,\Delta t_{\mathrm{MPC}}$ and letting $\vect u[k] \in \R^3$ be the commanded acceleration, zero-order-hold discretization of the error-state double integrator gives
+\begin{align}
+  \label{eq:mpc-AB}
+  &\vect x[k+1] = A\,\vect x[k] + B\,\vect u[k],\\
+  &A = \begin{bmatrix} I_3 & \Delta t_{\mathrm{MPC}} I_3 \\
+                       \mat 0 & I_3 \end{bmatrix},\quad
+  B = \begin{bmatrix}
+        -\tfrac{1}{2}\Delta t_{\mathrm{MPC}}^2 I_3 \\
+        -\Delta t_{\mathrm{MPC}} I_3
+      \end{bmatrix}.\nonumber
+\end{align}
+The negative sign in $B$ reflects the error-state convention: a positive commanded $\vect u$ reduces the tracking error. Stacking controls $\mathcal{U} = (\vect u[0], \dots, \vect u[N_p-1]) \in \R^{3N_p}$ and predicted errors $\mathcal{X} = (\vect x[1], \dots, \vect x[N_p]) \in \R^{6N_p}$, induction on \eqref{eq:mpc-AB} yields $\mathcal{X} = \Phi\,\vect x[0] +  Omega\,\mathcal{U}$, with $\Phi \in \R^{6N_p \times 6}$ stacking $A, A^2, \dots, A^{N_p}$
+and $\Omega \in \R^{6N_p \times 3N_p}$ block lower-triangular with $(\Omega)_{j,\ell} = A^{j-\ell-1} B$ for $\ell \le j-1$. Both $\Phi$ and $\Omega$ are constant and computed once at initialization.
+
+\paragraph{Reference-tracking cost and linearized tension constraint.} To preserve the baseline's outer-loop behavior in the unconstrained regime, the MPC minimizes the squared deviation of each $\vect u[k]$ from the baseline's target acceleration $\vect a_{\mathrm{target}}^{\mathrm{ref}}[k]$ plus a small effort regularization,
+\begin{align}
+\label{eq:mpc-cost}
+  J(\mathcal{U}, \vect s)
+    = \sum_{k=0}^{N_p-1}\Bigl[
+        w_t\,\bigl\|\vect u[k] &-
+                     \vect a_{\mathrm{target}}^{\mathrm{ref}}[k]
+                     \bigr\|^2
+        \\
+      &+ w_e\,\|\vect u[k]\|^2
+      \Bigr]+ w_s\,\sum_{k=0}^{N_p-1} s[k],\nonumber
+\end{align}
+where $\vect s \in \R_{\ge 0}^{N_p}$ is a non-negative slack vector for the tension constraint and $w_s = 10^4$ is the slack penalty. For cable $i$ at horizon step $j$, the true elastic tension is
+\begin{equation}
+  T_i[k+j]
+    = k_{\mathrm{eff}}\,\max\!\Bigl(0,\;
+        \|\vect p_i[k+j] - \vect p_L[k+j]\| - L_{\mathrm{eff}}
+      \Bigr).
+  \label{eq:T-true}
+\end{equation}
+Linearizing the chord length around the current taut chord $\vect c[k] = \vect p_i[k] - \vect p_L[k]$ with unit direction $\hat{\vect n}[k] = \vect c[k]/\|\vect c[k]\|$ and accounting for the error-state sign convention gives the horizon-$j$ linearized tension
+\begin{align}
+\label{eq:T-linearized}
+  T_i[k+j] \;\approx\;
+    T_i[k]
+    &+ j\,\Delta t_{\mathrm{MPC}}\,\dot T_i^{\mathrm{filt}}[k]\\
+    &+ \vect c_j^\top (A^j - I)\,\vect x[k]+ \vect c_j^\top \Omega_{\mathrm{row}\,j}\,\mathcal{U},\nonumber
+\end{align}
+with $\vect c_j = (-k_{\mathrm{eff}}\,\hat{\vect n}[k];\, \vect 0) \in \R^6$ acting only on the position component of $\vect x[k]$, and $\dot T_i^{\mathrm{filt}}[k]$ a low-pass-filtered derivative of the measured tension used to extrapolate rope dynamics forward. Using $(A^j - I)$ rather than $A^j$ in \eqref{eq:T-linearized} ensures that steady-state tracking contributes identically zero to the free response and avoids spurious constraint tightening at hover.
+
+\begin{theorem}[Linearization fidelity]
+\label{thm:mpc-lin}
+Let $\|\vect e_p[k]\| \le E$ where $\vect e_p[k]$ is the position component of $\vect x[k]$, and let the nominal chord at step $k$ be taut with length $d_{\mathrm{nom}} > L_{\mathrm{eff}}$. The
+first-order approximation \eqref{eq:T-linearized} satisfies
+\begin{equation}
+  \bigl|T_{\mathrm{lin}}[k+j] - T_{\mathrm{true}}[k+j]\bigr|
+    \;\le\;
+    \frac{k_{\mathrm{eff}}\,E^2}{2\,d_{\mathrm{nom}}},
+\end{equation}
+uniformly for all horizon steps $j \le N_p$.
+\end{theorem}
+
+\begin{proof}[Sketch]
+Expand $\|\vect c[k+j]\| = \|\vect c[k] + \Delta\vect c\|$; the linear term is $\hat{\vect n}[k]^\top \Delta\vect c$ and the second-order remainder is bounded by $\|\Delta\vect c\|^2 /
+(2\|\vect c[k]\|)$. Substituting the kinematic bound $\|\Delta\vect c\| \le E$ and the lower bound
+$\|\vect c[k]\| \ge d_{\mathrm{nom}}$, then multiplying by $k_{\mathrm{eff}}$, yields the stated inequality.
+\end{proof}
+
+\paragraph{Tick QP, recursive feasibility, and effective rest length.} Combining the cost \eqref{eq:mpc-cost} with the linearized tension constraint \eqref{eq:T-linearized} in matrix
+form yields the tick QP
+\begin{align}
+\label{eq:mpc-qp}
+  \min_{\mathcal{U},\,\vect s \ge \vect 0}
+    \tfrac{1}{2}\mathcal{U}^\top H \mathcal{U}
+    + \vect f^\top \mathcal{U}
+    + w_s\,\vect 1^\top \vect s\\
+  \text{s.t.}
+  \quad
+  G\,\mathcal{U} \le \vect d_T(\vect x[k]) + \vect s,\nonumber
+\end{align}
+where $G \in \R^{N_p \times 3N_p}$ stacks the rows $\vect c_j^\top \Omega_{\mathrm{row}\,j}$ and
+$\vect d_T(\vect x[k])$ collects the state-dependent right-hand sides. The QP is convex, strictly feasible through the slack $\vect s$, and solved by a single warm-started OSQP (Operator Splitting Quadratic Program~\cite{stellato2020osqp}) call per tick. Only $\vect u[0]$ is applied to the drone; the remaining steps form the warm start for the next tick (shift by one, pad with zero). Recursive feasibility requires a terminal cost consistent with a state-regulator interpretation of \eqref{eq:mpc-cost}; solving the discrete algebraic Riccati
+equation
+\begin{equation}
+  P_f = Q + A^\top P_f A
+        - A^\top P_f B\,(R + B^\top P_f B)^{-1}\,B^\top P_f A,
+  \label{eq:DARE}
+\end{equation}
+with $Q = \diag(q_p I_3,\, q_v I_3)$ and $R = r\,I_3$ yields the linear-quadratic-regulator (LQR) gain $K = (R + B^\top P_f B)^{-1} B^\top P_f A$. At canonical parameters, the closed-loop spectral radius $\rho_{\mathrm{spec}}(A - BK) \approx 0.969$, well inside the unit disc.
+
+\begin{corollary}[Unconditional feasibility]
+\label{cor:mpc-recfeas}
+The tick QP \eqref{eq:mpc-qp} is feasible at every control tick, independent of the initial condition, the parameter mismatch, or the horizon length. Specifically, for any current state $\vect x[k]$ and any horizon choice $N_p$, the slack choice $\mathcal{U} = \vect 0$, $\vect s[k+j] = \max(0, -[\vect d_T(\vect x[k])]_{j+1})$ for $j = 0, \dots, N_p - 1$, is always admissible.
+\end{corollary}
+
+\begin{proof}
+The slack $\vect s \ge \vect 0$ appears additively on the right-hand side of $G\,\mathcal{U} \le \vect d_T + \vect s$, so any entry of the right-hand side can be made non-negative by choosing $\vect s$ large enough; the stated construction does exactly this at zero control input.
+\end{proof}
+
+\begin{proposition}[Slack-activation regime]
+\label{prop:mpc-slack}
+Let $\|q - q^\star\|_\infty \le \bar\varepsilon_q$ where $q = (m_L, k_{\mathrm{eff}})$, and let $\vect d_T(\vect x[k])$ be $L_q$-Lipschitz in $q$ on the operational state set. Under Doctrine D1 of \cref{sec:Problem_Statement} and an initial tick at which the unconstrained QP solution satisfies the tension ceiling, the slack-activation magnitude $\|\vect s[k]\|_\infty$ along the resulting trajectory obeys $\|\vect s[k]\|_\infty \le L_q \bar\varepsilon_q + O(\bar\varepsilon_q^2)$. In particular, the slack activation scales as $O(\bar\varepsilon_q)$ over the trajectory.
+\end{proposition}
+
+\begin{proof}[Sketch]
+The right-hand side $\vect d_T(\vect x[k])$ of the tension constraint depends linearly on $q$ through $k_{\mathrm{eff}}$ in $\vect c_j$. A Taylor expansion in $q$ around $q^\star$ gives $\vect d_T(\vect x[k]; q) = \vect d_T(\vect x[k]; q^\star) + D_q \vect d_T \cdot (q - q^\star) + O(\|q - q^\star\|^2)$. At $q = q^\star$ the ceiling is satisfied without slack by hypothesis; consequently the minimum non-negative slack that restores feasibility at $q \ne q^\star$ is bounded above by $L_q \|q - q^\star\|_\infty + O(\|q - q^\star\|^2)$. Doctrine D1 preserves the linearization regime on each inter-fault window, so the bound propagates along the trajectory.
+\end{proof}
+
+We note that consistency with the true cable geometry requires an effective body-to-body rest length, since the physical rope connects the drone's body-frame attachment (vertical offset $\SI{0.09}{\ meter}$ below center) to the payload-side attachment (radial offset $0.3\,r_f$). We adopt
+\begin{equation}
+  L_{\mathrm{eff}}^{\mathrm{body}}
+    \;=\; \sqrt{r_f^2 + \rho_{\mathrm{geo}}^2} - \delta^\star,
+  \label{eq:Leff}
+\end{equation}
+chosen so that the body-to-body chord minus $L_{\mathrm{eff}}^{\mathrm{body}}$ equals the true rope stretch $\delta^\star$ at hover equilibrium. For the canonical configuration ($r_f = \SI{0.8}{\metre}$, vertical offset $\rho_{\mathrm{geo}} = \SI{1.21}{\metre}$), $L_{\mathrm{eff}}^{\mathrm{body}} \approx \SI{1.448}{\metre}$, giving a linearized elastic-spring force $T_{\mathrm{nom}}^{\mathrm{el}} \approx \SI{8}{\newton}$ in agreement with simulation. This is the \emph{Kelvin--Voigt elastic component} along the cable reported by \eqref{eq:T-linearized} --- not the full cable-axis hover tension $\bar T = (m_L g / N) / \cos\theta_{\mathrm{eq}} \approx \SI{25.6}{\newton}$ used elsewhere in the paper, which includes the weight-projection contribution along the hover-cone axis. Without the rest-length correction, \eqref{eq:T-linearized} reports $T_{\mathrm{nom}}^{\mathrm{el}} \approx \SI{650}{\newton}$ at hover, which is not physical.
+
+\paragraph{Empirical activation regime (P2-C).} The MPC layer was exercised on the V4 dual-fault schedule at tension ceilings $T_{\max} \in \{60, 70, 80, 90, 100\}\,\mathrm{N}$ with the corresponding baseline (no MPC, ceiling observed only) as control. Peak rope tension was essentially identical across all MPC ceiling values and the baseline (all $\approx \SI{104.6}{\newton}$). In contrast, the fraction of ticks exceeding the ceiling grew from $0.12\%$ at $T_{\max} = \SI{100}{\newton}$ to $17.5\%$ at $T_{\max} = \SI{60}{\newton}$. On this schedule, the peak tension is set by a trajectory-induced pre-fault spike of $\approx \SI{105}{\newton}$ at the climb-to-lemniscate transition; the linearized constraint \eqref{eq:T-linearized}, first-order accurate in $\|\vect e_p\|^2$, does not carry the predictive margin needed to suppress this spike below its own ceiling. The layer should become binding in the regime where the dynamic rope stretch is below the steady-state hover tension, and the ceiling is the dominant constraint. A tube-MPC tightening that folds the $\Gamma_f e^{-\lambda(t-t_k^\star)}$ overshoot of \eqref{eq:iss-envelope-explicit} into the constraint right-hand side is the natural strengthening for spike-dominated regimes; its evaluation is identified as future work. The baseline recovery envelope is inherited by the MPC mode (both share the same outer-loop target), and feasibility holds at every tick through the slack variable of Corollary~\ref{cor:mpc-recfeas}. Canonical MPC parameters are $N_p = 5$ ($10$ at evaluation), $\Delta t_{\mathrm{MPC}} = \SI{0.01}{\second}$, $q_p = 100$, $q_v = 10$, $r = 0.02$, $w_t = 1.0$, $w_e = 0.02$, $w_s = 10^4$, $T_{\max} = \SI{100}{\newton}$, $L_{\mathrm{eff}}^{\mathrm{body}} = \SI{1.448}{\metre}$, and $k_{\mathrm{eff}} = \SI{2778}{\newton\per\metre}$.
+
+\subsection{Fault-Triggered Formation-Reshape Supervisor}
+\label{sec:reshape-supervisor}
+
+\paragraph{Role in the architecture.} After a cable-severance event, the surviving drones retain their original angular slots $\{\phi_i = 2\pi i / N\}_{i \in \mathcal{S}(t)}$. On trajectories with non-trivial centripetal load, the hover-equilibrium tension distribution across the survivors becomes asymmetric: one surviving rope carries disproportionately more load than the others. The reshape supervisor reassigns the survivors' angular slots to a closed-form tension-optimal configuration and drives them there through a $C^2$ quintic smoothstep. It is active only while the surviving formation is asymmetric; once the new equiangular layout is reached, the supervisor latches, and the architecture returns to its pre-fault flow.
+
+Unlike the baseline controller of \cref{sec:proposed}, which operates under the strictly local information pattern \eqref{eq:info-set} and does not detect or annunciate faults, the reshape supervisor is an explicitly \emph{supervised} extension: it uses a local tension-latch fault detector on each drone (defined below) and a per-fault broadcast channel of at most $\lceil \log_2 N \rceil$ bits to distribute the fault index. The supervisor, therefore, steps outside the information pattern used by the baseline theorem and belongs to an extended information set. The baseline no-detection, no-communication guarantees of \cref{thm:hybrid-stability} remain attached to the baseline controller; the reshape extension is reported here as an optional performance module whose preservation of H1--H3 is established separately in \cref{sec:theorem-preservation}.
+
+\paragraph{Problem statement and closed-form optimal assignment.} Let $\{\phi_1, \dots, \phi_N\}$ be the nominal angular slots and suppose cable $i^\star$ severs. The supervisor seeks a new angular assignment $\{\phi'_i\}_{i \ne i^\star}$ that minimizes the worst-case rope tension over the surviving drones subject to the payload remaining at the nominal reference,
+\begin{equation}
+  \min_{\{\phi'_i\}_{i\ne i^\star}}
+  \;\max_{i \ne i^\star}\;
+  T_i\bigl(\phi'_i;\, \{\phi'_j\}_{j \ne i, i^\star}\bigr).
+  \label{eq:reshape-objective}
+\end{equation}
+Under the symmetric-load-sharing model (each surviving rope carries $m_L g / M$ of the vertical load with $M = |\mathcal{S}(t)|$, plus a centripetal contribution proportional to the angular offset), the quasi-static rope tension at slot $k$ takes the form
+\begin{equation}
+  T_k(\phi'_k; \{\phi'_j\})
+    \;=\; \frac{m_L g}{M\cos\beta}
+    \bigl(1 + \epsilon_k(\phi'_k; \{\phi'_j\})\bigr),
+  \label{eq:tension-quasistatic}
+\end{equation}
+where $\beta$ is the common cable-attachment angle at the new hover equilibrium, and $\epsilon_k$ is the angular-asymmetry residual induced by the non-uniform angular spacing of the survivors. The asymmetry residual satisfies $\sum_{k \ne i^\star} \epsilon_k = 0$ (total-load preservation) and scales with the deviation of the angular spacing from equiangular. The minimax problem \eqref{eq:reshape-objective} reduces to minimizing $\max_k \epsilon_k^2$ over a small finite family of angular assignments.
+
+\begin{theorem}[Globally tension-optimal reshape, $N = 4$]
+\label{thm:reshape}
+Let $N = 4$ with nominal slots $\phi_i = \pi i / 2$ for $i \in \{0,1,2,3\}$. Suppose cable $i^\star$ severs. Under the symmetric-load-sharing model \eqref{eq:tension-quasistatic}, the minimax assignment over the surviving triple is: (i)~the drone diametrically opposite $i^\star$ (index $(i^\star + 2) \bmod 4$) remains at its nominal angle ($\Delta\phi = 0$); (ii)~each of the two drones adjacent to the gap rotates exactly $\pi/6 = 30^\circ$ toward the gap. This assignment yields equiangular $120^\circ$ spacing among the survivors and minimizes $\max_i T_i$ over all continuous angular assignments respecting the hover-equilibrium constraint.
+\end{theorem}
+
+\begin{proof}[Sketch]
+By the constraint symmetry under reflection about the gap axis $\phi \mapsto 2\phi_{i^\star} - \phi$, any optimum has a symmetric copy; since the problem is continuous, strictly convex along symmetric-ansatz directions (see below), and has a unique extremum, the global optimum itself is symmetric. Setting $\phi'_{i^\star + 2 \bmod 4} = \phi_{i^\star + 2 \bmod 4}$ and parameterizing the two adjacent drones by a common offset $\Delta\phi$ toward the gap, the three residuals $\epsilon_0(\Delta\phi), \epsilon_1(\Delta\phi), \epsilon_2(\Delta\phi)$ can be evaluated in closed form. The function $\max_k \epsilon_k^2(\Delta\phi)$ is piecewise quadratic with kinks at $\Delta\phi$ values where two residuals cross; the minimum of the max occurs at the first such crossing. Direct algebra on the symmetric tension balance gives that this crossing takes place at $\Delta\phi = \pi/6$, where the three survivors are at equiangular $120^\circ$ spacing, and the three residuals become equal in magnitude. This configuration is therefore the minimax optimum. Endpoints ($\Delta\phi = 0$ and $\Delta\phi = \pi/4$) are checked to confirm that the interior solution dominates them. The closed-form value of the residual at the optimum yields a worst-case tension reduction of $25.8\%$ relative to the nominal $\Delta\phi = 0$ configuration.
+\end{proof}
+
+\paragraph{Application at $N = 5$.} The closed-form assignment of \cref{thm:reshape} is stated and proved for $N = 4$. The V4 and V6 dual-fault scenarios traverse $N = 5 \to 4 \to 3$: the supervisor invokes the $N = 4$ case directly at the second fault, and at the first fault ($5 \to 4$) the surviving four drones are assigned to equiangular $90^\circ$ spacing by the same minimax argument applied to the symmetric four-drone reduction. A formal generalization to arbitrary $N$ is identified as follow-up work; the present paper exercises only the $N = 4$ case rigorously and the $N = 5 \to 4$ extension by inspection.
+
+\paragraph{$C^2$ quintic smoothstep transition and safety certificates.} A discontinuous slot jump would demand an impulsive slot velocity. Instead, the supervisor interpolates between the pre-fault angle and the target over a window $T_{\mathrm{trans}} = \SI{5}{\second}$ using the quintic smoothstep
+\begin{align}
+\label{eq:smoothstep-quintic}
+  h(\tau) &\;=\; 10\tau^3 - 15\tau^4 + 6\tau^5,\\
+  \tau &= \frac{t - t^\star}{T_{\mathrm{trans}}},\;
+  \tau \in [0,\,1],\nonumber
+\end{align}
+which satisfies $h(0) = 0$, $h(1) = 1$, and $h'(0) = h'(1) = h''(0) = h''(1) = 0$, giving $C^2$ continuity at both endpoints. The time-varying slot override sent to each surviving drone through the hook of \cref{sec:ctrl-signature} is
+\begin{equation}
+  \tilde{\vect\Delta}_i(t)
+    \;=\; r_f
+    \begin{bmatrix}
+      \cos(\phi_i + h(\tau)\,\Delta\phi_i) \\[1pt]
+      \sin(\phi_i + h(\tau)\,\Delta\phi_i) \\[1pt]
+      0
+    \end{bmatrix}.
+  \label{eq:dyn-offset}
+\end{equation}
+
+\begin{proposition}[Peak tangential slot speed]
+\label{prop:peak-slot}
+The maximum tangential slot speed during the transition is
+\begin{equation}
+  \|\dot{\tilde{\vect\Delta}}_i\|_\infty
+    \;=\; r_f\,|\Delta\phi_i|\,
+          \tfrac{15}{8\,T_{\mathrm{trans}}}.
+\end{equation}
+For canonical $(r_f, |\Delta\phi_i|, T_{\mathrm{trans}}) = (0.8\,\mathrm{m},\, \pi/6,\, 5\,\mathrm{s})$, this evaluates to $\SI{0.157}{\metre\per\second}$, $1.17\times$ the characteristic anti-swing speed $s_{\max}/\tau_{\mathrm{pend}} \approx \SI{0.134}{\metre\per\second}$ obtained by referring the pendulum's position saturation amplitude $s_{\max} = \SI{0.3}{\metre}$ to one period $\tau_{\mathrm{pend}} = \SI{2.24}{\second}$. The comparison is therefore a design check rather than a strict margin: the transition speed is of the same order as the characteristic anti-swing scale, so the reshape-active window overlaps the anti-swing bandwidth rather than sitting strictly below it.
+\end{proposition}
+
+\begin{proposition}[Minimum inter-drone chord]
+\label{prop:min-chord}
+During the entire $N = 4 \to M = 3$ transition, the pairwise chord distance between any two surviving drones is bounded below by $d_{\min} = 2\,r_f\,\sin(\pi/4) \approx \SI{1.131}{\ meter}$ for $r_f = \SI{0.8}{\ meter}$. The two drones adjacent to the gap rotate toward the gap, so their separation from the diametrically opposite survivor increases monotonically from $\SI{1.131}{\metre}$ to $\SI{1.386}{\metre}$. The floor $\SI{1.131}{\metre}$ is $2.26\times$ the $\SI{0.5}{\metre}$ safe-clearance threshold; no explicit collision-avoidance constraint is required during reshape.
+\end{proposition}
+
+\paragraph{Detection, latching, and empirical activation regime (P2-D).} Drone $i$ is declared faulted when its tension has remained below a threshold continuously for a minimum duration,
+\begin{equation}
+  \iota \leftarrow i\quad\text{if}\quad
+    T_i(\tau) < T_{\mathrm{fault}}
+    \;\forall\,\tau \in [t - \tau_{\mathrm{det}},\, t],
+  \label{eq:detector}
+\end{equation}
+with $T_{\mathrm{fault}} = \SI{0.5}{\newton}$ and $\tau_{\mathrm{det}} = \SI{100}{\milli\second}$. Once latched, $\iota \ge 0$ is maintained for the rest of the mission.
+
+\begin{proposition}[Decentralization budget]
+\label{prop:decent-budget}
+With up to $F$ fault events in a mission, the total supervisor-to-drone broadcast traffic is at most $F\,\lceil \log_2 N \rceil$ bits. The surviving drones do not exchange positions, velocities, or tensions; each drone, on receipt of the fault id, independently computes its $\Delta\phi_i$ from the closed-form assignment of Theorem~\ref{thm:reshape} and begins its local quintic transition. Concretely, drone $i$ uses only (a) its own prior angular slot $\phi_i^{\mathrm{old}}$, which it already maintains, (b) the fault id identifying the severed drone $j$, and (c) the known fault-independent survivor count $N_s$; the new slot $\phi_i^{\mathrm{new}}$ is the unique uniformly-spaced assignment on the survivor set $\mathcal{S} = \{1,\ldots, N\} \setminus \{j\}$ that preserves the circular order, so $\Delta\phi_i = \phi_i^{\mathrm{new}} - \phi_i^{\mathrm{old}}$ is obtainable locally without consulting peer states.
+\end{proposition}
+
+A lemniscate-period sweep at $T_{\mathrm{ref}} \in \{8, 10, 12\}\,\mathrm{s}$ was run with the V4 dual-fault schedule, with and without the reshape supervisor enabled. Peak post-fault tensions were essentially identical across all period values and against the no-reshape baseline. On this trajectory family, the post-fault peak is governed by the trajectory-induced pre-fault spike of $\approx \SI{105}{\newton}$ at the climb-to-lemniscate transition rather than by the hover-equilibrium asymmetry that Theorem~\ref{thm:reshape} optimizes against. The supervisor becomes binding on trajectories for which the hover-equilibrium tension asymmetry dominates, which is indicative of the static-hover and low-centripetal regimes. The $25.8\,\%$ worst-case tension reduction predicted by Theorem~\ref{thm:reshape} is a linearised-quasi-static bound; the empirical test at $T_{\mathrm{ref}}=\SI{6}{\second}$ (package E8) returns $0.0\,\%$ measured benefit (\cref{sec:VI-H}), consistent with the dynamic centripetal loading dominating the quasi-static-hover target even at aggressive periods on this reference family. Canonical parameters are $T_{\mathrm{trans}} = \SI{5}{\second}$, $T_{\mathrm{fault}} = \SI{0.5}{\newton}$, $\tau_{\mathrm{det}} = \SI{100}{\milli\second}$, and a coordinator rate of $\SI{5}{\milli\second}$.
+
+\subsection{Baseline Theorem Preservation and Admissibility
+Regime}
+\label{sec:theorem-preservation}
+
+Each of the three components of \cref{sec:l1-augmentation,sec:mpc-layer,sec:reshape-supervisor} modifies the closed loop through a distinct channel, and each preserves hypotheses H1--H3 of \cref{thm:hybrid-stability} on the admissibility domain $\Omega = \Omega_\tau^{\mathrm{dwell}} \cap \Omega_{\mathrm{QP, active}}$. The recovery envelope \eqref{eq:iss-envelope-explicit}, therefore, remains valid under any combination of enabled components, with the relevant $\gamma$-gain reduced on the channel the component addresses. The argument proceeds by verifying H1--H3 for each component in isolation; compatibility under simultaneous activation follows because the three modifications act on disjoint channels of the closed-loop Lyapunov function.
+
+The $L_1$-adaptive augmentation adds $u_{\mathrm{ad}}$ to the altitude component of $\vect a_{\mathrm{target}}$ before the QP. The QP active set and the feed-forward identity $T_i^{\mathrm{ff}} = T_i$ remain unchanged, so H1 and H3 hold verbatim. H2 is independent of the controller. The $L_1$ component is intended to reduce the parameter-mismatch gain $\gamma_q$ in \eqref{eq:iss-envelope-explicit} by an adaptive factor: the factor approaches unity under perfect matching, and it contracts. At the same time, the predictor error $\vect{\tilde x}$ is small, consistent with the composite $V_{L_1}$ decay argument of \cref{sec:l1-augmentation}. The sampling-rate bound of Proposition~\ref{prop:gamma-star} is a necessary condition for this mechanism; full discrete-loop stability of the predictor, projection, and filter interconnection lies outside the proposition's scope and is verified empirically by the P2-B campaign. The receding-horizon MPC replaces the single-step QP \eqref{eq:qp} with \eqref{eq:mpc-qp}; Corollary~\ref{cor:mpc-recfeas} establishes unconditional feasibility through the slack variable, and Proposition~\ref{prop:mpc-slack} bounds the slack-activation magnitude by the parameter mismatch, both under the same Doctrine D1 used by the baseline theorem. The closed loop reduces to the baseline in the unconstrained regime. H1 and H3 are preserved; H2 is independent of the controller. The MPC layer tightens the tension-ceiling behavior in \eqref{eq:iss-envelope-explicit} by bounding $\Gamma_f$ against the slack-activation regime of Proposition~\ref{prop:mpc-slack}. The reshape supervisor modifies the slot reference through the override hook \eqref{eq:dyn-offset}. The baseline controller treats this as a bounded, $C^2$ reference perturbation with peak velocity bounded by Proposition~\ref{prop:peak-slot}. H1 and H3 are preserved provided that the override keeps the QP active-set transition fraction within Doctrine D1 and the smoothstep keeps the reference within the admissible-reference set. H2 requires the supervisor to fire at most once per dwell period, which follows from the latching rule \eqref{eq:detector}. The supervisor does not reduce any $\gamma$-gain in \eqref{eq:iss-envelope-explicit} directly; it reduces the post-fault tension peak by selecting a lower-$\epsilon_k^2$ angular configuration, improving the practical peak-tension metric beyond what the theorem captures.
+
+\begin{remark}
+No single component modifies the scope of \cref{thm:hybrid-stability}: the domain $\Omega$, the hypotheses H1--H3, and the form of the recovery envelope \eqref{eq:iss-envelope-explicit} are all preserved. Any subset of components can be simultaneously enabled without violating the baseline theorem, though cross-layer interaction terms (for example, the MPC's effect on the $L_1$ predictor error under a tight tension ceiling) are scenario-dependent and are evaluated through simulation only.
+\end{remark}
+
+\paragraph{Admissibility regime and out-of-scope conditions.} The theorems and empirical claims of this paper are explicit about their domain. Within the admissibility domain $\Omega = \Omega_\tau^{\mathrm{dwell}} \cap \Omega_{\mathrm{QP, active}}$ and under H1--H3, the full architecture satisfies the recovery envelope \eqref{eq:iss-envelope-explicit} with the closed-form gains established in \cref{thm:hybrid-stability} and the channel-wise reductions above. The analysis treats the pre-distributed reference waypoints as a time-varying input to the ISS framework; consequently, the result is a practical-stability statement in which the error remains bounded at the scale $\bar{e}_\infty \sim \SI{0.3}{\metre}$ under nominal operation (with the analytical horizontal-only estimate \eqref{eq:ss-numeric} evaluating to $\SI{0.27}{\metre}$ and the measured 3-D cruise-window RMSE at $\SI{0.312}{\metre}$ on V1, V2 nominal) and by $\rho^k \|\vect e_p(0)\|_P + \bar{e}_\infty$ after $k$ faults, with the analytical leading-order estimate $\rho_{\mathrm{ana}} = \exp(-\alpha_{xy}\,\tau_{\mathrm{pend}}) \approx 0.005$ and the empirically fitted contraction $\hat\rho_{\text{V4}}\!=\!0.20$, $\hat\rho_{\text{V5}}\!=\!0.045$ (\cref{sec:VI-C}, \cref{tab:stability-evidence}) both well below the $\rho<1$ sufficiency bound. The empirical-analytical gap reflects the leading-order asymptotic nature of $\rho_{\mathrm{ana}}$, which neglects post-fault equilibrium shift and finite-time integration contributions; together, these quantities verify that contraction holds with a margin across the demonstrated operating regime. The passive tension feed-forward $T_i^{\mathrm{ff}} = T_i$ alone delivers this property; neither simultaneous fault detection nor inter-drone communication is required for the baseline theorem to hold.
+
+The following regimes lie explicitly outside the domain of the analysis, and the architecture produces no guaranteed bounds under them. A rapid multi-fault regime, with consecutive faults separated by less than one pendulum period $\tau_{\mathrm{pend}}$, violates H2 and voids the dwell-time contraction of Lemma~\ref{lem:dwell-decay}. Long slack excursions, with slack-run duration exceeding $\tau_{\mathrm{slack,max}} = \SI{40}{\milli\second}$ or duty cycle above $\eta_{\max} = 2.5\%$, violate H1 and move the trajectory outside $\Omega_\tau^{\mathrm{dwell}}$. A QP-fallback regime, in which solver infeasibility forces the component-wise clamp of \cref{sec:qp-and-ff}, violates H3 and breaks the single-active-regime premise of Doctrine D1.
+
+A second class of conditions lies not merely outside the analysis domain of \cref{thm:hybrid-stability} but \emph{outside the architectural category} of \cref{sec:Introduction}: faults whose information does not arrive on the actuator-side rope-tension channel that the feed-forward identity reads. Specifically, \emph{drone-side faults} (rotor loss, IMU failure, battery brownout) do not self-announce through $T_i$ and require an alternative announcement channel; \emph{soft cable failures} (partial fraying, slip at the attachment) produce a graded rather than discrete tension signature that the structural-transition model does not capture; and \emph{tension-sensor failures} turn off the announcement mechanism itself. \emph{Payload-attitude dynamics}, arising from rigid-body coupling of the payload through the cable attachment geometry, lie outside the point-mass payload model and require re-deriving the dynamics formulation from the ground up. These four classes are not gaps in the present campaign --- they are out-of-category for the architectural thesis and are explicitly disclaimed as such. A controller designed within this paper's category is not expected to handle them, and any work that does handle them is correctly framed as a different paper rather than an extension of this one.
+
+For future work strictly inside the architectural category, we are interested in closing each of the analysis-domain regimes listed above. A generalization of the theorem, such as a multi-fault extension of the dwell-time argument under a controlled fault-schedule density, would address the rapid-multi-fault and QP-fallback regimes analytically. Targeted empirical campaigns --- payload-attitude identification, an aggressive-period reshape study corroborating the $25.8\%$ worst-case tension reduction predicted by Theorem~\ref{thm:reshape}, and a tube-MPC tightening that folds the $\Gamma_f e^{-\lambda(t - t_k^\star)}$ overshoot of \eqref{eq:iss-envelope-explicit} into the constraint right-hand side for spike-dominated regimes --- would complete the empirical picture.

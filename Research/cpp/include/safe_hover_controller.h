@@ -178,7 +178,7 @@ private:
   const drake::multibody::MultibodyPlant<double> &plant_;
   drake::multibody::BodyIndex body_index_;
   Eigen::Vector3d hover_position_;
-  mutable double mass_;
+  double mass_;
 
   double position_kp_, position_kd_;
   double altitude_kp_, altitude_kd_;

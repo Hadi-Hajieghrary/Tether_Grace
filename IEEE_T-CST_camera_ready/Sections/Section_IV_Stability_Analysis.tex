@@ -1,0 +1,243 @@
+The baseline controller of \cref{sec:proposed} achieves fault tolerance through a single structural choice: setting the altitude thrust feed-forward equal to the drone's own measured rope tension, $T_i^{\mathrm{ff}} = T_i$. We establish that this identity renders the closed loop \emph{hybrid practical input-to-state stable} (hybrid practical-ISS) under the cable-severance fault model of \cref{sec:reduction-and-reference}. When a peer cable severs, $T_i$ rises immediately and the feed-forward converts that step into a proportional thrust increment at the plant's native rate, without any detection, annunciation, or reconfiguration interval. The argument proceeds through the analytical hypotheses, five lemmas, the main theorem, and a claims-to-evidence map.
+
+\paragraph{Status of the lemma stack.} The five lemmas and the main theorem certify the architectural claim of \cref{sec:Introduction}---that for cooperative manipulation under self-announcing structural transitions, a single decentralized feed-forward identity suffices---rather than constituting a stand-alone theoretical contribution. The hybrid-systems framework is borrowed from~\cite{GoebelSanfeliceTeel2012}; the practical-ISS composition tools are standard. The value added is showing that the framework's hypotheses hold for the proposed architecture on the declared admissibility domain $\Omega_\tau^{\mathrm{dwell}}$, with closed-form expressions for $\rho$, $\lambda$, and the per-fault jump $\chi(\Delta_f)$.
+
+\subsection{Setup, Notation, and Analytical Hypotheses}
+\label{sec:stability-setup}
+
+The analysis operates on the reduced-order model of \cref{sec:reduction-and-reference}. Let $e_{p,z,i}(t) = p_{\mathrm{slot},i,z}(t) - p_{i,z}(t)$ be drone $i$'s altitude slot-tracking error and $\vect{e}_p(t) \in \R^{3N_s}$ the stacked position error over $\mathcal{S}(t)$ with $N_s = |\mathcal{S}(t)|$. Fault events and the dwell condition follow \cref{sec:fault-and-controller}; consecutive faults are separated by at least one payload-pendulum period,
+\begin{equation}
+  \tau_{d,k} \;\ge\; \tau_{\mathrm{pend}}
+    \;\triangleq\; 2\pi\sqrt{L/g}.
+  \label{eq:dwell-condition}
+\end{equation}
+At $L = \SI{1.25}{\metre}$, $\tau_{\mathrm{pend}} = \SI{2.24}{\second}$ and the pendulum natural frequency is $\omega_p \triangleq \sqrt{g/L} = \SI{2.80}{\radian\per\second}$.
+
+The analysis rests on three hypotheses, defended empirically in \cref{tab:stability-evidence,tab:domain-audit}. \textbf{H1} (slack-excursion budget) requires every trajectory to remain in $\Omega_\tau^{\mathrm{dwell}}$: maximum slack-run duration $\tau_{\mathrm{slack,max}} \le \SI{40}{\milli\second}$ and duty cycle $\eta_{\max} \le 2.5\%$. \textbf{H2} (spaced-fault dwell) requires $\tau_{d,k} \ge \tau_{\mathrm{pend}}$ \eqref{eq:dwell-condition}. \textbf{H3} (Doctrine~D1, single-active-regime QP) requires the per-tick QP's active set $\mathcal{A}(t)$ to be locally constant inside each inter-fault window; transitions are absorbed into the H1 $\eta_{\max}$ budget and empirically hold on $\ge 99.9\%$ of mission time (worst transition fraction $0.10\%$, \cref{tab:domain-audit}). Claims outside H1--H3---rapid multi-fault, long slack excursions, QP-fallback---are out of scope; the analysis produces no bounds for trajectories violating them.
+
+The empirical defence of H1 and H3 uses the same pre-declared missions as the theorem's consequences, so the validation is partially \emph{post hoc}: the bounds on $\tau_{\mathrm{slack,max}}$, $\eta_{\max}$, and the QP transition fraction are observed rather than guaranteed by design. The theorem therefore provides a conditional guarantee, and the margins of \cref{tab:domain-audit} document how far inside the domain the missions sit. Design-time certification of H1 and H3 for unseen trajectory families requires trajectory-planning machinery beyond the present scope and is identified as future work. The reduction theorem (\cref{thm:reduction}, C1) is independently validated against the bead-chain truth model in \cref{sec:VI-reduction}, providing an \emph{a priori} check that the reduced model tracks the full plant within $O(\delta + \eta_{\max})$; this separation addresses the main circularity concern.
+
+\subsection{Lemmas Underpinning the Hybrid Practical-ISS Theorem}
+\label{sec:five-lemmas}
+
+We state five lemmas that support the main theorem. \Cref{lem:tension-cancel} establishes algebraic tension cancellation on the altitude channel under a cable-tilt domain condition; \cref{lem:altitude-iss} gives exponential ISS through the closed-loop Lyapunov matrix; \cref{lem:antiswing-invariant} shows the anti-swing damping is invariant to surviving cardinality; \cref{lem:jump-continuity} bounds the Lyapunov jump at each fault; \cref{lem:dwell-decay} composes jump and decay into the dwell-cycle contraction $\rho \in (0, 1)$.
+
+\begin{lemma}[Tension cancellation]
+\label{lem:tension-cancel}
+Assume H1 and the cable-tilt domain condition $|\theta_i(t)| \le \theta_{c,\max}$ for known $\theta_{c,\max} \in (0, \pi/2)$. Then $T_i^{\mathrm{ff}} = T_i$ cancels the dominant projection term $T_i\cos\theta_i$ from the drone altitude acceleration, leaving a residual factor $(1 - \cos\theta_i)$ bounded by $1 - \cos\theta_{c,\max}$. At $\theta_{c,\max} = \SI{0.75}{\radian}$ this is $0.27$, and the residual enters the altitude-error equation as a bounded matched disturbance handled by \cref{lem:altitude-iss}.
+\end{lemma}
+
+\begin{proof}
+Substituting $f_i = m_i(g + a_{d,z}^\star) + T_i^{\mathrm{ff}}$ into $m_i \ddot{p}_{i,z} = f_i - m_i g - T_i\cos\theta_i + F_{w,i,z}$ and absorbing the wind term yields
+\begin{equation}
+  m_i \ddot{p}_{i,z}
+    = m_i a_{d,z}^\star + T_i(1 - \cos\theta_i).
+  \label{eq:alt-dynamics-residual}
+\end{equation}
+The residual is bounded by $1 - \cos\theta_{c,\max}$ ($0.27$ at $\theta_{c,\max} = \SI{0.75}{\radian}$); its peak is set by the tilt envelope rather than by the fault event and is absorbed by the ISS gain $\gamma_q$ of \cref{lem:altitude-iss}.
+\end{proof}
+
+\begin{lemma}[Altitude ISS via Lyapunov matrix]
+\label{lem:altitude-iss}
+Under hypotheses H1--H3, the altitude tracking error $e_{p,z,i}$ satisfies exponential input-to-state stability with explicit gain functions: there exist $\lambda > 0$ and $\gamma_w, \gamma_q \in \mathcal{K}$ such that, along trajectories between fault events,
+\begin{equation}
+  \dot V_z \;\le\; -\lambda\,V_z
+    \;+\; \gamma_w(\|w\|_\infty)
+    \;+\; \gamma_q(\|q - q^\star\|_\infty),
+  \label{eq:lyapunov-decay-alt}
+\end{equation}
+where $V_z(e,\dot e) \triangleq \tfrac{1}{2}[e,\dot e]^\top P_v\,[e,\dot e]$ and $P_v \succ 0$ is the unique positive-definite solution of $A_m^\top P_v + P_v A_m = -I$ for the closed-loop matrix $A_m$.
+\end{lemma}
+
+\begin{proof}
+After tension cancellation, the altitude error obeys $\ddot{e}_{p,z,i} + K_d^z \dot{e}_{p,z,i} + K_p^z e_{p,z,i} = \ddot{p}_{\mathrm{slot},z} + r_i(t)$ with $r_i(t) = O(\theta_{c,\max}^2 T_i/m_i) + O(\delta)$. The closed-loop matrix $A_m = \bigl[\begin{smallmatrix}0 & 1\\ -100 & -24\end{smallmatrix}\bigr]$ has eigenvalues $s_{1,2} = -12 \pm \sqrt{44}$ (dominant pole $s_1 \approx -5.37$~s$^{-1}$). Solving $A_m^\top P_v + P_v A_m = -I$ gives
+\begin{equation}
+  P_v = \begin{bmatrix} 2.224 & 0.005 \\ 0.005 & 0.0210 \end{bmatrix}.
+  \label{eq:Pv-numeric}
+\end{equation}
+Differentiating $V_z = \tfrac{1}{2}\zeta^\top P_v \zeta$ and completing the square yields \eqref{eq:lyapunov-decay-alt}; the spectral rate $\lambda_{\mathrm{spec}} = |\mathrm{Re}(s_1)| = 5.37$~s$^{-1}$ controls the contraction used in \cref{lem:dwell-decay}. The gains $\gamma_w, \gamma_q$ follow from Young's inequality with constants derived from $P_v$.
+\end{proof}
+
+
+\begin{lemma}[Pendulum damping invariance]
+\label{lem:antiswing-invariant}
+The active anti-swing damping coefficient $B_{\mathrm{swing}}$ is independent of the number of surviving drones $N_s$, ensuring that the pendulum damping ratio $\zeta > 1$ is preserved across any cable-severance fault transition.
+\end{lemma}
+
+\begin{proof}
+The restoring force is $F_{\mathrm{restore}} = N_s T_i^{\mathrm{ss}} k_{\mathrm{swing}} v_{L,\perp}/L$ with $T_i^{\mathrm{ss}} = m_L g / N_s$, so $N_s T_i^{\mathrm{ss}} = m_L g$ cancels the $N_s$ dependence and leaves $B_{\mathrm{swing}} = m_L g\,k_{\mathrm{swing}}/L = \SI{62.8}{\newton\second\per\metre}$. With $\omega_p = \SI{2.80}{\radian\per\second}$, the damping ratio $\zeta = B_{\mathrm{swing}}/(2 m_L \omega_p) = 1.12 > 1$; the pendulum is overdamped for any $N_s \ge 2$.
+\end{proof}
+
+\begin{lemma}[Bounded fault jump with post-fault overshoot]
+\label{lem:jump-continuity}
+Under the feed-forward identity $T_i^{\mathrm{ff}} = T_i$, the Lyapunov function at each fault event $t_f$ undergoes a bounded jump,
+\begin{equation}
+  V(\vect\xi(t_f^+))
+    \;\le\;
+    V(\vect\xi(t_f^-))
+    \;+\; \chi(\Delta_f),
+  \qquad
+  \chi \in \mathcal{K},
+  \label{eq:jump-contraction}
+\end{equation}
+where $\vect\xi = (\vect e_p, \vect e_v, \vect\varepsilon_T)$, $\chi \in \mathcal{K}$ is determined by the post-fault redistribution geometry, and $\Delta_f = \|\vect T^{\mathrm{qs}}(t_f^+) - \vect T^{\mathrm{qs}}(t_f^-)\|$. The identity $T_i^{\mathrm{ff}} = T_i$ keeps $\chi$ of leading order $\Delta_f$: without it, the bound inflates by the altitude channel's uncompensated matched disturbance, so the overshoot exceeds what the subsequent dwell-cycle decay of \cref{lem:dwell-decay} can absorb within one pendulum period.
+\end{lemma}
+
+\begin{proof}
+The Kelvin--Voigt cable model keeps the kinematic state continuous at $t_f$; on the severed rope, tension drops to zero, and on each surviving rope the tension transitions from its pre-fault share to the new quasi-static value over $\tau_{\mathrm{rope}} \approx \SI{6.3}{\milli\second}$. Decompose $V = V_{\mathrm{track}}(\vect e_p, \vect e_v) + \kappa_V V_{\mathrm{tension}}(\vect\varepsilon_T)$. $V_{\mathrm{track}}$ is continuous; $V_{\mathrm{tension}}$ can only grow at $t_f^+$ since $\mathcal{S}(t_f^+) = \mathcal{S}(t_f^-) \setminus \{i_f^\star\}$, and the jump is controlled by $\Delta_f$, yielding $V_{\mathrm{tension}}(t_f^+) - V_{\mathrm{tension}}(t_f^-) \le \chi(\Delta_f)$ with $\chi \in \mathcal{K}$. Summing gives \eqref{eq:jump-contraction}. The leading-order dependence on $\Delta_f$ follows from $T_i^{\mathrm{ff}} = T_i$: drone $i$'s thrust tracks the new measured tension within $\tau_{\mathrm{rope}}$, keeping the altitude contribution of order $\Delta_f$. Empirically, disabling the identity inflates altitude sag by $3.6$--$4.0\times$ across V3, V4, V5.
+\end{proof}
+
+\begin{lemma}[Dwell-cycle contraction]
+\label{lem:dwell-decay}
+Let $t_k^\star$ and $t_{k+1}^\star$ be consecutive fault events separated by dwell-time $\tau_{d,k} \ge \tau_{\mathrm{pend}}$. Under the bounded fault jump of Lemma~\ref{lem:jump-continuity} and the altitude-channel ISS decay of Lemma~\ref{lem:altitude-iss}, the Lyapunov function satisfies a per-fault-cycle contraction
+\begin{align}
+\label{eq:dwell-contraction}
+  V(\vect\xi(t_{k+1}^{\star,-}))
+    \;\le\;
+    \rho\, V(\vect\xi(t_k^{\star,-})) \;+\; c,\\
+  \rho \;\triangleq\; \exp\!\left(
+    -\alpha_{\min}\,\tau_{\mathrm{pend}} \right),
+\end{align}
+where $\alpha_{\min} = \min(\alpha_z, \alpha_{xy})$ is the slower of the altitude and horizontal decay rates, and $c > 0$ is an explicit constant derived from $\chi(\Delta_f)$ of Lemma~\ref{lem:jump-continuity} and the disturbance gains of Lemma~\ref{lem:altitude-iss}. At canonical parameters, $\rho \approx \exp(-2.37 \times 2.24) \approx 0.005$.
+\end{lemma}
+
+\begin{proof}
+Composing the jump $V(t_k^{\star,+}) \le V(t_k^{\star,-}) + \chi(\Delta_f)$ with the flow bound $\dot V \le -\alpha_{\min} V + c_0$ over $[t_k^{\star,+}, t_{k+1}^{\star,-}]$ of length $\ge \tau_{\mathrm{pend}}$ yields \eqref{eq:dwell-contraction} with $\rho = \exp(-\alpha_{\min}\tau_{\mathrm{pend}})$ and $c = \rho\,\chi(\Delta_f) + c_0/\alpha_{\min}$. The horizontal rate $\alpha_{xy} = \SI{2.37}{\second^{-1}}$ (from $K_p^{xy} = 30$, $K_d^{xy} = 15$) dominates the altitude rate $\alpha_z = \lambda_{\mathrm{spec}} = \SI{5.37}{\second^{-1}}$, giving $\alpha_{\min} = \alpha_{xy}$ and $\rho \approx e^{-2.37 \times 2.24} \approx 0.005$.
+\end{proof}
+
+\subsection{Main Theorem, Robustness, and Multi-Fault Feasibility}
+\label{sec:main-theorem-and-robustness}
+
+We now compose the five lemmas into the hybrid practical-ISS theorem and state corollaries on robustness, the steady-state tracking bound, and multi-fault feasibility.
+
+\begin{theorem}[Hybrid practical-ISS with explicit recovery envelope under $F$ sequential agent failures] \label{thm:hybrid-stability}
+Under hypotheses H1--H3 (\cref{sec:stability-setup}), the cable-tilt domain condition of Lemma~\ref{lem:tension-cancel}, any fault schedule $\sigma = \{(t_k^\star, i_k^\star)\}_{k=1}^{F} \in \mathcal{F}$ of $F$ unannounced cable severances satisfying $F \le N - 2$ and the per-fault actuator-margin condition $m_L g/(N{-}k) \le \kappa_{\mathrm{act}} f_{\max}$ for all $k \in \{1,\dots,F\}$, and admissible disturbances $d \in \mathcal{D}$, the stacked tracking-and-tension-error state $\vect\xi = (\vect e_p, \vect e_v, \vect\varepsilon_T)$ satisfies
+\begin{align}
+\label{eq:iss-envelope-explicit}
+  \|\vect\xi(t)\|
+    \;\le\;&
+      \beta\bigl(\|\vect\xi(0)\|,\,t\bigr)
+      \;+\; \gamma_w\bigl(\|w\|_\infty\bigr)
+      \;+\; \gamma_q\bigl(\|q - q^\star\|_\infty\bigr)
+      \notag \\
+    &\;+\; \gamma_\eta\bigl(\eta\bigr)
+      \;+\; \sum_{k=1}^{F}
+           \Gamma_f\,e^{-\lambda(t - t_k^\star)}\,
+           \mathbf{1}_{t \ge t_k^\star},\\
+  &t \in [t_{\mathrm{pickup}},\, T],\nonumber
+\end{align}
+where $\beta \in \mathcal{KL}$, $\gamma_w, \gamma_q, \gamma_\eta \in \mathcal{K}$, $\lambda \triangleq \alpha_{\min} = \min(\alpha_z, \alpha_{xy})$ is the slower of the altitude and horizontal closed-loop spectral rates from \cref{lem:altitude-iss,lem:antiswing-invariant} (the same rate driving the dwell-cycle contraction of \cref{lem:dwell-decay}), $\eta = \eta(\vect\xi[\cdot])$ is the realized slack duty cycle bounded above by $\eta_{\max}$ via H1, and $\Gamma_f > 0$ is the fault-overshoot coefficient set by the redistribution geometry. The per-step margin $m_L g/(N{-}k) \le \kappa_{\mathrm{act}} f_{\max}$ strengthens the post-final-fault \eqref{eq:actuator-envelope}; since $m_L g/(N{-}k)$ is monotone in $k$, the per-step condition reduces to \eqref{eq:actuator-envelope} at $k = F$ and is automatically satisfied for $k < F$. Equivalently, $V(\vect\xi(t_{k+1}^{\star,-})) \le \rho\,V(\vect\xi(t_k^{\star,-})) + c$ for explicit $c > 0$. Each surviving cable's tension obeys the envelope
+\begin{equation}
+  T_i(t) \;\le\;
+    T_{\mathrm{nom,post}}
+    \;+\; T_{\mathrm{overshoot}}\,
+    e^{-\lambda(t - t^\star_{\mathrm{last}})},
+  \qquad i \in \mathcal{S}(t),
+  \label{eq:tension-envelope-thm}
+\end{equation}
+with $T_{\mathrm{nom,post}} = m_L g/|\mathcal{S}(t)|$ the symmetric post-fault load share and $T_{\mathrm{overshoot}}$ a bounded transient amplitude derived from the redistribution geometry.
+\end{theorem}
+
+\begin{proof}[Sketch]
+\textit{Between faults.} \Cref{lem:altitude-iss} and the analogous horizontal argument give $\dot V(\vect\xi) \le -\lambda V + \gamma_w(\|w\|^2) + \gamma_q(\|q - q^\star\|^2) + \gamma_\eta(\eta)$ on each taut interval; $\gamma_\eta$ absorbs the reduction residual $C_1\delta + C_2\eta_{\max}$ of \cref{thm:reduction}. Integrating produces $\beta, \gamma_w, \gamma_q, \gamma_\eta$.
+
+\textit{At each $t_k^\star$.} \Cref{lem:jump-continuity} yields the bounded jump $V(t_k^{\star,+}) \le V(t_k^{\star,-}) + \chi(\Delta_f)$, and \cref{lem:dwell-decay} composes this with the flow decay to give $V(t_{k+1}^{\star,-}) \le \rho\,V(t_k^{\star,-}) + c$. The overshoot $\chi(\Delta_f)$, damped at rate $\lambda$, produces $\Gamma_f e^{-\lambda(t - t_k^\star)}$. Composing over $F$ events via the Teel--Goebel--Sanfelice framework~\cite{GoebelSanfeliceTeel2012} gives \eqref{eq:iss-envelope-explicit}. The tension envelope \eqref{eq:tension-envelope-thm} follows from the bound on $\vect\varepsilon_T$ in $V_{\mathrm{tension}}$ and its exponential contraction on each inter-fault interval.
+\end{proof}
+
+\input{Figures/diagrams/fig_lyapunov_sawtooth.tex}
+
+\begin{remark}[Practical-stability interpretation]
+\Cref{thm:hybrid-stability} is a practical stability bound, not asymptotic convergence. The ISS framework treats the reference waypoints as a time-varying input, not a disturbance; the residual captured by the $\gamma$ terms reflects the reference's dynamic content---principally the quasi-static pendulum offset---rather than a closed-loop failure. The identity $T_i^{\mathrm{ff}} = T_i$ alone delivers \eqref{eq:iss-envelope-explicit}; no detection or inter-drone communication is required.
+\end{remark}
+
+\begin{remark}[Jump-bound vs.\ contraction-rate mechanism]
+\label{rem:jump-vs-rate}
+Two distinct mechanisms produce the dwell-cycle contraction. The \emph{jump-bound mechanism} is the identity $T_i^{\mathrm{ff}} = T_i$, which bounds the per-event overshoot $\chi(\Delta_f)$ via \cref{lem:jump-continuity}: the surviving rope's tension step at $t_k^\star$ is translated instantaneously into a thrust increment, so the post-jump Lyapunov value is bounded by $V(t_k^{\star,-}) + \chi(\Delta_f)$ with $\chi$ scaling in the load-redistribution amplitude rather than any detection timeline. The \emph{contraction-rate mechanism} is the closed-loop spectrum of the outer-loop PD plus anti-swing damping, encoded in $(\alpha_z, \alpha_{xy})$ of \cref{lem:altitude-iss,lem:antiswing-invariant}; the inter-event flow contracts $V$ at this rate, giving $\rho = \exp(-\alpha_{\min}\tau_d) + (\text{disturbance gain})$. Both are necessary: removing the identity inflates $\chi(\Delta_f)$ to the full pendulum displacement, while detuning the PD/anti-swing layer slows $\alpha_{\min}$ and pushes $\rho$ toward unity. The architectural innovation here is the jump-bound mechanism; the ablation of \cref{sec:VI-D} isolates its contribution. The contraction-rate mechanism is a conventional cascaded PD/anti-swing design.
+\end{remark}
+
+\begin{corollary}[Pre-fault steady-state tracking bound]
+\label{cor:steady-state}
+Prior to any fault event, the payload tracking error is dominated by the quasi-static pendulum offset induced by the reference acceleration, and admits the explicit envelope
+\begin{equation}
+  \bar{e}_{p,xy} \le \frac{L A_{xy,\max}}{g}
+    \left(1 - \frac{1}{2\zeta^2}\right)
+    + \frac{A_{xy,\max}}{\kappa_{\mathrm{QP}} K_p^{xy}} + O(\delta),
+  \label{eq:ss-bound}
+\end{equation}
+where $A_{xy,\max}$ is the maximum reference acceleration, $\zeta = 1.12$ the damping ratio from \cref{lem:antiswing-invariant}, and $\kappa_{\mathrm{QP}} = w_t/(w_t + w_e) \approx 0.98$ the QP regularization factor. At canonical $A_{xy,\max} \approx \SI{2.47}{\metre\per\second\squared}$, the bound evaluates to
+\begin{align}
+\label{eq:ss-numeric}
+  \bar{e}_{p,xy}
+    \lesssim \frac{1.25 \times 2.47}{9.81}\!
+    &\left(1 - \frac{1}{2\times 1.12^2}\right)
+      + \frac{2.47}{0.98 \times 30}\\
+    &\approx 0.19 + 0.08
+    \approx \SI{0.27}{\metre},\nonumber
+\end{align}
+retaining only the two leading terms and absorbing the $O(\delta)$ residual. \eqref{eq:ss-numeric} is a leading-order scale, not a strict envelope: $(1 - 1/(2\zeta^2))$ is itself a low-frequency approximation of the transfer-function bias.
+\end{corollary}
+
+\begin{proof}[Derivation]
+The pendulum transfer function settles to $\bar{e}_{\mathrm{pend}} = (L A_{xy,\max}/g)(1 - 1/(2\zeta^2))$; the outer-loop PD adds $A_{xy,\max}/(\kappa_{\mathrm{QP}} K_p^{xy})$; the reduction error is $O(\delta)$ by \cref{thm:reduction}. Summing gives \eqref{eq:ss-bound}. V1 reports horizontal RMSE $\SI{0.306}{\metre}$ vs analytical $\SI{0.27}{\metre}$; the gap is the centripetal contribution not captured by the quasi-static derivation.
+\end{proof}
+
+\begin{corollary}[Robustness to mass, stiffness, drag, and wind]
+\label{cor:robustness}
+The envelope \eqref{eq:iss-envelope-explicit} is robust by construction along four axes. Mass mismatch is absorbed because $T_i^{\mathrm{ff}} = T_i$ uses measured rather than estimated tension, leaving \cref{lem:tension-cancel,lem:altitude-iss} mass-independent to leading order. Stiffness and drag mismatches enter through the $O(\delta + \eta_{\max})$ reduction residual, absorbed by $\gamma_\eta$ without degrading $\rho$ or the rates $\alpha_z, \alpha_{xy}$. Bounded wind enters through $\gamma_w$ with steady-state gain scaling as $1/K_p^{xy}$.
+\end{corollary}
+
+The P2-B mass sweep ($m_L \in \{2.5, 3.0, 3.5, 3.9\}\,\mathrm{kg}$, $56\,\%$ range over the minimum-mass endpoint, chosen to make the $L_1$ layer visible above the baseline PD's residual; \cref{sec:l1-augmentation}) yields RMSE variation of only $1.9\,\%$ with FF active. The V2 wind run yields 3-D RMSE $\SI{0.312}{\metre}$, matching the no-wind V1, confirming wind robustness.
+
+\paragraph{Multi-fault feasibility.} \eqref{eq:iss-envelope-explicit} extends to $k$ sequential faults by induction under two conditions: (a)~geometric closure $k \le N-2$, (b)~actuator margin $m_L g/(N{-}k) \le \kappa_{\mathrm{act}} f_{\max}$ at every step. Canonical $N=5$, $m_L=\SI{10}{\kilo\gram}$ admits $k = 2$ with margin; V4 and V5 (dual-fault) yield 3-D RMSE $0.324$--$\SI{0.328}{\metre}$, confirming \cref{thm:hybrid-stability}.
+
+\paragraph{Empirical validation summary.}
+\label{sec:stability-empirical-validation}
+\Cref{tab:stability-evidence} maps each claim to its campaign observation; full context is in \cref{sec:simulation}.
+
+\begin{table*}[t]
+  \centering
+  \caption{Empirical support for hybrid practical-ISS claims.}
+  \label{tab:stability-evidence}
+  \small
+  \renewcommand{\arraystretch}{1.05}
+  \begin{tabular}{p{5.5cm}p{2.5cm}p{8cm}}
+    \toprule
+    Claim / Lemma & Campaign & Evidence \\
+    \midrule
+    Tension cancellation (Lem.~\ref{lem:tension-cancel})
+      & P2-A ablation
+      & $3.6\times$--$4.0\times$ sag increase with FF disabled \\
+    Altitude ISS decay (Lem.~\ref{lem:altitude-iss})
+      & V1 nominal
+      & 3-D RMSE $= 0.312\,\mathrm{m}$, stable \\
+    Anti-swing invariance (Lem.~\ref{lem:antiswing-invariant})
+      & V1--V5 series
+      & Post-fault RMSE within $4\%$ of nominal
+        across all variants \\
+    Bounded fault jump (Lem.~\ref{lem:jump-continuity})
+      & V3, V4, V5 traces
+      & Direct fit on Lyapunov proxy
+        $V(t) = \frac{1}{2}\zeta^\top P_v \zeta$ (50 ms window):
+        $\hat\chi$ peak $1.1\!\times\!10^{-4}$ (V4),
+        $1.3\!\times\!10^{-5}$ (V5);
+        bounded jump confirmed across all events \\
+    Dwell-cycle contraction $\rho < 1$
+      (Lem.~\ref{lem:dwell-decay})
+      & V4, V5 dual-fault
+      & Direct measurement
+        $\hat\rho = V(t_2^-)/V(t_1^-)$:
+        $\hat\rho_{\text{V4}} = 0.20$,
+        $\hat\rho_{\text{V5}} = 0.045$;
+        both well below the analytical $\rho < 1$
+        sufficiency bound \\
+    Mass robustness
+      & P2-B sweep
+      & $1.9\%$ RMSE range over $56\%$ mass variation \\
+    Wind robustness
+      & V2 wind
+      & V2 3-D RMSE $= 0.312\,\mathrm{m} \approx$ V1 \\
+    \bottomrule
+  \end{tabular}
+\end{table*}
+
+The baseline theorem delivers \eqref{eq:iss-envelope-explicit} under H1--H3 and the identity $T_i^{\mathrm{ff}} = T_i$ alone; no additional architecture is required for \cref{def:problem}. \Cref{sec:extensions} develops parameter adaptation, tension-ceiling enforcement, and post-fault reshape---each targeting a residual channel of \eqref{eq:iss-envelope-explicit}---and shows each preserves H1--H3 on the baseline domain.

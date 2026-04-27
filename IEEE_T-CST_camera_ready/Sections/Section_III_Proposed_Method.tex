@@ -1,0 +1,243 @@
+We present the decentralized fault-tolerant controller that solves \cref{def:problem} on the reduced-order model of \cref{sec:reduction-and-reference}. Each drone $i$ runs one instance of the \textit{DecentralizedLocalController}, a continuous-time Drake \texttt{LeafSystem<double>}. The controller is a three-layer cascade: an outer-loop PD law with a passive anti-swing slot shift, a single-step convex QP that enforces the tilt-and-thrust actuator envelope while absorbing the feed-forward tension, and an inner-loop Euler-angle attitude PD. The central design element is $T_i^{\mathrm{ff}} = T_i$: setting the thrust feed-forward equal to the drone's measured rope tension encodes passive fault tolerance with no detection, communication, or supervisory reconfiguration. This is a property of \emph{the baseline}; the optional reshape supervisor of \cref{sec:reshape-supervisor} adds a local tension-latch detector and a per-fault broadcast and therefore lies outside the baseline information pattern, as we make explicit there. The optional $L_1$-adaptive altitude augmentation is detailed in \cref{sec:extensions} as a discrete sub-system updated at fixed period $\Delta t_{L_1} \equiv T_S = \SI{0.2}{\milli\second}$ ($T_s$ used in the stability analysis of \cref{sec:l1-augmentation}); its injection point is identified in \cref{sec:outer-loop}.
+
+\input{Figures/diagrams/fig_controller_cascade.tex}
+
+\begin{table*}[htbp]
+  \centering
+  \caption{Component-level information pattern. The baseline cascade and the $L_1$ and MPC extensions consume no fault flag and no peer message; only the optional reshape supervisor steps outside this pattern.}
+  \label{tab:component-pattern}
+  \small
+  \begin{tabular}{p{4.5cm}cccp{3.0cm}}
+    \toprule
+    Component & Detection? & Communication? & In main theorem? & Purpose \\
+    \midrule
+    Baseline cascade + identity \eqref{eq:Tff} & No & No & Yes & Passive fault absorption \\
+    $L_1$ altitude augmentation & No & No & Preserves theorem & Parameter mismatch \\
+    MPC tension ceiling & No & No & Preserves theorem & Tension constraint \\
+    Reshape supervisor & Yes (latch) & Yes ($\lceil\log_2 N\rceil$ bits) & Optional only & Slot reassignment \\
+    \bottomrule
+  \end{tabular}
+\end{table*}
+
+\subsection{Controller Input--Output Signature}
+\label{sec:ctrl-signature}
+
+At each continuous-time evaluation, drone $i$'s controller consumes its own inertial state $(\vect p_i, \vect v_i, \mat R_i, \vect\omega_i^{\mathcal{W}})$, scalar rope tension $T_i(t) \ge 0$, locally observed payload velocity $\vect v_L(t)$, the pre-distributed reference $(\vect p_L^d(t), \vect v_L^d(t))$ linearly interpolated between samples, and optionally a slot-offset override $\boldsymbol\delta_i^{\mathrm{ovr}}(t)$ from a \textit{FormationCoordinator} port. When the port is disconnected, the static formation offset $\boldsymbol\delta_i$ from the parameter struct is used. The baseline controller does not access payload position $\vect p_L$. The information consumed is a strict subset of $\mathcal{I}_i(t)$ \eqref{eq:info-set}; no peer state, peer-cable tension, or fault signal is accessed. The controller emits the world-frame wrench $(\vect F_i^{\mathcal{W}}, \vect\tau_i^{\mathcal{W}})$ applied to the drone body.
+
+% ----------------------------------------------------------------
+\subsection{Outer Loop: PD with Anti-Swing Slot Shift}
+\label{sec:outer-loop}
+% ----------------------------------------------------------------
+
+\paragraph{Slot reference and anti-swing shift.} Each drone is pre-assigned a hovering slot displaced vertically above the payload reference point and laterally by a fixed formation offset,
+\begin{equation}
+  \vect p_{\mathrm{slot},i}(t)
+    \;=\; \vect p_L^d(t) + \boldsymbol\delta_i
+        + d_{\mathrm{rope}}\,\hat{\vect e}_3,
+  \label{eq:slot-pos}
+\end{equation}
+where $\boldsymbol\delta_i \in \R^3$ is the formation offset (overridable at run time), $d_{\mathrm{rope}} = \SI{1.25}{\metre}$ is the vertical slot elevation matching $L$, and $\hat{\vect e}_3$ is the upward unit vector. The slot velocity is $\vect v_{\mathrm{slot},i}(t) = \vect v_L^d(t)$. To damp the payload pendulum passively, we shift the slot relative to the payload's horizontal velocity. With $\vect v_{L,\perp} \triangleq [v_{L,x}, v_{L,y}, 0]^{\top}$, the horizontal swing correction is
+\begin{equation}
+  \vect s_i(t) =
+    \begin{cases}
+      -k_{\mathrm{swing}}\,\vect v_{L,\perp}
+        & \text{if }
+          k_{\mathrm{swing}}\|\vect v_{L,\perp}\| \le s_{\max}, \\[2pt]
+      -s_{\max}\,\hat{\vect v}_{L,\perp}
+        & \text{otherwise,}
+    \end{cases}
+  \label{eq:swing-shift}
+\end{equation}
+where $\hat{\vect v}_{L,\perp}$ is the unit vector of $\vect v_{L,\perp}$. The shifted slot position is $\vect p_{\mathrm{slot},i}^{\mathrm{dyn}}(t) = \vect p_{\mathrm{slot},i}(t) + \vect s_i(t)$.
+
+\paragraph{Tracking errors.} The position and velocity errors are
+\begin{equation}
+  \vect e_p(t) = \vect p_{\mathrm{slot},i}^{\mathrm{dyn}}(t)
+                 - \vect p_i(t),
+  \qquad
+  \vect e_v(t) = \vect v_{\mathrm{slot},i}(t) - \vect v_i(t).
+  \label{eq:slot-error}
+\end{equation}
+The velocity error uses the unshifted slot velocity; the anti-swing correction modifies the position reference only.
+
+\paragraph{Target acceleration.} The outer loop computes a target body acceleration,
+\begin{align}
+\label{eq:a-target}
+  \vect a_{\mathrm{target}}(t)
+    =& \underbrace{%
+        \begin{bmatrix}
+          K_p^{xy}\, e_{p,x} + K_d^{xy}\, e_{v,x} \\[2pt]
+          K_p^{xy}\, e_{p,y} + K_d^{xy}\, e_{v,y} \\[2pt]
+          K_p^{z}\;\; e_{p,z} + K_d^{z}\;\; e_{v,z}
+        \end{bmatrix}}_{\vect a_{\mathrm{track}}}\\
+    &+\; w_{\mathrm{swing}}
+      \begin{bmatrix}
+        -k_{\mathrm{swing}}\, v_{L,x} \\[2pt]
+        -k_{\mathrm{swing}}\, v_{L,y} \\[2pt]
+        0
+      \end{bmatrix}.\nonumber
+\end{align}
+The altitude gain $K_p^z = 100$ exceeds the horizontal gain $K_p^{xy} = 30$ because vertical rope forces dominate the disturbance budget; the formal pole and Lyapunov-matrix analysis is in \cref{lem:altitude-iss}. When $L_1$ is active, its altitude correction $u_{\mathrm{ad}}(t)$ is added to the $z$-component of $\vect a_{\mathrm{target}}$ between the outer PD and the QP (\cref{sec:extensions}); horizontal channels are unmodified.
+
+% ----------------------------------------------------------------
+\subsection{Actuator Projection and Feed-Forward Tension}
+\label{sec:qp-and-ff}
+% ----------------------------------------------------------------
+
+\paragraph{Single-step convex QP.} $\vect a_{\mathrm{target}}$ may lie outside the tilt-and-thrust actuator envelope. We project onto the feasible set with a single-step convex QP that also regularises large commands:
+\begin{subequations}
+\label{eq:qp}
+\begin{align}
+  \vect a_d^\star
+    &= \operatorname*{argmin}_{\vect a_d \in \R^3}
+      \; w_t\,\bigl\|\vect a_d - \vect a_{\mathrm{target}}\bigr\|^2
+      + w_e\,\|\vect a_d\|^2,
+    \label{eq:qp-cost} \\
+  \text{s.t.}\;\;
+    &\abs{a_{d,x}},\;\abs{a_{d,y}}
+      \le a_{\mathrm{tilt}} \triangleq g\tan\theta_{\max},
+    \label{eq:qp-tilt} \\
+    &a_{z,\min}(t) \le a_{d,z} \le a_{z,\max}(t),
+    \label{eq:qp-vert}
+\end{align}
+\end{subequations}
+where the vertical bounds incorporate the rope tension
+feed-forward,
+\begin{align}
+\label{eq:az-bounds}
+  a_{z,\min}(t) &= \frac{f_{\min} - T_i^{\mathrm{ff}}(t)}{m_i} - g,\\
+  a_{z,\max}(t) &= \frac{f_{\max} - T_i^{\mathrm{ff}}(t)}{m_i} - g.\nonumber
+\end{align}
+At canonical parameters,
+$a_{\mathrm{tilt}} = 9.81\tan(0.6)
+\approx \SI{6.71}{\metre\per\second\squared}$.
+
+\paragraph{Feasibility.} The vertical interval in \eqref{eq:qp-vert} is non-empty whenever $f_{\min} < f_{\max}$, since both bounds shift by the same feed-forward term, and hover feasibility holds in all scenarios ($T_i \ll f_{\max}$). Doctrine~D1 (single-active-regime QP, formalised as H3 in \cref{sec:stability-setup}) is empirically satisfied at the $0.10\%$ worst transition fraction in \cref{tab:domain-audit}; the component-wise-clamp fallback is implemented but has not been triggered.
+
+\paragraph{Feed-forward tension.} For the canonical campaigns \texttt{initial\_pretensioned}=\texttt{true}, so the feed-forward is the identity from $t=0$:
+\begin{equation}
+  \boxed{T_i^{\mathrm{ff}}(t) \;=\; T_i(t).}
+  \label{eq:Tff}
+\end{equation}
+A smoothstep pickup ramp $\alpha(\tau) = 3\tau^2 - 2\tau^3$ handles cold-start engagement; it is bypassed in every reported campaign. The flag \texttt{disable\_tension\_ff} overrides \eqref{eq:Tff} to $T_i^{\mathrm{ff}} = 0$ for the feed-forward ablation campaign.
+
+\begin{remark}[Passive fault tolerance via \eqref{eq:Tff}]
+\label{rem:passive-ft}
+Identity \eqref{eq:Tff} is necessary, not merely convenient, for the dwell-cycle contraction $\rho \in (0, 1)$ of \cref{lem:dwell-decay}. The bounded fault-jump of \cref{lem:jump-continuity} keeps the post-fault overshoot of leading order in the redistribution magnitude $\Delta_f$: drone $i$'s thrust tracks the new measured tension within the rope timescale, so the altitude-channel contribution stays of order $\Delta_f$ rather than inflating by an uncompensated matched disturbance. Without \eqref{eq:Tff}, the altitude channel sees the redistribution as an unrejected matched disturbance, and the overshoot exceeds what the dwell-cycle decay can absorb within one pendulum period. The ablation campaign confirms this: disabling \eqref{eq:Tff} raises post-fault RMS tracking error by $34$--$39\%$ and inflates the altitude-sag envelope by $3.6$--$4.0\times$ across V3, V4, V5.
+\end{remark}
+
+\subsection{Inner Loop: Attitude PD and Controller Parameters}
+\label{sec:inner-loop}
+
+\paragraph{Thrust and desired attitude.}
+Given the QP solution $a_{d,z}^\star$, the commanded thrust is
+\begin{equation}
+\label{eq:thrust}
+  f_i \;=\; \operatorname{clamp}\!\bigl(\,
+      m_i(g + a_{d,z}^\star) + T_i^{\mathrm{ff}},\;
+      f_{\min},\; f_{\max}\bigr).
+\end{equation}
+Under the small-angle approximation, the horizontal acceleration commands map to desired pitch and roll angles,
+\begin{align}
+\label{eq:attitude-des}
+  \theta_{\mathrm{pitch}}^d
+    &= \operatorname{sat}\!\!\left(\frac{a_{d,x}^\star}{g},\;\pm\theta_{\max}\right),\\
+  \theta_{\mathrm{roll}}^d
+    &= \operatorname{sat}\!\!\left(-\frac{a_{d,y}^\star}{g},\;\pm\theta_{\max}\right).\nonumber
+\end{align}
+
+\paragraph{Euler-angle attitude PD and output wrench.} Roll and pitch are extracted from $\mat R_i$ by the standard ZYX decomposition; yaw uses the skew component $\epsilon_\psi = \tfrac{1}{2}(R_{21} - R_{12})$. With body angular velocity $\vect\omega_i^{\mathcal{B}} = \mat R_i^{\top}\, \vect\omega_i^{\mathcal{W}}$, the body torques are
+\begin{align}
+  \tau_{i,x}
+    &= K_p^{\mathrm{att}}\!\left(
+         \theta_{\mathrm{roll}}^d - \phi_{\mathrm{roll}}
+       \right)
+      - K_d^{\mathrm{att}}\,\omega_{i,x}^{\mathcal{B}},
+    \label{eq:att-pd-roll} \\[2pt]
+  \tau_{i,y}
+    &= K_p^{\mathrm{att}}\!\left(
+         \theta_{\mathrm{pitch}}^d - \theta_{\mathrm{pitch}}
+       \right)
+      - K_d^{\mathrm{att}}\,\omega_{i,y}^{\mathcal{B}},
+    \label{eq:att-pd-pitch} \\[2pt]
+  \tau_{i,z}
+    &= -\frac{K_p^{\mathrm{att}}}{2}\,(R_{21} - R_{12})
+          - K_d^{\mathrm{att}}\,\omega_{i,z}^{\mathcal{B}},
+    \label{eq:att-pd-yaw}
+\end{align}
+each saturated to $[-\tau_{\max}, \tau_{\max}]$. The law \eqref{eq:att-pd-roll}--\eqref{eq:att-pd-yaw} uses Euler-angle error directly rather than a geodesic $\SOthree$ map; this is valid in the small-tilt regime enforced by \eqref{eq:qp-tilt}. The output wrench is
+\begin{equation}
+  \vect F_i^{\mathcal{W}} = f_i\,\mat R_i\,\hat{\vect e}_3,
+  \qquad
+  \vect\tau_i^{\mathcal{W}} = \mat R_i\,
+    [\tau_{i,x},\; \tau_{i,y},\; \tau_{i,z}]^{\top},
+  \label{eq:wrench}
+\end{equation}
+applied at the same continuous-time evaluation instant as the upstream computations.
+
+\paragraph{Canonical controller parameters.} \Cref{tab:baseline-params} collects the parameters used throughout all simulation campaigns.
+
+\begin{table}[t]
+  \centering
+  \caption{Proposed controller parameters (canonical values used
+  in all simulation campaigns).}
+  \label{tab:baseline-params}
+  \small
+  \renewcommand{\arraystretch}{1.05}
+  \begin{tabular}{lrl}
+    \toprule
+    Parameter & Value & Role \\
+    \midrule
+    $K_p^{xy},\; K_d^{xy}$
+      & $30,\;15$
+      & horizontal outer loop \\
+    $K_p^{z},\;\; K_d^{z}$
+      & $100,\;24$
+      & altitude outer loop \\
+    $K_p^{\mathrm{att}},\; K_d^{\mathrm{att}}$
+      & $25,\;4$
+      & attitude inner loop \\
+    $k_{\mathrm{swing}}$
+      & $0.8$
+      & anti-swing gain \\
+    $w_{\mathrm{swing}}$
+      & $0.3$
+      & anti-swing weight in $\vect a_{\mathrm{target}}$ \\
+    $s_{\max}$
+      & \SI{0.3}{\metre}
+      & slot-shift saturation \\
+    $d_{\mathrm{rope}}$
+      & \SI{1.25}{\metre}
+      & slot $z$-offset (nominal rope length) \\
+    $w_t,\; w_e$
+      & $1.0,\;0.02$
+      & QP tracking / effort weights \\
+    $\theta_{\max}$
+      & \SI{0.6}{\radian}
+      & tilt ceiling (${\approx}34^{\circ}$) \\
+    $f_{\min},\; f_{\max}$
+      & $0,\;\SI{150}{\newton}$
+      & thrust envelope \\
+    $\tau_{\max}$
+      & \SI{10}{\newton\metre}
+      & torque saturation \\
+    $T_{\mathrm{thresh}}$
+      & \SI{0.3}{\newton}
+      & pickup-detection threshold \\
+    $\bar{T}$
+      & \SI{19.62}{\newton}
+      & nominal per-drone tension ($m_L g / N$) \\
+    $K_{p,T}$
+      & $1.5$
+      & pickup-phase tension correction gain \\
+    $T_{\mathrm{ramp}}$
+      & \SI{1.0}{\second}
+      & pickup smoothstep window \\
+    $\Delta t_{L_1}$
+      & \SI{0.2}{\milli\second}
+      & $L_1$ discrete update period \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+The three-layer controller specified above is the baseline on which \cref{sec:stability} establishes the hybrid practical-ISS theorem. The only structurally nonstandard element is the feed-forward identity $T_i^{\mathrm{ff}} = T_i$ in \eqref{eq:az-bounds} and \eqref{eq:thrust}; every other block is conventional. The next section shows that this single identity is the mechanism responsible for the per-fault-cycle Lyapunov contraction, with $\rho \in (0,1)$, and that without it, the closed loop loses its hybrid practical-ISS property.

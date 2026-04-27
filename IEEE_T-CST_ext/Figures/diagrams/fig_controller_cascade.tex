@@ -1,0 +1,162 @@
+% ============================================================
+%  Figure — Per-drone decentralised controller cascade.
+%  Strict orthogonal block diagram: every connection is one
+%  horizontal or vertical segment (no slopes), every signal arrow
+%  has exactly ONE arrowhead at its endpoint, and no signal line
+%  passes through any block.
+%
+%  Layout (centred on x=0):
+%    y=  1.7  : feed-forward sum (sumT, FF identity, red)
+%    y=  0.0  : baseline cascade row
+%               refin  PD  sumL1  QP  att  plant
+%               x:    -8.6 -6.0 -3.0 0.0 3.4 6.7
+%    y= -2.6  : sensor block, centred at x = 1.7
+%               (column gap between qp and att, so sense.north
+%                runs cleanly UP to sumT without crossing blocks)
+%    y= -4.6  : extension band
+%               reshape  L1  MPC, x = -6.0 / -3.0 / 0.0
+%               (vertically aligned with their injection points)
+% ============================================================
+\begin{figure*}[t]
+\centering
+\begin{tikzpicture}[
+    >={Stealth[length=2mm,width=1.6mm]},
+    blk/.style={draw, thick, rounded corners=1pt, fill=blue!8,
+                minimum height=11mm, minimum width=22mm,
+                align=center, font=\footnotesize, inner sep=2pt},
+    extblk/.style={draw, thick, rounded corners=1pt, fill=orange!18,
+                   minimum height=10mm, minimum width=26mm,
+                   align=center, font=\footnotesize, inner sep=2pt},
+    sens/.style={draw, thick, rounded corners=1pt, fill=green!10,
+                 minimum height=9mm, minimum width=30mm,
+                 align=center, font=\footnotesize, inner sep=2pt},
+    plant/.style={draw, thick, rounded corners=1pt, fill=gray!12,
+                  minimum height=11mm, minimum width=24mm,
+                  align=center, font=\footnotesize, inner sep=2pt},
+    sum/.style={draw, thick, circle, inner sep=0.5pt,
+                minimum size=4.5mm, font=\scriptsize},
+    sig/.style={font=\scriptsize, inner sep=1.2pt, fill=white},
+    boxed/.style={draw, dashed, rounded corners=2pt, inner sep=4pt},
+    flow/.style={->, thick},
+    fftap/.style={->, thick, red!70!black},
+    senseflow/.style={->, thick, blue!55!black},
+    extflow/.style={->, thick, dashed, orange!75!black}
+  ]
+
+  % --- Baseline cascade row (y = 0) ---
+  \node[sig, font=\scriptsize] (refin) at (-8.6, 0)
+        {$\mathbf{p}_L^d,\,\mathbf{v}_L^d$};
+  \node[blk] (pd)    at (-6.0, 0) {Outer PD\\$+$ anti-swing\\slot shift};
+  \node[sum] (sumL1) at (-3.0, 0) {$+$};
+  \node[blk] (qp)    at ( 0.0, 0) {Single-step QP\\tilt + thrust\\envelope};
+  \node[blk] (att)   at ( 3.4, 0) {Attitude PD\\(ZYX Euler)};
+  \node[plant] (plant) at ( 6.7, 0) {Drone $i$ + cable\\(reduced model)};
+
+  % horizontal cascade flow
+  \draw[flow] (refin) -- (pd);
+  \draw[flow] (pd) -- node[sig, above] {$\mathbf{a}_{\mathrm{target}}$}
+        (sumL1);
+  \draw[flow] (sumL1) -- (qp);
+  \draw[flow] (qp) -- node[sig, above] {$\mathbf{a}_d^\star$} (att);
+  \draw[flow] (att) -- node[sig, above] {$f_i,\,\boldsymbol{\tau}_i$}
+        (plant);
+
+  % --- Feed-forward identity tap (sumT directly above QP) ---
+  \node[sum, fill=red!10] (sumT) at (0, 1.7) {$+$};
+  % Identity label: placed ABOVE sumT (out of any tap path);
+  % no white fill so it does not look like a small box.
+  \node[anchor=south, font=\scriptsize\itshape, red!70!black,
+        inner sep=2pt] at (sumT.north)
+        {$T_i^{\mathrm{ff}}\!=\!T_i$\,(identity)};
+  \draw[fftap] (sumT.south) -- (qp.north);
+
+  % --- Sensor band (y = -2.6, centre at x = 1.7) ---
+  % x = 1.7 sits in the clear gap between QP (right edge x=1.1)
+  % and att (left edge x=2.3), so sense.north runs vertically up
+  % to sumT without crossing any block.
+  \node[sens] (sense) at (1.7, -2.6)
+        {Local sensors\\$x_i,\;\; T_i,\;\; x_L$};
+
+  % Plant -> sensors: |- (vertical down then horizontal left)
+  \draw[senseflow] (plant.south) |- (sense.east);
+
+  % Sensors -> PD: horizontal left at y = -2.6, then vertical up
+  % at x = -6.0.  Single draw call -> ONE arrowhead at pd.south.
+  \draw[senseflow] (sense.west)
+        -- node[sig, pos=0.65, above] {$x_i,\,x_L$}
+        (-6.0, -2.6) -- (pd.south);
+
+  % T_i tap (red) — sense.NORTH straight up, then horizontal
+  % left to sumT.east.  Single draw call -> ONE arrowhead at
+  % sumT.east.  Vertical at x=1.7 clears QP (right edge x=1.1)
+  % and att (left edge x=2.3); horizontal at y=1.7 sits well
+  % above all baseline blocks (top edges at y ~= 0.55).
+  % T_i label placed near the start of the vertical (well below
+  % the cascade row), with no fill so it does not look like a
+  % small block sitting on the cascade.
+  \draw[fftap] (sense.north)
+        -- node[anchor=west, font=\scriptsize\itshape,
+                red!70!black, pos=0.20, inner sep=1pt]
+                {$T_i$ (own tension)}
+        (sense.north |- sumT.east) -- (sumT.east);
+
+  % --- Bracket the baseline ---
+  \begin{scope}[on background layer]
+    \node[boxed,
+          fit=(refin) (pd) (sumL1) (qp) (att) (plant) (sumT) (sense)]
+         (baseline) {};
+  \end{scope}
+  \node[font=\scriptsize\itshape, anchor=south west]
+        at (baseline.north west)
+        {Baseline cascade --- continuous time, all signals local};
+
+  % --- Extension band (y = -4.6) ---
+  \node[extblk] (reshape) at (-6.0, -4.6)
+        {Reshape supervisor\\$\lceil\log_2 N\rceil$-bit broadcast};
+  \node[extblk] (l1) at (-3.0, -4.6)
+        {$L_1$ adaptive\\altitude augmentation};
+  \node[extblk] (mpc) at ( 0.0, -4.6)
+        {Receding-horizon MPC\\(replaces single-step QP)};
+
+  % All three extension injection arrows are strictly vertical.
+  \draw[extflow] (reshape.north)
+        -- node[sig, pos=0.78, right=2pt]
+              {$\boldsymbol{\delta}_i^{\mathrm{ovr}}$}
+        (pd.south);
+  \draw[extflow] (l1.north)
+        -- node[sig, pos=0.78, right=2pt] {$u_{\mathrm{ad}}$}
+        (sumL1.south);
+  \draw[extflow] (mpc.north)
+        -- node[sig, pos=0.78, right=2pt] {replaces QP}
+        (qp.south);
+
+  % --- Bracket the extension layers ---
+  \begin{scope}[on background layer]
+    \node[boxed, fit=(reshape) (l1) (mpc), draw=orange!70!black]
+         (ext) {};
+  \end{scope}
+  \node[font=\scriptsize\itshape, orange!70!black,
+        anchor=south west]
+        at (ext.north west)
+        {Extension layers (\cref{sec:extensions})};
+
+\end{tikzpicture}
+\caption{Per-drone control cascade. The baseline (blue, framed top) is
+a three-stage continuous-time pipeline: outer-loop PD with anti-swing
+slot shift, a single-step convex QP that projects
+$\mathbf{a}_{\mathrm{target}}$ onto the tilt-and-thrust envelope, and an
+Euler-angle attitude PD. The non-standard element is the red
+feed-forward tap: drone $i$ routes its own measured tension $T_i$
+directly into the altitude thrust feed-forward,
+$T_i^{\mathrm{ff}} = T_i$. This single identity is the carrier of
+hybrid practical-ISS across cable-severance events
+(\cref{thm:hybrid-stability}); the surrounding cascade is otherwise
+textbook. Three optional layers (orange, framed bottom) hook in at
+three precisely identified injection points: the $L_1$ adaptive
+correction $u_{\mathrm{ad}}$ enters the altitude channel between the
+outer PD and the QP; the receding-horizon MPC replaces the single-step
+QP entirely; the reshape supervisor overrides the formation slot
+$\boldsymbol{\delta}_i$ on receipt of a single
+$\lceil\log_2 N\rceil$-bit broadcast.}
+\label{fig:controller-cascade}
+\end{figure*}

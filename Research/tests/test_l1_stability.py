@@ -3,7 +3,8 @@
 Checks:
   * `A_m` eigenvalues match the closed-form derivation.
   * The symbolic Lyapunov matrix P satisfies `A_mᵀ P + P A_m = −I`.
-  * The gain bound Γ* = 2/(T_s · p_{22}) ≈ 4.75e4.
+  * The gain bound Γ* = 2/(T_s · p_{22}) ≈ 4.75e5 for the canonical
+    (k_p, k_d, T_s) = (100, 24, 2e-4).
   * The Euler-discretised σ̂ update is a contraction for Γ = 0.5 Γ*
     and diverges for Γ = 1.2 Γ* (empirical boundary).
 """

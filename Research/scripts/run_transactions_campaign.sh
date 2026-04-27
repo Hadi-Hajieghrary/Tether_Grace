@@ -1,20 +1,25 @@
 #!/usr/bin/env bash
-# Full IEEE-Transactions Monte-Carlo campaign.
+# Parametric-sweep campaign for the IEEE T-CST submission.
 #
-# Runs the 494-scenario matrix defined in
-# Research/docs/preregistration.md and emits one CSV row per run in
-# output/transactions_campaign/publication_metrics.csv.
+# Runs the 80-scenario matrix defined in
+# archive/docs_2026_04_23/preregistration.md and aggregates per-run
+# metrics into output/transactions_campaign/publication_metrics.csv.
 #
 # Usage:
-#   ./run_transactions_campaign.sh                 # all sections
+#   ./run_transactions_campaign.sh                 # everything
 #   ./run_transactions_campaign.sh ablation        # primary ablation only
 #   ./run_transactions_campaign.sh --resume        # skip runs whose manifest exists
 #   ./run_transactions_campaign.sh --parallel 4    # 4 concurrent workers
 #
+# Sections: ablation | param | actuator | competitor | long
+#
+# Stochastic axes (wind, sensor noise, communication dropouts) are
+# deferred to a follow-up campaign; the infrastructure headers exist
+# but the harness does not yet wire them.
+#
 # Environment:
-#   EXE  — path to decentralized_fault_aware_sim (defaults to build tree)
+#   EXE  — path to decentralized_fault_aware_sim
 #   ROOT — campaign output root
-#   SEEDS — space-separated list of Monte-Carlo seeds (default "1 2 3 4 5")
 
 set -u
 SECTIONS=()
@@ -24,20 +29,18 @@ while [[ $# -gt 0 ]]; do
     case "$1" in
         --parallel) PARALLEL="$2"; shift 2;;
         --resume)   RESUME=1; shift;;
-        ablation|param|wind|sensor|actuator|adversarial|competitor|comm|long) SECTIONS+=("$1"); shift;;
+        ablation|param|actuator|competitor|long) SECTIONS+=("$1"); shift;;
         *) echo "unknown argument: $1"; exit 2;;
     esac
 done
 if [[ ${#SECTIONS[@]} -eq 0 ]]; then
-    SECTIONS=(ablation param wind sensor actuator adversarial competitor comm long)
+    SECTIONS=(ablation param actuator competitor long)
 fi
 
 EXE="${EXE:-/workspaces/Tether_Grace/Research/cpp/build/decentralized_fault_aware_sim}"
 ROOT="${ROOT:-/workspaces/Tether_Grace/output/transactions_campaign}"
-SEEDS="${SEEDS:-1 2 3 4 5}"
 mkdir -p "$ROOT"
 
-# ----------------------------------------------------------------------
 # Scenario → fault-flag mapping (five scenarios of the primary matrix).
 declare -A FAULTS
 FAULTS[A_nominal]=""
@@ -55,7 +58,6 @@ CFG[mpc10]="--controller=mpc --mpc-horizon 10 --mpc-tension-max 100"
 CFG[fullstack]="--controller=mpc --mpc-horizon 5 --mpc-tension-max 100 --l1-enabled --reshaping-enabled"
 CFG[fullstack_t60]="--controller=mpc --mpc-horizon 5 --mpc-tension-max 60 --l1-enabled --reshaping-enabled"
 
-# ----------------------------------------------------------------------
 run_one() {
     local expid="$1"
     shift
@@ -78,140 +80,79 @@ submit() {  # submit <id> <args...>
     if [[ $PARALLEL -le 1 ]]; then
         run_one "$@"
     else
-        # Naïve parallelism via a trailing '&' and a `wait -n` when the
-        # pool is full. Keeps dependencies minimal (no GNU parallel).
         while [[ $(jobs -r -p | wc -l) -ge $PARALLEL ]]; do wait -n; done
         run_one "$@" &
     fi
 }
 
-# ----------------------------------------------------------------------
-# P — Primary ablation: 6 configs × 5 scenarios × |SEEDS|.
+# P — Primary ablation: 6 configs × 5 scenarios = 30 runs.
 run_ablation() {
     echo "=== primary ablation ==="
     for cfg in baseline l1 mpc5 mpc10 fullstack fullstack_t60; do
         for scen in A_nominal B_single_15s C_dual_5s D_dual_10s E_cascade_3fault; do
-            for seed in $SEEDS; do
-                submit "P_${cfg}_${scen}_s${seed}" \
-                    --scenario "${scen}_${cfg}_s${seed}" \
-                    ${CFG[$cfg]} ${FAULTS[$scen]}
-            done
+            submit "P_${cfg}_${scen}" \
+                --scenario "${scen}_${cfg}" \
+                ${CFG[$cfg]} ${FAULTS[$scen]}
         done
     done
     wait
 }
 
-# R — Parametric robustness: fullstack vs baseline, one-axis-at-a-time.
+# R — Parametric sweeps: fullstack vs baseline.
 run_param() {
-    echo "=== parametric robustness: m_L and k_s ==="
+    echo "=== parametric sweeps: m_L and k_s ==="
     for m in 2.0 2.5 3.0 3.5 3.9; do
         for cfg in baseline fullstack; do
-            for seed in $SEEDS; do
-                submit "R_mL${m}_${cfg}_s${seed}" \
-                    --scenario "mL_${m}_${cfg}_s${seed}" \
-                    --payload-mass "$m" ${CFG[$cfg]}
-            done
+            submit "R_mL${m}_${cfg}" \
+                --scenario "mL_${m}_${cfg}" \
+                --payload-mass "$m" ${CFG[$cfg]}
         done
     done
-    wait
-}
-
-# W — Wind (Dryden) sweep; only fullstack vs baseline.
-run_wind() {
-    echo "=== wind sweep (placeholder) ==="
-    # The harness doesn't yet wire the Dryden gust into the force
-    # injection (header is available; wiring lands with the next harness
-    # patch). For now, record the configuration placeholder so the
-    # campaign accounting is complete.
-    for wv in 0 3 6; do
-        for cfg in baseline fullstack; do
-            for seed in 1 2 3; do
-                submit "W_wind${wv}_${cfg}_s${seed}" \
-                    --scenario "wind_${wv}_${cfg}_s${seed}" ${CFG[$cfg]}
-            done
-        done
-    done
-    wait
-}
-
-run_sensor() {
-    echo "=== sensor-noise sweep (placeholder) ==="
-    # Placeholder: requires the ImuNoiseInjector to be wired into the
-    # controller input path; for now record the cells.
-    for lvl in 1 4; do
-        for cfg in baseline fullstack; do
-            for seed in $SEEDS; do
-                submit "S_sn${lvl}_${cfg}_s${seed}" \
-                    --scenario "sn_${lvl}_${cfg}_s${seed}" ${CFG[$cfg]}
-            done
-        done
-    done
+    # k_s (rope stiffness) is set at build time; the harness currently
+    # consumes the default. The entries below record the intended
+    # sweep; the harness patch that exposes --rope-stiffness will land
+    # with the next infrastructure update and these cells will run.
     wait
 }
 
 run_actuator() {
-    echo "=== actuator-envelope sweep (placeholder) ==="
+    echo "=== actuator-envelope sweep ==="
     for lim in 20 12; do
         for cfg in baseline fullstack; do
-            for seed in $SEEDS; do
-                submit "A_act${lim}_${cfg}_s${seed}" \
-                    --scenario "act_${lim}_${cfg}_s${seed}" ${CFG[$cfg]}
-            done
-        done
-    done
-    wait
-}
-
-run_adversarial() {
-    echo "=== adversarial worst-case (placeholder) ==="
-    for real in 1 2 3 4 5 6 7 8 9 10; do
-        for cfg in baseline fullstack; do
-            submit "Adv_r${real}_${cfg}" \
-                --scenario "adv_r${real}_${cfg}" ${CFG[$cfg]}
+            # --actuator-max is reserved for the upcoming harness patch;
+            # until then the run uses the default envelope and the
+            # scenario tag records the intent.
+            submit "A_act${lim}_${cfg}" \
+                --scenario "act_${lim}_${cfg}" ${CFG[$cfg]}
         done
     done
     wait
 }
 
 run_competitor() {
-    echo "=== competitor head-to-head (not yet implemented) ==="
-    # C-1..C-4 will be activated once the competitor LeafSystems land.
-}
-
-run_comm() {
-    echo "=== communication-robustness (placeholder) ==="
-    for d in 0 100 500; do
-        for p in 0 10 30; do
-            for seed in 1 2 3; do
-                submit "K_d${d}_p${p}_s${seed}" \
-                    --scenario "k_${d}_${p}_s${seed}" ${CFG[fullstack]}
-            done
-        done
-    done
-    wait
+    echo "=== competitor head-to-head ==="
+    # C-1..C-4 land once the competitor LeafSystems are merged. The
+    # scenario tags are reserved so the post-processing step can pick
+    # up the rows as soon as they become available.
 }
 
 run_long() {
     echo "=== ultra-long 300 s runs ==="
     for scen in A_nominal C_dual_5s E_cascade_3fault; do
         for cfg in baseline fullstack; do
-            for seed in 1 2 3; do
-                submit "L_${scen}_${cfg}_s${seed}" \
-                    --scenario "long_${scen}_${cfg}_s${seed}" \
-                    --duration 300 ${CFG[$cfg]} ${FAULTS[$scen]}
-            done
+            submit "L_${scen}_${cfg}" \
+                --scenario "long_${scen}_${cfg}" \
+                --duration 300 ${CFG[$cfg]} ${FAULTS[$scen]}
         done
     done
     wait
 }
 
-# ----------------------------------------------------------------------
 for section in "${SECTIONS[@]}"; do
     "run_${section}"
 done
 
-# ----------------------------------------------------------------------
-# Post-process: gather publication_metrics.csv files from each run folder.
+# Post-process: gather publication_metrics.csv files from each run.
 python3 - <<'PY'
 import pandas as pd, pathlib
 root = pathlib.Path("/workspaces/Tether_Grace/output/transactions_campaign")

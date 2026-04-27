@@ -47,6 +47,9 @@
 #include "safe_hover_controller.h"
 #include "control_mode_switcher.h"
 #include "trajectory_visualizer.h"
+#include "wind_disturbance.h"
+#include "wind_force_applicator.h"
+#include "estimation_utils.h"  // AttachmentPositionExtractor
 
 namespace quad_rope_lift {
 
@@ -88,6 +91,10 @@ struct CliOptions {
   bool adaptive = false;
   // Enable the L1 adaptive outer loop inside the baseline controller.
   bool l1_enabled = false;
+  // Optional override for the L1 adaptive gain Γ; <0 means leave default.
+  double l1_gamma = -1.0;
+  // Optional override for the per-segment rope stiffness (N/m); <=0 means use default.
+  double rope_stiffness = -1.0;
   // Override the default payload mass (3.0 kg) when ≥ 0.
   double payload_mass_override = -1.0;
   // Controller selection and MPC horizon parameters.
@@ -96,6 +103,25 @@ struct CliOptions {
   double mpc_tension_max = 100.0;
   // Engage the fault-triggered formation-reshape supervisor.
   bool reshaping_enabled = false;
+  // Mean wind speed (m/s) applied to every drone and the payload with
+  // Dryden-spectrum turbulence. 0 disables wind entirely.
+  double wind_speed = 0.0;
+  // Seed for the stochastic turbulence generator; fixed value ⇒ bit-
+  // reproducible gust realisation.
+  unsigned int wind_seed = 42;
+  // P2-A ablation: when true, zero out the feed-forward rope-tension
+  // term inside the baseline controller to isolate its contribution
+  // to the emergent-fault-tolerance mechanism.
+  bool disable_tension_ff = false;
+  // P2-D sweep axis: override the default lemniscate3d/figure8 period.
+  // Any value <= 0 means "use the shape's default".
+  double lemniscate_period = -1.0;
+  // P2-B: the mass the *controller* believes the payload has, used to
+  // set pickup_target_tension_nominal.  When <= 0 (default), the
+  // controller's nominal mass tracks --payload-mass so that existing
+  // runs are bit-identical.  Used to simulate mass-mismatch for the
+  // L1 adaptive-layer campaign.
+  double controller_nominal_mass = -1.0;
 };
 
 CliOptions ParseCli(int argc, char** argv) {
@@ -115,11 +141,18 @@ CliOptions ParseCli(int argc, char** argv) {
     else if (eq("--trajectory") && i + 1 < argc) o.trajectory = argv[++i];
     else if (eq("--adaptive")) o.adaptive = true;
     else if (eq("--l1-enabled")) o.l1_enabled = true;
+    else if (eq("--l1-gamma") && i + 1 < argc) o.l1_gamma = std::atof(argv[++i]);
+    else if (eq("--rope-stiffness") && i + 1 < argc) o.rope_stiffness = std::atof(argv[++i]);
     else if (eq("--controller") && i + 1 < argc) o.controller = argv[++i];
     else if (eq("--mpc-horizon") && i + 1 < argc) o.mpc_horizon = std::atoi(argv[++i]);
     else if (eq("--mpc-tension-max") && i + 1 < argc) o.mpc_tension_max = std::atof(argv[++i]);
     else if (eq("--reshaping-enabled")) o.reshaping_enabled = true;
     else if (eq("--payload-mass") && i + 1 < argc) o.payload_mass_override = std::atof(argv[++i]);
+    else if (eq("--wind-speed") && i + 1 < argc) o.wind_speed = std::atof(argv[++i]);
+    else if (eq("--wind-seed") && i + 1 < argc) o.wind_seed = static_cast<unsigned int>(std::atoi(argv[++i]));
+    else if (eq("--disable-tension-ff")) o.disable_tension_ff = true;
+    else if (eq("--lemniscate-period") && i + 1 < argc) o.lemniscate_period = std::atof(argv[++i]);
+    else if (eq("--controller-nominal-mass") && i + 1 < argc) o.controller_nominal_mass = std::atof(argv[++i]);
   }
   return o;
 }
@@ -138,9 +171,12 @@ double FaultTimeFor(const CliOptions& o, int q) {
 }
 
 // Build a waypoint trajectory based on the requested shape.
+// lemniscate_period overrides the default lemniscate3d/figure8 period
+// when > 0; otherwise the canonical shape-specific default is used.
 std::vector<TrajectoryWaypoint> BuildTrajectory(
     const std::string& shape, double duration,
-    double z_low, double z_high) {
+    double z_low, double z_high,
+    double lemniscate_period = -1.0) {
   std::vector<TrajectoryWaypoint> wps;
   if (shape == "lemniscate3d") {
     // 3-D lemniscate: a Bernoulli figure-8 in (x,y) with superimposed
@@ -154,7 +190,8 @@ std::vector<TrajectoryWaypoint> BuildTrajectory(
     //   z(phi) = z_high + Az * sin(phi)             (altitude once per loop)
     //
     const double a = 3.0;
-    const double T = 12.0;              // lemniscate period (shorter than 2-D
+    const double T = lemniscate_period > 0.0 ? lemniscate_period : 12.0;
+                                        // lemniscate period (shorter than 2-D
                                         //   figure8 T=16 so each loop is
                                         //   more dynamic)
     const double Az = 0.35;             // altitude oscillation amplitude [m]
@@ -165,8 +202,12 @@ std::vector<TrajectoryWaypoint> BuildTrajectory(
     w.position = {a, 0, z_high}; w.arrival_time = 5.0; w.hold_time = 1.0; wps.push_back(w);
 
     // Trace the 3-D lemniscate densely for the bulk of the mission.
+    // The reference stays on the lemniscate all the way through the
+    // end of the mission — no return-and-descend leg — so post-fault
+    // recovery windows are not contaminated by an aggressive descent
+    // at the trailing edge of the run.
     const double traj_start = 6.0;
-    const double traj_end   = duration - 3.0;
+    const double traj_end   = duration;
     const double sample_dt  = 0.2;
     for (double t = traj_start; t < traj_end; t += sample_dt) {
       const double phi   = (t - traj_start) * 2.0 * M_PI / T;
@@ -180,18 +221,6 @@ std::vector<TrajectoryWaypoint> BuildTrajectory(
       wp.hold_time = 0.0;
       wps.push_back(wp);
     }
-    // Return to start + descend
-    TrajectoryWaypoint wp_return;
-    wp_return.position = {a, 0, z_high};
-    wp_return.arrival_time = duration - 2.0;
-    wp_return.hold_time = 0.5;
-    wps.push_back(wp_return);
-
-    TrajectoryWaypoint wpf;
-    wpf.position = {a, 0, z_low};
-    wpf.arrival_time = duration - 0.1;
-    wpf.hold_time = 2.0;
-    wps.push_back(wpf);
 
   } else if (shape == "figure8") {
     // Lemniscate of Bernoulli. Larger scale (a = 3 m span of ±3 in x) and
@@ -337,7 +366,8 @@ int DoMain(int argc, char** argv) {
   //   ≈ 2 ms; sim step 2 × 10⁻⁴ s leaves a factor-10 safety margin.
   //   Static stretch at nominal 7.4 N per rope: 2.4 mm (rope behaves as
   //   essentially rigid at cruise, matching real aerial-sling behaviour).
-  const double segment_stiffness = 25000.0;
+  const double segment_stiffness = (opts.rope_stiffness > 0.0)
+      ? opts.rope_stiffness : 25000.0;
   const double segment_damping = 60.0;
   const int num_rope_beads = 8;
   const double formation_radius = 0.8;
@@ -346,6 +376,12 @@ int DoMain(int argc, char** argv) {
   const double gravity = 9.81;
   const double simulation_time_step = 2e-4;  // Matches Tether_Lift baseline
   const double load_per_rope = (payload_mass * gravity) / static_cast<double>(N);
+  // Nominal per-rope load as *perceived by the controller*.  Defaults
+  // to the physical value; overridden for P2-B mass-mismatch runs.
+  const double controller_nominal_mass = (opts.controller_nominal_mass > 0.0)
+      ? opts.controller_nominal_mass : payload_mass;
+  const double load_per_rope_nominal =
+      (controller_nominal_mass * gravity) / static_cast<double>(N);
 
   // ============ TRAJECTORY + HOVER-EQUILIBRIUM GEOMETRY ============
   //
@@ -408,7 +444,8 @@ int DoMain(int argc, char** argv) {
 
   std::vector<TrajectoryWaypoint> waypoints =
       BuildTrajectory(opts.trajectory, opts.duration,
-                      initial_altitude, final_altitude);
+                      initial_altitude, final_altitude,
+                      opts.lemniscate_period);
 
   // Controller waypoints = payload waypoints lifted by rope_drop.
   std::vector<TrajectoryWaypoint> ctrl_waypoints = waypoints;
@@ -615,7 +652,7 @@ int DoMain(int argc, char** argv) {
       cp.waypoints = waypoints;
       cp.rope_length = rope_length;
       cp.rope_drop = rope_drop;
-      cp.pickup_target_tension_nominal = load_per_rope;
+      cp.pickup_target_tension_nominal = load_per_rope_nominal;
       cp.altitude_kp = 100.0;   cp.altitude_kd = 24.0;
       cp.position_kp = 30.0;    cp.position_kd = 15.0;
       cp.attitude_kp = 25.0;    cp.attitude_kd = 4.0;
@@ -630,6 +667,8 @@ int DoMain(int argc, char** argv) {
       cp.max_torque = 10.0;
       cp.l1_enabled = opts.l1_enabled;
       cp.l1_control_step = simulation_time_step;
+      if (opts.l1_gamma > 0.0) cp.l1_gamma = opts.l1_gamma;
+      cp.disable_tension_ff = opts.disable_tension_ff;
       controllers[q] = builder.AddSystem<DecentralizedLocalController>(
           plant, *quadcopter_bodies[q], payload_body, cp);
       controllers[q]->set_mass(quadcopter_bodies[q]->default_mass());
@@ -639,7 +678,7 @@ int DoMain(int argc, char** argv) {
       mp.waypoints = waypoints;
       mp.rope_length = rope_length;
       mp.rope_drop = rope_drop;
-      mp.pickup_target_tension_nominal = load_per_rope;
+      mp.pickup_target_tension_nominal = load_per_rope_nominal;
       mp.altitude_kp = 100.0;   mp.altitude_kd = 24.0;
       mp.position_kp = 30.0;    mp.position_kd = 15.0;
       mp.attitude_kp = 25.0;    mp.attitude_kd = 4.0;
@@ -716,9 +755,13 @@ int DoMain(int argc, char** argv) {
               << fc_p.t_trans << " s, N=" << N << "\n";
   }
 
-  // ============ FORCE COMBINER (Controller + Rope forces) ============
+  // ============ FORCE COMBINER (Controller + Rope + optional Wind) ======
+  // 2 N slots for (control_force, rope_force) per drone; one extra slot
+  // carries the aggregated wind drag when --wind-speed > 0.
+  const bool wind_enabled = (opts.wind_speed > 0.0);
+  const int n_combiner_inputs = 2 * N + (wind_enabled ? 1 : 0);
   auto& force_combiner = *builder.AddSystem<ExternallyAppliedSpatialForceMultiplexer>(
-      2 * N);
+      n_combiner_inputs);
 
   // Fault-quad safe-hover handover
   std::vector<SafeHoverController*> safe_ctrls(N, nullptr);
@@ -758,6 +801,47 @@ int DoMain(int argc, char** argv) {
       builder.Connect(ctrl_system(q)->GetOutputPort("control_force"),
                       force_combiner.get_input_port(2 * q));
     }
+  }
+
+  // ============ WIND DISTURBANCE (optional) ============
+  // Dryden-spectrum turbulence on every drone and on the payload,
+  // realised by the Tether_Lift WindDisturbance + WindForceApplicator
+  // pair. The wind-force output lands in the final force-combiner slot.
+  if (wind_enabled) {
+    DrydenTurbulenceParams wind_p;
+    wind_p.mean_wind = Eigen::Vector3d(opts.wind_speed, 0.0, 0.0);
+    // Turbulence scaled so sigma ≈ 20 % of mean at low altitude.
+    wind_p.sigma_u = 0.20 * opts.wind_speed;
+    wind_p.sigma_v = 0.20 * opts.wind_speed;
+    wind_p.sigma_w = 0.10 * opts.wind_speed;
+    wind_p.altitude_dependent = true;
+    GustParams gust_p;
+    gust_p.enabled = false;
+
+    auto* wind_system = builder.AddSystem<WindDisturbance>(
+        N, wind_p, gust_p, /*dt=*/0.01);
+    wind_system->set_seed(opts.wind_seed);
+
+    std::vector<const RigidBody<double>*> drone_bodies_vec(
+        quadcopter_bodies.begin(), quadcopter_bodies.end());
+    std::vector<Eigen::Vector3d> zero_offsets(N, Eigen::Vector3d::Zero());
+    auto* drone_pos_extractor =
+        builder.AddSystem<AttachmentPositionExtractor>(
+            plant, drone_bodies_vec, zero_offsets);
+    builder.Connect(plant.get_state_output_port(),
+                    drone_pos_extractor->get_plant_state_input_port());
+    builder.Connect(drone_pos_extractor->get_positions_output_port(),
+                    wind_system->get_drone_positions_input_port());
+
+    auto* wind_force = builder.AddSystem<WindForceApplicator>(
+        drone_bodies_vec, payload_body, N);
+    builder.Connect(wind_system->get_wind_velocities_output_port(),
+                    wind_force->get_wind_input_port());
+    builder.Connect(wind_force->get_forces_output_port(),
+                    force_combiner.get_input_port(2 * N));
+
+    std::cout << "Wind disturbance wired: mean " << opts.wind_speed
+              << " m/s along +x, seed " << opts.wind_seed << "\n";
   }
 
   builder.Connect(force_combiner.get_output_port(),
@@ -1026,13 +1110,16 @@ int DoMain(int argc, char** argv) {
 
   meshcat->StartRecording();
 
-  // Advance in chunks for progress reporting
+  // Advance in chunks for progress reporting. Flush every line so
+  // redirected logs reflect real-time progress (stdout is fully
+  // buffered when the process's stdout is connected to a file).
   const double step = 1.0;
   double t = 0.0;
   while (t < opts.duration) {
     t = std::min(t + step, opts.duration);
     simulator.AdvanceTo(t);
-    std::cout << "  t = " << t << "s / " << opts.duration << "s\n";
+    std::cout << "  t = " << t << "s / " << opts.duration << "s"
+              << std::endl;
   }
 
   meshcat->StopRecording();
@@ -1105,32 +1192,33 @@ int DoMain(int argc, char** argv) {
   }
   csv << "\n";
 
-  const int num_vel_offset = plant.num_positions();  // q first, then v in state
-  // Body indexing: body 0 is world, bodies 1..N are quads, body N+1 is payload, rest are beads
-  // Our AddRigidBody sequence gave: quads (0..N-1 in our vec), then payload, then beads
-  // In plant.num_bodies() world is 0, so quad 0 is body 1 in Drake's indexing, etc.
-  // But q[] layout uses only bodies that have floating joints (all of ours do).
-  // Layout: q[i*7 + 4 : i*7 + 7] = position of i-th floating body
+  // Drake floating-body layout in the state vector:
+  //   q = [body_0 quat(4) pos(3),  body_1 quat(4) pos(3),  ...]
+  //   v = [body_0 omega(3) lin(3), body_1 omega(3) lin(3), ...]
+  // Bodies were added in this order: quads (0..N-1), payload (index N),
+  // bead chains (indices N+1 onwards). World is body 0 in the plant's
+  // indexing but is not floating, so it is absent from q/v.
+  const int velocity_section_start = plant.num_positions();
+  auto pos_index_for_body  = [&](int body_idx) { return body_idx * 7; };
+  auto vel_index_for_body  = [&](int body_idx) {
+    return velocity_section_start + body_idx * 6;
+  };
 
-  // Resolve where each body sits in q/v
-  auto body_q_off = [&](int custom_idx) { return custom_idx * 7; };
-  auto body_v_off = [&](int custom_idx) { return num_vel_offset + custom_idx * 6; };
-
-  const int payload_idx = N;  // 0..N-1 are quads, index N is payload
+  const int payload_idx = N;  // quads fill 0..N-1; payload follows at N.
 
   for (int s = 0; s < sd.cols(); ++s) {
     csv << times(s);
     // Quads
     for (int i = 0; i < N; ++i) {
-      const int qo = body_q_off(i) + 4;
-      const int vo = body_v_off(i) + 3;
+      const int qo = pos_index_for_body(i) + 4;
+      const int vo = vel_index_for_body(i) + 3;
       csv << "," << sd(qo, s) << "," << sd(qo + 1, s) << "," << sd(qo + 2, s);
       csv << "," << sd(vo, s) << "," << sd(vo + 1, s) << "," << sd(vo + 2, s);
     }
     // Payload
     {
-      const int qo = body_q_off(payload_idx) + 4;
-      const int vo = body_v_off(payload_idx) + 3;
+      const int qo = pos_index_for_body(payload_idx) + 4;
+      const int vo = vel_index_for_body(payload_idx) + 3;
       csv << "," << sd(qo, s) << "," << sd(qo + 1, s) << "," << sd(qo + 2, s);
       csv << "," << sd(vo, s) << "," << sd(vo + 1, s) << "," << sd(vo + 2, s);
     }

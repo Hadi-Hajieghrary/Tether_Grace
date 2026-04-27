@@ -78,6 +78,12 @@ class DecentralizedLocalController final
     /// drone free-falls while the rope engages.
     bool initial_pretensioned = true;
 
+    /// Ablation hook for the P2-A campaign. When true, T_ff is forced to
+    /// zero and the synthesised thrust is `mass * (g + a_z)` alone — the
+    /// controller loses its emergent-redistribution mechanism.  Default
+    /// false; existing runs are bit-identical.
+    bool disable_tension_ff = false;
+
     // L1 adaptive outer loop -------------------------------------------
     /// Master enable; default off so baseline runs are bit-identical to
     /// pre-L1 behaviour.
