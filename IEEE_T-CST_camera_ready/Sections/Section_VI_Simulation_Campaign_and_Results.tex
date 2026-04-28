@@ -303,11 +303,11 @@ P2-C and P2-D probe the MPC tension-ceiling (C3-MPC) and reshape supervisor (C3-
   Peak tension during the fault transient is dominated by the pre-fault dynamic spike from the lemniscate's centripetal acceleration ($\approx \SI{42}{\newton}$ on survivors immediately before the first fault, resolving within one pendulum period); this spike is independent of the ceiling. The ceiling targets the post-fault quasi-static regime: at the 5$\to$3 transition with $\SI{10}{\kilo\gram}$ payload, $m_L g / 3 \approx \SI{32.7}{\newton}$, well below all tested ceilings. Lowering the ceiling from $\SI{100}{\newton}$ to $\SI{60}{\newton}$ produces no measurable change (NF2). The ceiling becomes binding when the post-fault load approaches $T_{\max}$---heavier payload, lower ceiling, or fewer survivors. \Cref{prop:mpc-slack,sec:theorem-preservation} preserve \cref{thm:hybrid-stability} whether or not the ceiling is binding.
 \end{remark}
 
-\paragraph{P2-D --- Formation reshape.} We sweep $T_{\mathrm{ref}} \in \{8, 10, 12\}~\si{\second}$ with and without reshape on V4 (\cref{tab:reshape-period-sweep}).
+\paragraph{P2-D --- Formation reshape.} We sweep $T_{\mathrm{ref}} \in \{8, 10, 12\}~\si{\second}$ with and without reshape on V4, plus the aggressive-period binding-regime probe at $T_{\mathrm{ref}}=\SI{6}{\second}$ (E8). Peak post-fault rope tension is identical with reshape on and off at every tested period: $\SI{330.2}{\newton}$, $\SI{191.4}{\newton}$, $\SI{153.8}{\newton}$, $\SI{87.9}{\newton}$ at $T_{\mathrm{ref}} = 6, 8, 10, 12~\si{\second}$ respectively.
 
 \begin{remark}[NF3: Reshape benefit zero across periods and aggressive-period probe]
 \label{rem:reshape-null}
-  The reshape supervisor targets the quasi-static-hover tension distribution. At the tested periods, centripetal acceleration $a_c = (2\pi/T_{\mathrm{ref}})^2 A \approx 0.82$--$3.29~\si{\metre\per\second\squared}$ continuously modulates the per-rope distribution, dominating the hover-equilibrium asymmetry the supervisor targets. The quasi-static assumption of \cref{thm:reshape} is therefore not binding at any tested period, including the aggressive $T_{\mathrm{ref}}=\SI{6}{\second}$ probe (E8), which a priori predicted a $\sim 25.8\%$ reduction. Measured peak tension with reshape on is $\SI{330.2}{\newton}$, identical to off: $0.0\%$ benefit. Pushing reshape into a binding regime would require a lower-bandwidth reference family or an extended objective accounting for the dynamic load. \Cref{thm:reshape,sec:theorem-preservation} preserve the envelope outside the binding regime.
+  The reshape supervisor targets the quasi-static-hover tension distribution under the symmetric-load-sharing model of \cref{thm:reshape}. At the tested periods, centripetal acceleration $a_c = (2\pi/T_{\mathrm{ref}})^2 A \approx 0.82$--$3.29~\si{\metre\per\second\squared}$ continuously modulates the per-rope distribution, and this dynamic modulation dominates the hover-equilibrium asymmetry the supervisor targets---so high centripetal load, far from making the asymmetry binding, makes it \emph{non}-binding. The quasi-static assumption of \cref{thm:reshape} therefore fails to bind at any tested period, including the aggressive $T_{\mathrm{ref}}=\SI{6}{\second}$ probe (E8) for which the linearised theorem a priori predicted a $\sim 25.8\%$ reduction; the measured benefit there is $0.0\%$. Pushing reshape into a binding regime would require a lower-bandwidth reference family or an extended objective accounting for the dynamic load. \Cref{thm:reshape,sec:theorem-preservation} preserve the envelope outside the binding regime.
 \end{remark}
 
 \begin{table}[htbp]
@@ -326,24 +326,6 @@ P2-C and P2-D probe the MPC tension-ceiling (C3-MPC) and reshape supervisor (C3-
     90N       & 104.6N & 87.9N & 0.34\%  \\
     100N      & 104.6N & 87.9N & 0.12\%  \\
     Baseline & 104.6N & 87.9N & ---   \\
-    \bottomrule
-  \end{tabular}
-\end{table}
-
-\begin{table}[htbp]
-  \caption{Formation-reshape period sweep (P2-D, NF3). Peak post-fault rope tension with and without the reshape supervisor across four trajectory periods on V4, including the aggressive-period probe at $T_{\mathrm{ref}}=\SI{6}{\second}$ (E8).}
-  \label{tab:reshape-period-sweep}
-  \centering
-  \small
-  \renewcommand{\arraystretch}{1.05}
-  \begin{tabular}{crr}
-    \toprule
-    $T_{\mathrm{ref}}$ (s) & Peak post-fault, reshape off (N) & Peak post-fault, reshape on (N) \\
-    \midrule
-    6  & 330.2 & 330.2 \\
-    8  & 191.4 & 191.4 \\
-    10 & 153.8 & 153.8 \\
-    12 & 87.9  & 87.9  \\
     \bottomrule
   \end{tabular}
 \end{table}

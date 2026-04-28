@@ -405,11 +405,11 @@ The P2-C and P2-D campaigns probe the MPC tension-ceiling layer (\cref{sec:mpc-l
   The peak rope tension during the fault transient is dominated by the pre-fault dynamic spike driven by the lemniscate's centripetal acceleration, which reaches approximately \SI{42}{\newton} on the surviving ropes immediately before the first fault and resolves within one payload-pendulum period. This spike is a property of the reference-trajectory geometry and is present regardless of whether the MPC ceiling constraint is active. The MPC ceiling is designed to protect the post-fault quasi-static regime, where surviving drones carry additional redistributed weight: at the five-to-three-drone transition with a \SI{10}{\kilo\gram} payload, the quasi-static per-rope load is approximately $m_L g / 3 \approx \SI{32.7}{\newton}$, well below all tested ceilings. Lowering the ceiling from \SI{100}{\newton} to \SI{60}{\newton} produces no measurable change in RMSE or peak sag (NF2). A segmented tension analysis that separates the pre-fault dynamic spike from the post-fault quasi-static load is included in \cref{tab:mpc-ceiling-sweep}, confirming that the ceiling targets the correct physical regime, even though it is non-binding on the demonstrated trajectory. The domain boundary of C3-MPC: the ceiling constraint becomes binding when the post-fault static rope load approaches $T_{\max}$, which requires a heavier payload, a lower ceiling, or fewer than three surviving drones. Proposition~\ref{prop:mpc-slack} and \cref{sec:theorem-preservation} establish that the MPC layer preserves the recovery envelope of \cref{thm:hybrid-stability} whether or not the ceiling is binding.
 \end{remark}
 
-\paragraph{P2-D --- Formation reshape.} We sweep the reference lemniscate period $T_{\mathrm{ref}} \in \{8,\,10,\,12\}~\si{\second}$ with and without the post-fault reshape supervisor, on the V4 dual-fault schedule. Results are shown in \cref{tab:reshape-period-sweep}.
+\paragraph{P2-D --- Formation reshape.} We sweep the reference lemniscate period $T_{\mathrm{ref}} \in \{8,\,10,\,12\}~\si{\second}$ with and without the post-fault reshape supervisor, on the V4 dual-fault schedule, plus the aggressive-period binding-regime probe at $T_{\mathrm{ref}}=\SI{6}{\second}$ (E8, \cref{fig:reshape-binding-T6}). Peak post-fault rope tension is identical with reshape on and off at every tested period: $\SI{330.2}{\newton}$, $\SI{191.4}{\newton}$, $\SI{153.8}{\newton}$, $\SI{87.9}{\newton}$ at $T_{\mathrm{ref}} = 6, 8, 10, 12~\si{\second}$ respectively.
 
 \begin{remark}[NF3: Reshape benefit zero across trajectory period sweep and aggressive-period binding probe]
 \label{rem:reshape-null}
-  The post-fault reshape supervisor assigns surviving drones to the tension-optimal angular-slot configuration for quasi-static hover (\cref{sec:reshape-supervisor}). At the tested lemniscate periods, the centripetal acceleration during cruise is $a_c = (2\pi/T_{\mathrm{ref}})^2 A \approx 0.82$--$3.29~\si{\metre\per\square\second}$ across $T_{\mathrm{ref}} \in \{6,8,10,12\}~\si{\second}$, which continuously modulates the rope-tension distribution throughout the trajectory and dominates the hover-equilibrium asymmetry that the reshape supervisor targets. The quasi-static-hover assumption underlying the closed-form slot assignment of \cref{thm:reshape} is therefore not the binding constraint at any of the tested periods --- including the aggressive $T_{\mathrm{ref}}=\SI{6}{\second}$ probe (E8), which was a priori predicted to yield an approximately $25.8\,\%$ peak tension reduction. The measured peak tension is $330.2~\si{\newton}$ with reshape on and $330.2~\si{\newton}$ with reshape off (\cref{fig:reshape-binding-T6}, \cref{tab:reshape-period-sweep}): $0.0\,\%$ measurable benefit. The null finding at $T_{\mathrm{ref}}=\SI{6}{\second}$ indicates that the dynamic centripetal load dominates the quasi-static slot-assignment target even when the trajectory is driven towards the linearised theorem's binding regime, and that pushing the reshape layer into an empirically binding regime would require either a lower-bandwidth reference family or an extended reshape objective that accounts for the dynamic load. Theorem~\ref{thm:reshape} and \cref{sec:theorem-preservation} guarantee that enabling the reshape outside its binding regime leaves the recovery envelope of \cref{thm:hybrid-stability} unchanged.
+  The post-fault reshape supervisor assigns surviving drones to the tension-optimal angular-slot configuration for quasi-static hover under the symmetric-load-sharing model of \cref{thm:reshape} (\cref{sec:reshape-supervisor}). At the tested lemniscate periods, the centripetal acceleration during cruise is $a_c = (2\pi/T_{\mathrm{ref}})^2 A \approx 0.82$--$3.29~\si{\metre\per\square\second}$ across $T_{\mathrm{ref}} \in \{6,8,10,12\}~\si{\second}$, which continuously modulates the rope-tension distribution throughout the trajectory; this dynamic modulation dominates the hover-equilibrium asymmetry the supervisor targets, so high centripetal load makes the asymmetry \emph{non}-binding rather than the reverse. The quasi-static-hover assumption underlying the closed-form slot assignment is therefore not the binding constraint at any of the tested periods --- including the aggressive $T_{\mathrm{ref}}=\SI{6}{\second}$ probe (E8), which was a priori predicted to yield an approximately $25.8\,\%$ peak tension reduction; the measured benefit there is $0.0\,\%$ (\cref{fig:reshape-binding-T6}). The null finding at $T_{\mathrm{ref}}=\SI{6}{\second}$ indicates that the dynamic centripetal load dominates the quasi-static slot-assignment target even when the trajectory is driven towards the linearised theorem's binding regime, and that pushing the reshape layer into an empirically binding regime would require either a lower-bandwidth reference family or an extended reshape objective that accounts for the dynamic load. Theorem~\ref{thm:reshape} and \cref{sec:theorem-preservation} guarantee that enabling the reshape outside its binding regime leaves the recovery envelope of \cref{thm:hybrid-stability} unchanged.
 \end{remark}
 
 \begin{table}[htbp]
@@ -430,26 +430,6 @@ The P2-C and P2-D campaigns probe the MPC tension-ceiling layer (\cref{sec:mpc-l
     90N       & 104.6N & 87.9N & 0.34\%  \\
     100N      & 104.6N & 87.9N & 0.12\%  \\
     Baseline & 104.6N & 87.9N & ---   \\
-    \bottomrule
-  \end{tabular}
-\end{table}
-
-\begin{table}[htbp]
-  \caption{%
-    Formation-reshape period sweep (P2-D, NF3). Peak post-fault rope tension (N) with and without the reshape supervisor across three trajectory periods on the V4 schedule; the aggressive-period binding-regime probe at $T_{\mathrm{ref}}=\SI{6}{\second}$ (E8) is reported alongside in \cref{fig:reshape-binding-T6}. During the tested periods, the peaks are trajectory-dominated, leaving reshape without measurable effect on the peak metric.%
-  }
-  \label{tab:reshape-period-sweep}
-  \centering
-  \small
-  \renewcommand{\arraystretch}{1.05}
-  \begin{tabular}{crr}
-    \toprule
-    $T_{\mathrm{ref}}$ (s) & Peak post-fault, reshape off (N) & Peak post-fault, reshape on (N) \\
-    \midrule
-    6  & 330.2 & 330.2 \\
-    8  & 191.4 & 191.4 \\
-    10 & 153.8 & 153.8 \\
-    12 & 87.9  & 87.9  \\
     \bottomrule
   \end{tabular}
 \end{table}
