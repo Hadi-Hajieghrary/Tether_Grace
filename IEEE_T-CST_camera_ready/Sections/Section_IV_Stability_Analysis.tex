@@ -9,11 +9,9 @@ the closed loop \emph{hybrid practical input-to-state stable}
 $T_i$ rises immediately and the feed-forward converts that step
 into a proportional thrust increment at the plant's native rate,
 without any detection, annunciation, or reconfiguration interval.
-The argument proceeds through the analytical hypotheses, six
-lemmas, the main theorem, and a claims-to-evidence map.
 
 \paragraph{Status of the lemma stack.}
-The five lemmas and main theorem certify the architectural claim of \cref{sec:Introduction}---that a single decentralized feed-forward identity supplies the bounded-jump mechanism required for hybrid practical-ISS on the declared admissibility domain---rather than constituting a stand-alone theoretical contribution. The hybrid-systems framework is from~\cite{GoebelSanfeliceTeel2012}; the practical-ISS composition tools are standard. The value added is verifying the framework's hypotheses on $\Omega_\tau^{\mathrm{dwell}}$ with closed-form $\rho$, $\lambda$, and $\chi(\Delta_f)$. Among the recovery-envelope constants, $\lambda$ and $\rho$ are fully explicit from $P_v$, $P_{xy}$ \eqref{eq:Pv-numeric}; the jump bound $\chi(\Delta_f)$ is explicit in structure with coefficient $\kappa_V$ bounded but not numerically calibrated here---its quantification is identified as follow-on work in \cref{sec:discussion-audit}.
+The five lemmas verify the hybrid-systems hypotheses of~\cite{GoebelSanfeliceTeel2012} on $\Omega_\tau^{\mathrm{dwell}}$, certifying that the feed-forward identity $T_i^{\mathrm{ff}}=T_i$ supplies the bounded-jump mechanism for hybrid practical-ISS. The decay rates $\lambda$ and $\rho$ are fully explicit from the closed-loop Lyapunov matrices $P_v$, $P_{xy}$ of \cref{lem:altitude-iss,lem:horizontal-iss}. The jump bound $\chi(\Delta_f)$ is structurally explicit via \eqref{eq:chi-explicit}, but the weighting constant $\kappa_V$ that scales the tension Lyapunov channel depends on the relative magnitudes of the tracking and tension error states; its numerical calibration is deferred to follow-on work and does not affect the $\rho < 1$ certificate or the $\rho_\mathrm{ana} \approx 0.005$ computation.
 
 % ----------------------------------------------------------
 \subsection{Setup, Notation, and Analytical Hypotheses}
@@ -57,47 +55,24 @@ scope; the analysis produces no bounds for trajectories
 violating them.
 
 \paragraph{Partial circularity and its mitigation.}
-The empirical defence of H1 and H3 uses the same pre-declared
-missions as the theorem's consequences, so the validation is
-partially \emph{post hoc}; the theorem provides a \emph{conditional}
-guarantee, and \cref{tab:domain-audit} documents the margins.
-Two measures mitigate the circularity. First, the gate bounds
-are set by the physics of bead-chain re-tension:
-$\tau_{\mathrm{slack,max}} = \SI{40}{\milli\second}$ is one quarter
-of the Tikhonov frozen window $\tau_{\mathrm{pend}}/(2\pi)$, and
-$\eta_{\max} = 2.5\%$ is a Rayleigh-turbulence budget.
-Second, \cref{thm:reduction} is independently validated against
-the bead-chain truth model in \cref{sec:VI-reduction},
-providing an \emph{a~priori} check that the reduced model tracks
-the full plant within $O(\delta + \eta_{\max})$ on
-$\Omega_\tau^{\mathrm{dwell}}$; the stability analysis absorbs
-the residual into $\gamma_\eta$ of \cref{thm:hybrid-stability}
-without appeal to the simulated missions.
-Design-time certification of H1 and H3 for unseen trajectory
-families is identified as future work.
+The empirical defence of H1 and H3 uses the same pre-declared missions as the theorem's consequences, so the validation is partially \emph{post hoc}; \cref{tab:domain-audit} documents the margins. The gate bounds are set by bead-chain physics: $\tau_{\mathrm{slack,max}} = \SI{40}{\milli\second}$ is one quarter of the Tikhonov frozen window $\tau_{\mathrm{pend}}/(2\pi)$, and $\eta_{\max} = 2.5\%$ is a Rayleigh-turbulence budget. \Cref{thm:reduction} is independently validated against the bead-chain truth model in \cref{sec:VI-reduction}, providing an \emph{a~priori} check that the reduction error is absorbed into $\gamma_\eta$ of \cref{thm:hybrid-stability} without appeal to the simulated missions.
 
 % ----------------------------------------------------------
 \subsection{Lemmas Underpinning the Hybrid Practical-ISS Theorem}
 \label{sec:five-lemmas}
 % ----------------------------------------------------------
 
-We state five lemmas that support the main theorem.
-\Cref{lem:tension-cancel} establishes algebraic tension
-cancellation on the altitude channel;
-\cref{lem:altitude-iss} gives exponential ISS for the altitude
-channel through the closed-loop Lyapunov matrix $P_v$;
-\cref{lem:horizontal-iss} gives the parallel result for the
-horizontal channels through $P_{xy}$, providing the
-$\alpha_{xy}$ rate that drives the dwell-cycle contraction
-$\rho$;
-\cref{lem:antiswing-invariant} shows the anti-swing damping is
-invariant to surviving cardinality;
-\cref{lem:jump-continuity} gives a bounded Lyapunov jump at
-each fault in terms of the quasi-static redistribution
-magnitude $\Delta_f$, together with the equal-sharing
-specialization used for canonical calibration;
-\cref{lem:dwell-decay} composes jump and decay into the
-dwell-cycle contraction $\rho \in (0, 1)$.
+Five lemmas underpin \cref{thm:hybrid-stability}: tension
+cancellation on the altitude channel
+(\cref{lem:tension-cancel}); exponential ISS for altitude and
+horizontal channels through Lyapunov matrices $P_v$ and
+$P_{xy}$ (\cref{lem:altitude-iss,lem:horizontal-iss});
+anti-swing invariance to surviving cardinality
+(\cref{lem:antiswing-invariant}); bounded Lyapunov jump
+$\chi(\Delta_f)$ at each fault
+(\cref{lem:jump-continuity}); and the dwell-cycle
+contraction $\rho \in (0,1)$ composing jump and decay
+(\cref{lem:dwell-decay}).
 
 For fault jumps, the tension coordinates are compared on the
 post-fault survivor set by restricting the pre-fault vector to
@@ -180,33 +155,13 @@ independent of $N_s$.
 \end{lemma}
 
 \begin{proof}
-After tension cancellation (\cref{lem:tension-cancel}), each
-scalar tracking error $e$ satisfies
-$\ddot{e} + K_d \dot{e} + K_p e = \ddot{p}_{\mathrm{slot}}
-+ r_i(t)$ with $|r_i| = O(\theta_{c,\max}^2 T_i/m_i) +
-O(\delta)$ bounded uniformly on $\Omega_\tau^{\mathrm{dwell}}$
-under H1; for altitude this is \eqref{eq:alt-error-ode} with
-$r_i$ from \cref{lem:tension-cancel}.
+After tension cancellation (\cref{lem:tension-cancel}), each scalar error satisfies a Hurwitz closed-loop ODE; for altitude:
 \begin{equation}
   \ddot{e}_{p,z,i} + K_d^z \dot{e}_{p,z,i} + K_p^z e_{p,z,i}
     = \ddot{p}_{\mathrm{slot},z} + r_i(t).
   \label{eq:alt-error-ode}
 \end{equation}
-For each channel, the closed-loop matrix is Hurwitz ($A_m$:
-eigenvalues $s_{1,2} = -12 \pm \sqrt{44}$; $A_{m,xy}$:
-$s_{1,2}^{xy} = (-15\pm\sqrt{105})/2$), so the unique
-$P \succ 0$ satisfying $A^\top P + PA = -I$ exists. The
-$2\times2$ Lyapunov equation is solved algebraically via
-$p_{12} = 1/(2K_p)$, yielding the matrices in
-\eqref{eq:Pv-numeric}. Setting $\zeta = [e,\dot{e}]^\top$,
-$V = \tfrac{1}{2}\zeta^\top P \zeta$, differentiating along
-trajectories, and applying Young's inequality to the
-cross-terms from $\ddot{p}_{\mathrm{slot}} + r_i$ gives the
-ISS inequalities \eqref{eq:lyapunov-decay-alt}--\eqref{eq:lyapunov-decay-xy}
-with decay rates $|\mathrm{Re}(s_1)|$ of each $A$; the ISS
-gains are proportional to $\lambda_{\max}(P)/\lambda_{\min}(P)$
-and the input magnitude. Independence from $N_s$ follows
-because neither $A_m$ nor $A_{m,xy}$ depends on $|\mathcal{S}|$.
+The unique $P \succ 0$ solving $A^\top P + PA = -I$ is computed algebraically, yielding the matrices in \eqref{eq:Pv-numeric}; differentiating $V = \tfrac{1}{2}\zeta^\top P\zeta$ along trajectories and applying Young's inequality gives \eqref{eq:lyapunov-decay-alt}--\eqref{eq:lyapunov-decay-xy} with rates $|\mathrm{Re}(s_1)|$. Independence from $N_s$ follows because neither $A_m$ nor $A_{m,xy}$ depends on $|\mathcal{S}|$.
 \end{proof}
 
 % ---- Remark: pendulum damping invariance (formerly Lemma 4) ---
@@ -675,11 +630,3 @@ observation; full context is in \cref{sec:simulation}.
   \end{tabular}
 \end{table*}
 
-The baseline theorem delivers \eqref{eq:iss-envelope-explicit}
-under H1--H3 and the identity $T_i^{\mathrm{ff}} = T_i$
-within the analyzed architecture; no additional architecture
-is required for \cref{def:problem}. \Cref{sec:extensions} develops parameter
-adaptation, tension-ceiling enforcement, and post-fault
-reshape---each targeting a residual channel of
-\eqref{eq:iss-envelope-explicit}---and shows each preserves
-H1--H3 on the baseline domain.

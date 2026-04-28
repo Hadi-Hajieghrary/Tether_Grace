@@ -1,4 +1,4 @@
-We present the decentralized fault-tolerant controller for \cref{def:problem} on the reduced-order model of \cref{sec:reduction-and-reference}. Each drone $i$ runs one instance of the \textit{DecentralizedLocalController}, a continuous-time Drake \texttt{LeafSystem<double>}: a three-layer cascade comprising an outer-loop PD law with anti-swing slot shift, a single-step convex QP on the tilt-and-thrust envelope, and an inner-loop Euler-angle attitude PD. The central design element is $T_i^{\mathrm{ff}} = T_i$, which encodes passive fault tolerance with no detection, communication, or reconfiguration. This holds for \emph{the baseline}; the optional reshape supervisor (\cref{sec:reshape-supervisor}) adds a latch detector and a per-fault broadcast, lying outside the baseline information pattern. The optional $L_1$ augmentation (\cref{sec:extensions}) is a discrete subsystem at $T_S = \SI{0.2}{\milli\second}$ with injection point identified in \cref{sec:outer-loop}.
+We present the decentralized fault-tolerant controller for \cref{def:problem}. Each drone runs a three-layer cascade: an outer-loop PD with anti-swing slot shift, a single-step convex QP on the tilt-and-thrust envelope, and an inner-loop attitude PD. The central design element is $T_i^{\mathrm{ff}} = T_i$, encoding passive fault tolerance with no detection, communication, or reconfiguration. The optional reshape supervisor (\cref{sec:reshape-supervisor}) adds a latch detector and a per-fault broadcast; the optional $L_1$ augmentation (\cref{sec:extensions}) injects an adaptive altitude correction between the outer PD and the QP.
 
 \input{Figures/diagrams/fig_controller_cascade.tex}
 
@@ -19,10 +19,6 @@ We present the decentralized fault-tolerant controller for \cref{def:problem} on
   \end{tabular}
 \end{table*}
 
-\subsection{Controller Input--Output Signature}
-\label{sec:ctrl-signature}
-
-At each continuous-time evaluation, drone $i$'s controller consumes the signals in $\mathcal{I}_i(t)$ \eqref{eq:info-set} plus, optionally, a slot-offset override $\boldsymbol\delta_i^{\mathrm{ovr}}(t)$ from a \textit{FormationCoordinator} port (used only by the reshape supervisor; when disconnected, the static offset $\boldsymbol\delta_i$ is used). The baseline controller does not access payload position $\vect p_L$. The output is the world-frame wrench $(\vect F_i^{\mathcal{W}}, \vect\tau_i^{\mathcal{W}})$ applied to the drone body.
 
 % ----------------------------------------------------------------
 \subsection{Outer Loop: PD with Anti-Swing Slot Shift}
@@ -58,7 +54,6 @@ where $\hat{\vect v}_{L,\perp}$ is the unit vector of $\vect v_{L,\perp}$. The s
   \vect e_v(t) = \vect v_{\mathrm{slot},i}(t) - \vect v_i(t).
   \label{eq:slot-error}
 \end{equation}
-The velocity error uses the unshifted slot velocity; the anti-swing correction modifies the position reference only.
 
 \paragraph{Target acceleration.} The outer loop computes a target body acceleration,
 \begin{align}
@@ -108,11 +103,7 @@ feed-forward,
   a_{z,\min}(t) &= \frac{f_{\min} - T_i^{\mathrm{ff}}(t)}{m_i} - g,\\
   a_{z,\max}(t) &= \frac{f_{\max} - T_i^{\mathrm{ff}}(t)}{m_i} - g.\nonumber
 \end{align}
-At canonical parameters,
-$a_{\mathrm{tilt}} = 9.81\tan(0.6)
-\approx \SI{6.71}{\metre\per\second\squared}$.
-
-\paragraph{Feasibility.} The vertical interval in \eqref{eq:qp-vert} is non-empty whenever $f_{\min} < f_{\max}$, since both bounds shift by the same feed-forward term, and hover feasibility holds in all scenarios ($T_i \ll f_{\max}$). Doctrine~D1 (single-active-regime QP, formalised as H3 in \cref{sec:stability-setup}) is empirically satisfied at the $0.10\%$ worst transition fraction in \cref{tab:domain-audit}; the component-wise-clamp fallback is implemented but has not been triggered.
+\paragraph{Feasibility.} The vertical interval in \eqref{eq:qp-vert} is non-empty whenever $f_{\min} < f_{\max}$; hover feasibility holds in all scenarios, and Doctrine~D1 is satisfied at the $0.10\%$ worst QP-transition fraction (\cref{tab:domain-audit}).
 
 \paragraph{Feed-forward tension.} For the canonical campaigns \texttt{initial\_pretensioned}=\texttt{true}, so the feed-forward is the identity from $t=0$:
 \begin{equation}
@@ -120,11 +111,6 @@ $a_{\mathrm{tilt}} = 9.81\tan(0.6)
   \label{eq:Tff}
 \end{equation}
 A smoothstep pickup ramp $\alpha(\tau) = 3\tau^2 - 2\tau^3$ handles cold-start engagement; it is bypassed in every reported campaign. The flag \texttt{disable\_tension\_ff} overrides \eqref{eq:Tff} to $T_i^{\mathrm{ff}} = 0$ for the feed-forward ablation campaign.
-
-\begin{remark}[Passive fault tolerance via \eqref{eq:Tff}]
-\label{rem:passive-ft}
-Identity \eqref{eq:Tff} is necessary for the dwell-cycle contraction $\rho \in (0, 1)$ of \cref{lem:dwell-decay}: drone $i$'s thrust tracks the new tension within the rope timescale, keeping the post-fault overshoot of order $\Delta_f$. Without \eqref{eq:Tff}, the altitude channel sees an unrejected matched disturbance and the overshoot exceeds what the dwell-cycle decay can absorb within one pendulum period. The ablation confirms this: disabling \eqref{eq:Tff} raises RMS tracking error by $34$--$39\%$ and inflates altitude sag by $3.6$--$4.0\times$ across V3, V4, V5.
-\end{remark}
 
 \subsection{Inner Loop: Attitude PD and Controller Parameters}
 \label{sec:inner-loop}
@@ -146,7 +132,7 @@ Under the small-angle approximation, the horizontal acceleration commands map to
     &= \operatorname{sat}\!\!\left(-\frac{a_{d,y}^\star}{g},\;\pm\theta_{\max}\right).\nonumber
 \end{align}
 
-\paragraph{Euler-angle attitude PD and output wrench.} Roll and pitch are extracted from $\mat R_i$ by the standard ZYX decomposition; yaw uses the skew component $\epsilon_\psi = \tfrac{1}{2}(R_{21} - R_{12})$. With body angular velocity $\vect\omega_i^{\mathcal{B}} = \mat R_i^{\top}\, \vect\omega_i^{\mathcal{W}}$, the body torques are
+\paragraph{Euler-angle attitude PD and output wrench.} With body angular velocity $\vect\omega_i^{\mathcal{B}} = \mat R_i^{\top}\, \vect\omega_i^{\mathcal{W}}$, the body torques are
 \begin{align}
   \tau_{i,x}
     &= K_p^{\mathrm{att}}\!\left(
@@ -240,4 +226,4 @@ applied at the same continuous-time evaluation instant as the upstream computati
   \end{tabular}
 \end{table}
 
-The three-layer controller specified above is the baseline on which \cref{sec:stability} establishes the hybrid practical-ISS theorem. The only structurally nonstandard element is the feed-forward identity $T_i^{\mathrm{ff}} = T_i$ in \eqref{eq:az-bounds} and \eqref{eq:thrust}; every other block is conventional. The next section shows that this single identity is the mechanism responsible for the per-fault-cycle Lyapunov contraction, with $\rho \in (0,1)$, and that without it, the closed loop loses its hybrid practical-ISS property.
+

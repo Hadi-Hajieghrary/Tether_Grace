@@ -1,4 +1,4 @@
-We audit the controller claims through a pre-declared simulation campaign in Drake~\cite{drake,tether_grace_code}: the reduction-fidelity audit checks C1 (\cref{sec:reduction-and-reference}); the fault-progression scenarios provide evidence for the hybrid practical-ISS envelope (C2, \cref{sec:stability}); the ablation campaigns isolate the feed-forward identity and characterize each extension's domain (C3, \cref{sec:extensions}). All numerical claims are deterministic point estimates from a single fixed Dryden seed~42 (\cref{rem:reproducibility}).
+All numerical claims are deterministic point estimates from a single fixed Dryden seed~42 (\cref{rem:reproducibility}).
 
 \subsection{Simulation Environment and Campaign Structure}
 \label{sec:campaign}
@@ -65,8 +65,6 @@ The campaign structure (\cref{tab:campaign-matrix}) comprises V1--V6 as the pre-
   \end{tabular}
 \end{table*}
 
-\paragraph{Indexing convention.} Logs and figure captions index drones $0,\dots,N{-}1$ to match the simulator's array convention; the theoretical index in \cref{sec:Problem_Statement,sec:stability,sec:extensions} is $i = \text{drone\_id} + 1$. We keep the simulator labels for traceability with archived run logs.
-
 \paragraph{Admissibility-domain audit (H1 and H3).} \Cref{thm:reduction} and \cref{thm:hybrid-stability} require three gates to hold on the demonstrated trajectory: H1a (no slack run $> \SI{40}{\milli\second}$), H1b (aggregate slack duty cycle $\le 2.5\%$), and H3 (QP active-set transition fraction $\le 1\%$). \Cref{tab:domain-audit} reports measurements for V1--V6: every variant passes with margin. Worst observed values are \SI{35.8}{\milli\second} (H1a; V2--V5, $\SI{4.2}{\milli\second}$ margin), $1.66\%$ (H1b; V6, $0.84$~pp margin), and $0.10\%$ (H3; V4--V6, $0.90$~pp margin). These measurements certify domain membership for the demonstrated mission family but do not prove H1--H3 for all references, wind, or fault schedules; the audit must be repeated for new missions. V6's lower H1a ($\SI{31.4}{\milli\second}$) is consistent with MPC damping high-frequency QP transitions.
 
 \begin{table}[htbp]
@@ -93,24 +91,24 @@ The campaign structure (\cref{tab:campaign-matrix}) comprises V1--V6 as the pre-
   \end{tabular}
 \end{table}
 
-\paragraph{Statistical scope.} All campaigns use fixed Dryden seed~42, whose principal ($+x$) wind component achieves a $2\sigma$ exceedance within $[8,12]\,\si{\second}$---a reproducible stress case. The reported RMSE, sag, contraction, and ablation-effect values are deterministic point estimates; they should not be interpreted as population statistics. CRN-paired replication with bootstrap CIs is follow-up work.
+\paragraph{Statistical scope.} All campaigns use fixed Dryden seed~42 (reproducible $2\sigma$ exceedance within $[8,12]\,\si{\second}$); reported RMSE, sag, and ablation values are deterministic point estimates. CRN-paired replication with bootstrap CIs is follow-up work.
 
-\paragraph{Scope.} V1--V6 begin slightly slack ($\SI{1.17}{\metre}$ drone-to-payload vs $\SI{1.25}{\metre}$ rest length); the pickup logic engages within the first simulator tick. The evaluation window $[8, 30]\,\si{\second}$ excludes this transient.
+\paragraph{Scope.} V1--V6 begin slightly slack ($\SI{1.17}{\metre}$ vs.\ $\SI{1.25}{\metre}$ rest length); pickup engages within the first tick and the evaluation window $[8,30]\,\si{\second}$ excludes the transient.
 
 \subsection{Reduction-Fidelity Audit}
 \label{sec:VI-reduction}
 
 
-Three quantities are at play and must be kept distinct throughout this section:
+Three quantities must be kept distinct:
 \begin{itemize}[leftmargin=1.5em,noitemsep]
   \item $T_i^{\mathrm{qs}} \triangleq k_{\mathrm{eff}}(\ell_i - L)^+$ --- the \emph{per-rope quasi-static} tension (same $\ell_i$ as the physical rope); \cref{thm:reduction} bounds $|T_i^{\mathrm{KV}} - T_i^{\mathrm{qs}}|$ at $\le C_1\delta + C_2\eta_{\max} \approx \SI{0.076}{\newton}$;
   \item $\varepsilon_i \triangleq T_i^{\mathrm{KV}} - T_{\mathrm{eff}}$ --- the \emph{inter-rope asymmetry} around the surviving-rope mean; this is a formation-geometry effect, driven by post-fault load redistribution, and is \emph{not} bounded by \cref{thm:reduction};
   \item trajectory deviation --- the quantity controlled by \cref{thm:hybrid-stability}, which absorbs both $T_i^{\mathrm{qs}}$ and the feed-forward identity.
 \end{itemize}
 
-\Cref{thm:reduction} bounds the shape-mode deviation $|T_i^{\mathrm{KV}} - T_i^{\mathrm{qs}}|$ via the Lyapunov energy argument. The empirical audit here measures only $\varepsilon_i = T_i^{\mathrm{KV}} - T_{\mathrm{eff}}$, which is easier to compute but is a \emph{different} (and structurally larger) quantity. Its role is to characterize how load-asymmetric the post-fault configuration is, not to verify the theorem bound.
+The empirical audit measures $\varepsilon_i = T_i^{\mathrm{KV}} - T_{\mathrm{eff}}$, which is formation-geometry driven and structurally larger than the shape-mode deviation; its role is to characterize post-fault load asymmetry, not to verify the theorem bound.
 
-\Cref{thm:hybrid-stability} requires that the lumped model tracks the bead-chain truth in the sense of \cref{thm:reduction}. The domain-gate layer (\cref{tab:domain-audit}) certifies that $\eta$, max slack-run, and QP transition fraction all satisfy the theorem's hypotheses with margin across all six variants; this is the primary certificate.
+The domain-gate layer (\cref{tab:domain-audit}) certifies that $\eta$, max slack-run, and QP transition fraction satisfy the theorem hypotheses with margin across all variants; this is the primary certificate.
 
 The \emph{inter-rope dispersion} layer provides additional context. On $[8,30]\,\si{\second}$ for each variant we compute $T_{\mathrm{eff}}(t) = |\mathcal{S}(t)|^{-1} \sum_{i\in\mathcal{S}(t)} T_i^{\mathrm{KV}}(t)$ and $\varepsilon_i(t) = T_i^{\mathrm{KV}}(t) - T_{\mathrm{eff}}(t)$. \Cref{tab:reduction-residuals} reports RMS, P95, and peak of $|\varepsilon_i|$; \cref{fig:reduction-overlay-V4} overlays per-rope $T_i^{\mathrm{KV}}$ against $T_{\mathrm{eff}}$ for V4. The inter-rope asymmetry sits at RMS $\sim\SI{12}{\newton}$ on dual-fault variants ($\approx 60\%$ of nominal per-rope tension), with peaks at $\SI{60}{\newton}$ at the most centripetally-loaded instants. This large dispersion is architecturally expected: after a fault, each surviving rope carries more load and formation angles differ, causing $T_i^{\mathrm{qs}}$ to vary across ropes by the same $O(10)$\,N. It does not contradict the theorem, which bounds $|T_i^{\mathrm{KV}} - T_i^{\mathrm{qs}}|$ at $\approx\SI{0.076}{\newton}$ --- the shape-mode deviation of each rope \emph{from its own} quasi-static baseline. The identity $T_i^{\mathrm{ff}} = T_i$ ensures each drone receives the full asymmetric signal, so the stability analysis need not model the asymmetry analytically (\cref{lem:tension-cancel}). A trajectory-level audit against a reduced-rope simulator is follow-up work.
 
@@ -146,7 +144,7 @@ The \emph{inter-rope dispersion} layer provides additional context. On $[8,30]\,
 \label{sec:VI-B}
 % ----------------------------------------------------------------
 
-We use the two nominal variants to set the tracking-performance floor for fault-induced transients. V1 (no wind) yields 3-D RMSE $\SI{0.312}{\metre}$ over $[8,30]$~s. The bound of \cref{cor:steady-state} is horizontal-only; V1 horizontal RMSE $\SI{0.306}{\metre}$ matches the predicted $\SI{0.27}{\metre}$ to leading order, with the gap from centripetal acceleration on the curved segments. The 3-D value exceeds the corollary because it accumulates altitude error over the $\pm\SI{0.35}{\metre}$ vertical excursion, which the horizontal-only derivation excludes.
+V1 (no wind) yields 3-D RMSE $\SI{0.312}{\metre}$ over $[8,30]$~s. The bound of \cref{cor:steady-state} is horizontal-only; V1 horizontal RMSE $\SI{0.306}{\metre}$ matches the predicted $\SI{0.27}{\metre}$ to leading order, with the gap from centripetal acceleration on the curved segments. The 3-D value exceeds the corollary because it accumulates altitude error over the $\pm\SI{0.35}{\metre}$ vertical excursion, which the horizontal-only derivation excludes.
 
 V2 (Dryden wind, $\SI{4}{\metre\per\second}$ mean, seed~42) yields RMSE $\SI{0.312}{\metre}$, indistinguishable from V1 at single-seed precision. The PD/QP layer absorbs the turbulence without adaptive augmentation, exercising the wind margin of \cref{cor:robustness}. \Cref{tab:performance-ci} consolidates per-variant RMSE, sag, and tension; \cref{fig:trajectory-3d-V4} shows the V4 payload trajectory in 3-D with the lemniscate reference, fault events, and three formation snapshots.
 
@@ -185,7 +183,7 @@ V2 (Dryden wind, $\SI{4}{\metre\per\second}$ mean, seed~42) yields RMSE $\SI{0.3
 \label{sec:VI-C}
 % ----------------------------------------------------------------
 
-We audit \cref{thm:hybrid-stability} against three scenarios of increasing severity: V3 (single fault), V4 (dual, $\Delta t = \SI{5}{\second}$), V5 (dual, $\Delta t = \SI{10}{\second}$). The dwell condition \eqref{eq:dwell-assumption} requires $\Delta t \ge \tau_{\mathrm{pend}} = \SI{2.24}{\second}$; the dual-fault scenarios meet it with $\SI{2.76}{\second}$ and $\SI{7.76}{\second}$ margin.
+We audit \cref{thm:hybrid-stability} against three scenarios of increasing severity: V3 (single fault), V4 (dual, $\Delta t = \SI{5}{\second}$), V5 (dual, $\Delta t = \SI{10}{\second}$).
 
 \paragraph{V3 --- single fault.} Drone~0 severs at $t = \SI{12}{\second}$; four survivors respond without fault signals or peer communication. Peak 3-D error $\SI{0.337}{\metre}$, IAE $\SI{0.452}{\metre\second}$, max sag $\SI{85.1}{\milli\metre}$. Settle time is below the \SI{1}{\milli\second} tick resolution (logged as 0~s): the bounded jump of \cref{lem:jump-continuity} at the near-equal-sharing hover point falls below one tick.
 
@@ -193,7 +191,7 @@ We audit \cref{thm:hybrid-stability} against three scenarios of increasing sever
 
 \paragraph{V5 --- dual fault, $\Delta t = \SI{10}{\second}$.} Extending the gap to $\SI{10}{\second}$ lets the system fully re-settle. The second fault's IAE is $\SI{0.741}{\metre\second}$ ($+11\%$ over V4) reflecting higher cruise speed at $t = \SI{22}{\second}$, not degraded recovery. Max sag $\SI{87.4}{\milli\metre}$; sub-tick settle.
 
-\paragraph{V6 --- full stack.} V6 repeats V4 with MPC~$+L_1$+reshape active. First-fault sag is $\SI{69.9}{\milli\metre}$ ($-12\%$ vs V4), consistent with the stack preserving the envelope while delivering incremental benefit.
+\paragraph{V6 --- full stack.} With MPC~$+L_1$+reshape active, first-fault sag is $\SI{69.9}{\milli\metre}$ ($-12\%$ vs V4), consistent with the stack preserving the envelope while delivering incremental benefit.
 
 \Cref{fig:fault-zoom} shows the fault-centered timeline for V4 with FF-on (solid) vs FF-off (dashed) on the same wind seed: (a)~tracking-error norm, (b)~altitude error exposing the sag differential, (c)~Lyapunov proxy $V(t) = \xi^\top P_v \xi$, allowing direct visual inspection of the bounded jump (\cref{lem:jump-continuity}) and the inter-event contraction (\cref{lem:dwell-decay}) alongside the causal mechanism. V3, V5, FF-held-constant, and per-drone thrust traces are in the supplementary package. Empirical fits on V4 and V5 give peak jump $\hat\chi_{\max} = 1.1\!\times\!10^{-4}$ (V4), $1.3\!\times\!10^{-5}$ (V5)---in units of the dimensionless proxy $V$, not physical units---and dwell-cycle contraction $\hat\rho_{\text{V4}}=0.20$, $\hat\rho_{\text{V5}}=0.045$, both well below the $\rho < 1$ sufficiency bound (\cref{tab:stability-evidence}).
 
@@ -212,14 +210,12 @@ We audit \cref{thm:hybrid-stability} against three scenarios of increasing sever
   \label{fig:fault-zoom}
 \end{figure}
 
-The deterministic effect-size estimates are in \cref{tab:ff-ablation,fig:fault-zoom}; statistical amplification across paired CRN seeds is follow-up work.
-
 \subsection{Tension Feedforward Ablation}
 \label{sec:VI-D}
 
-The P2-A campaign provides the strongest quantitative evidence for \eqref{eq:Tff} as the causal recovery mechanism. We disable $T_i^{\mathrm{ff}} = T_i$ in the QP layer with all other parameters held fixed and repeat V3, V4, V5.
+The P2-A campaign provides the strongest quantitative evidence for \eqref{eq:Tff} as the causal recovery mechanism. We disable $T_i^{\mathrm{ff}} = T_i$ in the QP layer and repeat V3, V4, V5.
 
-The degradation mechanism follows \cref{rem:passive-ft}: without the identity, the altitude channel carries an unrejected load increment, inflating both steady-state floor and post-fault Lyapunov jumps (\cref{lem:jump-continuity}); \cref{tab:ff-ablation,fig:fault-zoom} summarize the $34$--$39\%$ RMSE increase and $3.6$--$4.0\times$ peak-sag inflation.
+Without the identity, the altitude channel carries an unrejected load increment, inflating both steady-state floor and post-fault Lyapunov jumps (\cref{lem:jump-continuity}); \cref{tab:ff-ablation,fig:fault-zoom} summarize the $34$--$39\%$ RMSE increase and $3.6$--$4.0\times$ peak-sag inflation.
 
 \begin{table}[htbp]
   \caption{Tension feed-forward ablation (P2-A). Cruise-window RMSE (m) and peak post-fault altitude sag (mm) with FF enabled and disabled, per fault schedule.}

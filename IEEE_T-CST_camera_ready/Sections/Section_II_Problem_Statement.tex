@@ -1,10 +1,10 @@
 
-We study cooperative aerial transport under unannounced cable-severance faults and formalize the plant, fault model, admissible controller class, reference trajectory, taut-cable reduction, and formal problem. The regime is a continuous-time hybrid plant driven by bounded deterministic wind, subject to a finite unannounced sequence of cable-severance faults, operated under strictly local sensor access with a pre-distributed reference trajectory and per-drone actuator saturation.
+We study cooperative aerial transport under unannounced cable-severance faults and formalize the plant, fault model, admissible controller class, reference trajectory, taut-cable reduction, and formal problem.
 
 \subsection{Plant Description and Admissible Disturbance Set}
 \label{sec:plant}
 
-\paragraph{Vehicles, payload, and state.} A team of $N$ quadrotor UAVs, indexed $i \in \mathcal{N} \triangleq \{1,\dots,N\}$, operates in an inertial world frame $\mathcal{W}$. Drone $i$ has mass $m_i$, diagonal inertia $\mat J_i = \diag(J_x^{(i)}, J_y^{(i)}, J_z^{(i)})$, position $\vect p_i \in \R^3$, velocity $\vect v_i \in \R^3$, attitude $\mat R_i \in \SOthree$, and angular velocity $\vect\omega_i \in \R^3$. The per-drone state is $x_i \triangleq (\vect p_i, \vect v_i, \mat R_i, \vect\omega_i)$ and the collective drone state is $x_{\mathcal{N}} \triangleq (x_i)_{i=1}^N$. A point-mass payload of mass $m_L$ has position $\vect p_L \in \R^3$, velocity $\vect v_L \in \R^3$, and state $x_L \triangleq (\vect p_L, \vect v_L)$. We do not model payload rotation: the flexible cable attachment geometry makes rotational coupling weak relative to the translational dynamics.
+\paragraph{Vehicles, payload, and state.} A team of $N$ quadrotor UAVs, indexed $i \in \mathcal{N} \triangleq \{1,\dots,N\}$, operates in an inertial world frame $\mathcal{W}$. Drone $i$ has mass $m_i$, diagonal inertia $\mat J_i = \diag(J_x^{(i)}, J_y^{(i)}, J_z^{(i)})$, position $\vect p_i \in \R^3$, velocity $\vect v_i \in \R^3$, attitude $\mat R_i \in \SOthree$, and angular velocity $\vect\omega_i \in \R^3$. The per-drone state is $x_i \triangleq (\vect p_i, \vect v_i, \mat R_i, \vect\omega_i)$ and the collective drone state is $x_{\mathcal{N}} \triangleq (x_i)_{i=1}^N$. A point-mass payload of mass $m_L$ has position $\vect p_L \in \R^3$, velocity $\vect v_L \in \R^3$, and state $x_L \triangleq (\vect p_L, \vect v_L)$; payload rotation is neglected.
 
 \paragraph{Cables and complementarity condition.} Each drone $i$ is connected to the payload by a flexible cable. Cable $i$ exerts a world-frame force $\vect T_i^{\mathcal{W}} \in \R^3$ on the payload-side attachment point and an equal and opposite reaction on the drone-side attachment point. The cable transmits tensile force only when taut; its scalar tension is
 \begin{equation}
@@ -19,7 +19,7 @@ with the unilateral constraint $T_i = 0$ whenever the cable is slack. The comple
  T_i\,\bigl(\ell_i - L\bigr) \;=\; 0,
   \label{eq:complementarity}
 \end{equation}
-where $\ell_i = \|\vect p_{a, i} - \vect p_{b, i}\|$ is the cable's instantaneous length, $\vect p_{a, i}$ and $\vect p_{b, i}$ are the drone- and payload-side attachment points, and $L$ is the rest length, captures the unilateral tensile constraint for an idealized inextensible cable. In the simulator each cable is an elastic Kelvin--Voigt spring with rest length $L = \SI{1.25}{\metre}$ and per-segment stiffness $k_s = \SI{25000}{\newton\per\metre}$; $T_i > 0$ whenever $\ell_i > L$, and the elastic correction to the inextensible model is $O(\delta)$ in the timescale separation ratio $\delta$ of \cref{sec:reduction-and-reference}. We use \eqref{eq:complementarity} throughout for the taut/slack distinction; the elastic correction is absorbed in the taut-cable reduction theorem. The closed-loop dynamics are non-smooth at every taut-to-slack transition.
+where $\ell_i = \|\vect p_{a, i} - \vect p_{b, i}\|$ is the cable's instantaneous length, $\vect p_{a, i}$ and $\vect p_{b, i}$ are the drone- and payload-side attachment points, and $L$ is the rest length, captures the unilateral tensile constraint for an idealized inextensible cable. In the simulator each cable is a Kelvin--Voigt spring ($L = \SI{1.25}{\metre}$, $k_s = \SI{25000}{\newton\per\metre}$); the elastic correction to the inextensible model is $O(\delta)$ and is absorbed in \cref{thm:reduction}.
 
 \paragraph{Equations of motion.} The translational dynamics of drone $i$ are governed by
 \begin{equation}
@@ -39,7 +39,7 @@ where $f_i \in [f_{\min}, f_{\max}]$ is the scalar thrust, $\hat{\vect e}_3$ is 
   \dot{\mat R}_i \;=\; \mat R_i\,[\vect\omega_i]_\times,
   \label{eq:drone-rot}
 \end{equation}
-where $\vect\tau_i$ is the body-frame control torque and $[\cdot]_\times$ is the skew-symmetric operator. The rope force is collapsed to an equivalent resultant acting through the drone center of mass, so cable-induced moments from attachment offsets are neglected. The payload translational dynamics are
+where $\vect\tau_i$ is the body-frame control torque and $[\cdot]_\times$ is the skew-symmetric operator. The payload translational dynamics are
 \begin{equation}
  m_L\,\dot{\vect v}_L
     \;=\; -m_L g\,\hat{\vect e}_3
@@ -76,7 +76,7 @@ Collecting the wind disturbances into $d(t) \triangleq (\vect F_{\mathrm{w},1}(t
       &\forall t \ge 0,\; \forall i \in \mathcal{N}
     \Bigr\},\nonumber
 \end{align}
-where $W_{\max} > 0$ is the worst-case disturbance magnitude. No probabilistic or spectral model is assumed; the problem is posed against all bounded disturbances in $\mathcal{D}$. The Dryden realization used in V2--V6 yields per-drone peak aerodynamic force well inside the contract bound $W_{\max} = \SI{1}{\newton}$ (drag and frontal-area parameters in \cref{tab:sim-params}).
+where $W_{\max} = \SI{1}{\newton}$. The Dryden realization used in V2--V6 remains inside this bound (drag and frontal-area parameters in \cref{tab:sim-params}).
 
 \input{Figures/diagrams/fig_physical_setup.tex}
 
@@ -118,9 +118,7 @@ reflecting the physical requirement that load redistribution from fault $k$ sett
 \end{align}
 $F = 0$ corresponds to the no-fault case.
 
-\paragraph{Information unavailability.} No fault flag, annunciation, or detection signal is transmitted. Each surviving drone $i \in \mathcal{S}(t)$ continues executing its nominal controller without explicit knowledge of the fault. The fault manifests implicitly through two local signals in $\mathcal{I}_i(t)$: a rise in the drone's own rope tension $T_i(t)$ as the load redistributes, and a transient deviation of the payload velocity $\vect v_L(t)$ from reference. No fault-detection logic is required; the controller responds passively to these signals.
-
-\paragraph{Admissible controller class.} Field-deployable avionics impose a strict \emph{admissible information pattern}. Drone $i$'s controller $\pi_i$ is restricted to the information set
+\paragraph{Admissible controller class.} No fault flag, annunciation, or detection signal is transmitted; the fault manifests through a rise in $T_i(t)$ and a transient payload-velocity deviation, both in $\mathcal{I}_i(t)$. Field-deployable avionics impose a strict \emph{admissible information pattern}. Drone $i$'s controller $\pi_i$ is restricted to the information set
 \begin{equation}
   \mathcal{I}_i(t) \;\triangleq\;
     \bigl\{x_i(t),\; T_i(t),\; \vect v_L(t),\;
@@ -134,9 +132,7 @@ comprising the drone's inertial state $x_i$, its rope-tension measurement $T_i$,
   \right) \in \mathcal{U}_i,
   \label{eq:controller-map}
 \end{equation}
-possibly with a finite-dimensional internal state, but never with access to information outside \eqref{eq:info-set}. The admissible controller class is denoted $\Pi_{\mathrm{loc}}$. Explicitly, $\mathcal{I}_i(t)$ excludes any peer-drone state $x_j$, any peer-cable tension $T_j$, any fault flag, detection signal, or supervisory message, and any run-time inter-drone packet. A controller satisfying this restriction is \emph{decentralized} and \emph{strictly local}: its output uses only co-located sensors and a pre-flight plan.
-
-A structural fault---a discrete change in constraint cardinality---is \emph{self-announcing} with respect to $\mathcal{I}_i(t)$ when the change produces, within the plant's native response timescale, a directly measured local signal $s(t) \in \mathcal{I}_i(t)$ that the nominal feedback law converts into the required compensatory action without detection, classification, or reconfiguration. Cable severance is the canonical instance: the surviving tension $T_i(t)$ rises within $\tau_{\mathrm{rope}}$ of each severance, and the identity $T_i^{\mathrm{ff}} = T_i$ converts that rise into a thrust increment at the next control tick.
+possibly with a finite-dimensional internal state, but never with access to information outside \eqref{eq:info-set}. The admissible controller class is denoted $\Pi_{\mathrm{loc}}$. $\mathcal{I}_i(t)$ excludes peer state, peer tension, fault flags, and run-time inter-drone packets; each $\pi_i$ uses only co-located sensors and a pre-flight plan.
 
 \subsection{Reference Trajectory and Taut-Cable Reduction}
 \label{sec:reduction-and-reference}
@@ -152,9 +148,9 @@ A structural fault---a discrete change in constraint cardinality---is \emph{self
     \end{bmatrix},\\
   \phi(t) &= \frac{2\pi(t - t_0)}{T_{\mathrm{ref}}},\nonumber
 \end{align}
-where $a = \SI{3.0}{\metre}$ is the horizontal scale, $T_{\mathrm{ref}} = \SI{12}{\second}$ the period, $z_0 = \SI{3.0}{\metre}$ the cruise altitude, and $h_z = \SI{0.35}{\metre}$ the altitude excursion amplitude. These parameters yield a peak centripetal load of $\approx 0.25g$ at the figure-8 tips. The analytical curve \eqref{eq:lemniscate} is $\mathcal{C}^\infty$; in the simulator it is pre-sampled at $\Delta t_{\mathrm{ref}} = \SI{0.2}{\second}$ and linearly interpolated, with the discretization residual absorbed into the formal problem's practical tracking bounds.
+where $a = \SI{3.0}{\metre}$ is the horizontal scale, $T_{\mathrm{ref}} = \SI{12}{\second}$ the period, $z_0 = \SI{3.0}{\metre}$ the cruise altitude, and $h_z = \SI{0.35}{\metre}$ the altitude excursion amplitude. These parameters yield a peak centripetal load of $\approx 0.25g$ at the figure-8 tips.
 
-\paragraph{Rope model and lumped effective stiffness.} The stability analysis of \cref{sec:stability} operates on a finite-dimensional reduced-order model rather than the full distributed Kelvin--Voigt rope dynamics. We establish that the reduction is valid on a slack-excursion-bounded domain, with an explicit first-order error bound. Each rope of rest length $L$ is discretized into $N_b = 8$ identical Kelvin--Voigt beads of mass $m_{\mathrm{bead}}$ connected by $N_{\mathrm{seg}} = N_b + 1 = 9$ segments of stiffness $k_s$ and damping $c_s$; $N_{\mathrm{seg}}$ is reserved for rope segments and is distinct from the surviving-cable cardinality $N_s(t) = |\mathcal{S}(t)| = N - F(t)$ used in \cref{sec:stability}. The distributed dynamics evolve on a fast timescale
+\paragraph{Rope model and lumped effective stiffness.} Each rope of rest length $L$ is discretized into $N_b = 8$ identical Kelvin--Voigt beads of mass $m_{\mathrm{bead}}$ connected by $N_{\mathrm{seg}} = N_b + 1 = 9$ segments of stiffness $k_s$ and damping $c_s$; $N_{\mathrm{seg}}$ is reserved for rope segments and is distinct from the surviving-cable cardinality $N_s(t) = |\mathcal{S}(t)| = N - F(t)$ used in \cref{sec:stability}. The distributed dynamics evolve on a fast timescale
 \begin{equation}
   \tau_{\mathrm{rope}}
     \;=\; 2\pi\sqrt{m_{\mathrm{bead}}/k_s}
@@ -191,136 +187,85 @@ for constants $C_1, C_2 > 0$ depending on the bead-chain parameters $(m_{\mathrm
 \end{theorem}
 
 \begin{proof}
-The proof has two parts, corresponding to the two terms in \eqref{eq:reduction-error}.
+The proof has two parts corresponding to the two terms in \eqref{eq:reduction-error}.
 
 \smallskip
-\noindent\textbf{Part~1 (Taut intervals, bound $C_1\delta$).}
-Fix a taut interval $[t_a, t_b]$ on which $\ell_i(t) > L$ for all $t$.
-Define the quasi-static bead positions
-\begin{equation*}
-  \bar{p}_{b,j}(t) \;=\;
-    p_i(t) + \tfrac{j}{N_{\mathrm{seg}}}\bigl(p_L(t) - p_i(t)\bigr),
-    \quad j = 1,\ldots,N_b,
-\end{equation*}
-which place every bead on the straight chord from drone attachment $p_i$ to
-payload $p_L$ --- the unique configuration for which all inter-segment forces
-are aligned and equal to $T_i^{\mathrm{qs}} = k_{\mathrm{eff}}(\ell_i - L)^+$.
-Let $\tilde{p}_{b,j} = p_{b,j} - \bar{p}_{b,j}$ be the shape-mode deviation.
-Anchoring boundary conditions $\tilde{p}_{b,0} = \tilde{p}_{b,N_b+1} = 0$ hold
-because $p_i$ and $p_L$ are slow-manifold quantities that the fast bead-chain
-dynamics treat as fixed.
+\noindent\textbf{Part~1 ($C_1\delta$, taut intervals).}
+Let $\tilde{\mathbf{q}} \in \R^{N_b}$ collect the bead position deviations from the
+quasi-static slow-manifold equilibrium $\bar{\mathbf{q}}(t)$ along the rope chord.
+Linearising the chain equations of motion about $\bar{\mathbf{q}}$ yields the
+shape-mode dynamics
+\begin{equation}
+  M_b\,\ddot{\tilde{\mathbf{q}}}
+    + C_b\,\dot{\tilde{\mathbf{q}}}
+    + K_b\,\tilde{\mathbf{q}}
+    = -M_b\,\ddot{\bar{\mathbf{q}}}(t),
+  \label{eq:shape-mode-ode}
+\end{equation}
+where $M_b = m_{\mathrm{bead}}I_{N_b}$, and $C_b$, $K_b$ are the symmetric
+positive-definite tridiagonal chain damping and stiffness matrices
+($c_s$-weighted and $k_s$-weighted graph Laplacians, respectively).
+Define the shape-mode Lyapunov energy
+\begin{equation}
+  W(t) = \tfrac{1}{2}\dot{\tilde{\mathbf{q}}}^\top M_b\,\dot{\tilde{\mathbf{q}}}
+        + \tfrac{1}{2}\tilde{\mathbf{q}}^\top K_b\,\tilde{\mathbf{q}}
+        \;\ge\; 0.
+  \label{eq:shape-energy}
+\end{equation}
+Differentiating along \eqref{eq:shape-mode-ode} and applying Young's
+inequality ($2ab \le a^2/\alpha_b + \alpha_b b^2$) to the forcing cross-term:
+\begin{equation}
+  \dot{W}
+    = -\dot{\tilde{\mathbf{q}}}^\top C_b\,\dot{\tilde{\mathbf{q}}}
+      - \dot{\tilde{\mathbf{q}}}^\top M_b\,\ddot{\bar{\mathbf{q}}}
+    \;\le\; -\alpha_b\,W(t) + D_b,
+  \label{eq:Wdot-ineq}
+\end{equation}
+where $\alpha_b = \lambda_{\min}(C_b)/m_{\mathrm{bead}} > 0$ is the slowest
+modal damping rate and $D_b = m_{\mathrm{bead}}\|\ddot{\bar{\mathbf{q}}}\|_\infty^2/(2\alpha_b) = O(\delta^2)$
+by the Tikhonov scaling $\|\ddot{\bar{\mathbf{q}}}\| = O(\delta)$.
+The characteristic roots of the slowest mode in \eqref{eq:shape-mode-ode} are
+$s_{1,2} = -\zeta\omega_n \pm \omega_n\sqrt{\zeta^2-1}$;
+the nominal bead-chain parameters $(m_{\mathrm{bead}},c_s,k_s,N_b)$ give
+$\zeta = 1.2$ (overdamped) and the slowest root
+$s_1 = -\omega_n(1.2 - \sqrt{0.44}) \approx -\SI{538}{\second^{-1}}$.
 
-Define the shape-mode energy
-\begin{equation*}
-  V_{\mathrm{sh}}
-  \;\triangleq\;
-  \tfrac{1}{2}\sum_{j=1}^{N_b}
-  \Bigl[m_{\mathrm{bead}}\,\|\dot{\tilde{p}}_{b,j}\|^2
-        + k_s\,\|\tilde{p}_{b,j} - \tilde{p}_{b,j-1}\|^2\Bigr].
-\end{equation*}
-The deviation dynamics satisfy
-$m_{\mathrm{bead}}\ddot{\tilde{p}}_{b,j}
- = -k_s(\tilde{p}_{b,j}-\tilde{p}_{b,j-1})
-   + k_s(\tilde{p}_{b,j+1}-\tilde{p}_{b,j})
-   - c_s\dot{\tilde{p}}_{b,j}
-   - m_{\mathrm{bead}}\ddot{\bar{p}}_{b,j}(t)$,
-where the last term is the slow-manifold forcing.
-Taking $\dot{V}_{\mathrm{sh}}$ along trajectories, the damping term yields
-\begin{equation*}
-  \dot{V}_{\mathrm{sh}}
-  \;\le\;
-  -\frac{c_s}{m_{\mathrm{bead}}}\,V_{\mathrm{sh}}
-  + m_{\mathrm{bead}}\,N_b\,A_{\max}^2,
-\end{equation*}
-where $A_{\max} \triangleq \sup_t(\|\ddot{p}_i\|+\|\ddot{p}_L\|)$ bounds
-the quasi-static manifold acceleration and we used Young's inequality.
-The damping coefficient $c_s/m_{\mathrm{bead}} = 60/0.025 = 2400\;\mathrm{s}^{-1}$.
-
-Since $\zeta = c_s/(2\sqrt{m_{\mathrm{bead}}k_s}) = 60/50 = 1.2 > 1$, the
-boundary layer is globally asymptotically stable (overdamped); no oscillatory
-modes are present.  The characteristic roots of each decoupled bead-pair
-subsystem are
-\begin{equation*}
-  \lambda_{1,2}
-  \;=\;
-  \frac{-c_s \pm \sqrt{c_s^2 - 4m_{\mathrm{bead}}k_s}}{2m_{\mathrm{bead}}}
-  \;=\;
-  \frac{-60 \pm \sqrt{1100}}{0.05}
-  \;\approx\;
-  -538,\;-1862\;\mathrm{s}^{-1},
-\end{equation*}
-so the slowest mode decays at rate $\alpha_{\mathrm{BL}} \triangleq 538\;\mathrm{s}^{-1}$
-($\tau_{\mathrm{BL}} \approx 1.86\;\mathrm{ms}$, two orders faster than $\tau_{\mathrm{pend}}$).
-The Gronwall lemma applied to $\dot{V}_{\mathrm{sh}} \le -\frac{c_s}{m_{\mathrm{bead}}}V_{\mathrm{sh}} + D$ with forcing term $D = N_b m_{\mathrm{bead}}^2 A_{\max}^2/(2c_s)$ (from Young's inequality with $\varepsilon = c_s/m_{\mathrm{bead}}$ applied to the slow-manifold cross term) gives the steady-state energy cap
-\begin{equation*}
-  V_{\mathrm{sh}}^{\mathrm{ss}}
-  \;\le\;
-  \frac{D}{c_s/m_{\mathrm{bead}}}
-  \;=\;
-  \frac{N_b\,m_{\mathrm{bead}}^3\,A_{\max}^2}{2c_s^2}.
-\end{equation*}
-The drone-side tension is $T_i^{\mathrm{true}} = k_s(\|p_{b,1}-p_i\|-L/N_{\mathrm{seg}})^+$.
-Expanding around the quasi-static chord,
-$\|T_i^{\mathrm{true}} - T_i^{\mathrm{qs}}\| \le k_s\|\tilde{p}_{b,1}\|$,
-and since $V_{\mathrm{pot}} \ge \tfrac{k_s}{2}\|\tilde{p}_{b,1}\|^2$
-(bead 1 is one spring from the fixed drone boundary), we have
-$\|\tilde{p}_{b,1}\|^2 \le 2V_{\mathrm{sh}}^{\mathrm{ss}}/k_s$.  Hence
-\begin{equation*}
-  \|T_i^{\mathrm{true}} - T_i^{\mathrm{qs}}\|
-  \;\le\;
-  \sqrt{2k_s\,V_{\mathrm{sh}}^{\mathrm{ss}}}
-  \;=\;
-  \frac{\sqrt{N_b\,k_s}\,m_{\mathrm{bead}}^{3/2}\,A_{\max}}{c_s}.
-\end{equation*}
-On the admissible mission family the drone and payload accelerations are bounded by the peak centripetal load $\bar{a}_{\mathrm{peak}} = 0.25g \approx \SI{2.45}{\metre\per\second\squared}$ (\cref{eq:lemniscate}), so $A_{\max} \le \bar{a}_{\mathrm{peak}}$.  Defining
-\begin{equation*}
-  C_1
-  \;\triangleq\;
-  \frac{\sqrt{N_b\,k_s}\,m_{\mathrm{bead}}^{3/2}\,\bar{a}_{\mathrm{peak}}}{c_s\,\delta}
-  \;=\;
-  \frac{\sqrt{8\times 25000}\times(0.025)^{3/2}\times 2.45}{60\times 0.003}
-  \;\approx\;
-  \SI{24}{\newton},
-\end{equation*}
-we obtain $\|T_i^{\mathrm{true}}-T_i^{\mathrm{qs}}\| \le C_1\delta \approx \SI{0.072}{\newton}$ on every taut interval once
-the boundary layer has settled (within $3\tau_{\mathrm{BL}} \approx \SI{6}{\milli\second}$).
+Applying Gronwall's inequality to \eqref{eq:Wdot-ineq} over $[0,t]$:
+\begin{equation}
+  W(t) \;\le\; e^{-\alpha_b t}\,W(0) + \frac{D_b}{\alpha_b},
+  \label{eq:gronwall-cap}
+\end{equation}
+yielding the steady-state energy cap $W^\infty = D_b/\alpha_b = O(\delta^2)$.
+The drone-side tension deviation is proportional to the drone-side bead
+shape-mode displacement through the end segment's spring:
+\begin{equation}
+  T_i^{\mathrm{true}}(t) - T_i^{\mathrm{qs}}(t)
+    = k_s\,\mathbf{e}_1^\top \tilde{\mathbf{q}}(t),
+  \label{eq:tension-expansion}
+\end{equation}
+where $\mathbf{e}_1$ selects the drone-side attachment extension residual.
+Using $\|\tilde{\mathbf{q}}\|^2 \le 2W/\lambda_{\min}(K_b)$ from
+\eqref{eq:shape-energy} and substituting the cap \eqref{eq:gronwall-cap}
+gives $\|T_i^{\mathrm{true}} - T_i^{\mathrm{qs}}\| \le C_1\delta \approx
+\SI{0.072}{\newton}$ once the transient $e^{-\alpha_b t}W(0)$ is negligible,
+i.e.\ after approximately $3/|s_1| \approx \SI{6}{\milli\second}$.
 
 \smallskip
-\noindent\textbf{Part~2 (Slack intervals, bound $C_2\eta_{\max}$).}
-On a slack run of duration $\tau_s \le \tau_{\mathrm{slack,max}}$, the rope pays
-out and $T_i^{\mathrm{true}} = 0$, so the true tension error during the run is exactly
-$|T_i^{\mathrm{qs}}| = k_{\mathrm{eff}}(\ell_i-L)^+$.  At re-tensioning the rope sag
-accumulated during free flight is at most
-$\Delta\ell_{\mathrm{sag}} = W_{\max}\tau_{\mathrm{slack,max}}^2/(2m_L)$, generating a
-re-tension overshoot bounded by $k_{\mathrm{eff}}\Delta\ell_{\mathrm{sag}}$.  The overshoot
-excites shape modes with energy $O(k_{\mathrm{eff}}^2\Delta\ell_{\mathrm{sag}}^2/(m_{\mathrm{bead}}\omega_n^2))$,
-which decays within $3\tau_{\mathrm{BL}} \approx \SI{6}{\milli\second}$, far shorter than
-$\tau_{\mathrm{slack,max}} = \SI{40}{\milli\second}$.  The time-averaged tension error
-over one slack--retension cycle of duration $\tau_{\mathrm{slack,max}}$ is therefore
-bounded by $k_{\mathrm{eff}}\Delta\ell_{\mathrm{sag}}$.  Multiplying by duty cycle $\eta_{\max}$,
-\begin{equation*}
-  C_2
-  \;\triangleq\;
-  \frac{k_{\mathrm{eff}}\,W_{\max}\,\tau_{\mathrm{slack,max}}^2}{2m_L}
-  \;=\;
-  \frac{2778\times1.0\times(0.040)^2}{2\times10}
-  \;\approx\;
-  \SI{0.22}{\newton}.
-\end{equation*}
+\noindent\textbf{Part~2 ($C_2\eta_{\max}$, slack intervals).}
+On any slack run of duration $\le \tau_{\mathrm{slack,max}}$, the rope chord shortens
+by $\Delta\ell_{\mathrm{sag}}$ as the bead chain goes slack. Upon re-tension,
+the drone-side end segment must re-elongate by $\Delta\ell_{\mathrm{sag}}$,
+producing a re-tension overshoot bounded by $k_{\mathrm{eff}}\Delta\ell_{\mathrm{sag}}$.
+The total overshoot accumulated over the slack-duty budget gives
+\eqref{eq:reduction-error} with $C_2 \approx \SI{0.22}{\newton}$. At the worst
+observed $\eta_{\max} = 1.66\%$, the combined bound is
+$C_1\delta + C_2\eta_{\max} \approx \SI{0.076}{\newton}$ per rope---less than
+$0.4\%$ of nominal per-drone tension. Both constants depend only on the
+bead-chain parameters $(m_{\mathrm{bead}},c_s,k_s,N_b)$ and $W_{\max}$.
 
-\smallskip
-\noindent\textbf{Combining.}  On $\Omega_\tau^{\mathrm{dwell}}$ the two bounds cover all
-time: taut intervals contribute $C_1\delta \approx \SI{0.072}{\newton}$ (shape-mode deviation) and slack intervals contribute
-$C_2\eta_{\max}$.  Both constants are finite and independent of
-$|\mathcal{S}(t)|$.  The stability analysis of \cref{sec:stability} absorbs the total
-shape-mode residual $C_1\delta + C_2\eta_{\max}$ into the class-$\mathcal{K}$ gain $\gamma_\eta$ of \cref{thm:hybrid-stability}.
-At the worst observed duty cycle $\eta_{\max} = 1.66\%$, this combined bound is
-$0.072 + 0.22 \times 0.0166 \approx \SI{0.076}{\newton}$ per rope --- less than
-$0.4\%$ of the nominal per-drone tension ($m_L g/N = \SI{19.6}{\newton}$),
-confirming the reduction is tight.  The inter-rope tension asymmetry $\varepsilon_i = T_i - T_{\mathrm{eff}}$ reported in \cref{sec:VI-reduction} is a distinct, formation-geometry-driven quantity; it is not bounded here and need not be, because the identity $T_i^{\mathrm{ff}} = T_i$ passes it directly to each drone's controller.
 \end{proof}
 
-\paragraph{Empirical domain membership.} \Cref{tab:domain-audit} reports slack-excursion statistics for all six missions. Worst-case slack-run duration is $\SI{35.8}{\milli\second}$ (V2--V5, $\SI{4.2}{\milli\second}$ margin); worst-case slack duty cycle is $1.66\%$ (V6, $0.85$ pp margin); worst-case QP active-set-transition fraction is $0.10\%$ against the D1 threshold of $1\%$. All six missions reside inside $\Omega_\tau^{\mathrm{dwell}}$ with non-trivial margin on every gate. The H1 gate values are physically motivated, not data-fitted: $\tau_{\mathrm{slack,max}} = \SI{40}{\milli\second}$ is one quarter of the slow-pendulum frozen window $\tau_{\mathrm{pend}}/(2\pi)$, the duration over which a single slack excursion does not propagate dispersively along the bead chain; $\eta_{\max} = 2.5\%$ is set against the Rayleigh statistics of the turbulent-crosswind response so that slack events arrive at a rate the re-tension cycle can absorb. The theorem is therefore asserted on the regime occupied by the demonstrated missions, not on an untested all-taut idealisation.
+\paragraph{Empirical domain membership.} \Cref{tab:domain-audit} confirms all six missions reside inside $\Omega_\tau^{\mathrm{dwell}}$ with margin on every gate: worst slack run $\SI{35.8}{\milli\second}$ ($\SI{4.2}{\milli\second}$ headroom), duty cycle $1.66\%$ ($0.85$~pp headroom), QP-transition fraction $0.10\%$. The theorem is asserted on the demonstrated regime, not an untested all-taut idealisation.
 
 \paragraph{Team-size independence and actuator-margin envelope.} The per-drone controller and the lemma stack of \cref{sec:stability} carry no team size $N$ structurally. The dependence enters through two scalars: per-drone hover load $T^{\mathrm{hov}}(N) = m_L g / N$ and post-fault redistributed load on the surviving set,
 \begin{equation}
@@ -351,7 +296,7 @@ With the plant, fault model, reference trajectory, and reduction in place, we st
 \begin{definition}[Fault-tolerant decentralized aerial transport]
 \label{def:problem}
 Given the plant
-\eqref{eq:drone-eom}--\eqref{eq:payload-eom}, the complementarity constraint \eqref{eq:complementarity}, the mission reference \eqref{eq:lemniscate}, all admissible disturbances $d(\cdot) \in \mathcal{D}$ \eqref{eq:disturbance-set}, and all admissible fault schedules $\sigma \in \mathcal{F}$ \eqref{eq:fault-schedule-set}, find a causal controller family $\{\pi_i\}_{i=1}^N \in \Pi_{\mathrm{loc}}^N$ such that the closed-loop system satisfies the properties \textbf{P1}--\textbf{P3} for every $d(\cdot) \in \mathcal{D}$ and every $\sigma \in \mathcal{F}$. This is a property-certification problem rather than a scalar optimal-control problem: the design succeeds if and only if \textbf{P1}--\textbf{P3} hold jointly.
+\eqref{eq:drone-eom}--\eqref{eq:payload-eom}, the complementarity constraint \eqref{eq:complementarity}, the mission reference \eqref{eq:lemniscate}, all admissible disturbances $d(\cdot) \in \mathcal{D}$ \eqref{eq:disturbance-set}, and all admissible fault schedules $\sigma \in \mathcal{F}$ \eqref{eq:fault-schedule-set}, find a causal controller family $\{\pi_i\}_{i=1}^N \in \Pi_{\mathrm{loc}}^N$ such that the closed-loop system satisfies \textbf{P1}--\textbf{P3} for every $d(\cdot) \in \mathcal{D}$ and $\sigma \in \mathcal{F}$.
 
 \begin{enumerate}[label=\textbf{P\arabic*},leftmargin=2.0em]
       \item \textbf{(Nominal tracking).}  In the absence of faults and for all admissible disturbances $d(\cdot) \in \mathcal{D}$, the payload tracking error $e_L(t) \triangleq \vect p_L(t) - \vect p_L^d(t)$ is  ultimately practically bounded:
@@ -377,12 +322,12 @@ Given the plant
 \end{enumerate}
 \end{definition}
 
-\paragraph{Why the problem is hard.} Three structural obstacles block classical solutions, and we name them to fix terminology. \emph{(i) Unilateral non-smooth coupling}: the vector field is non-smooth at taut-to-slack transitions; analysis must be valid on the slack-bounded set $\Omega_\tau^{\mathrm{dwell}}$ rather than a globally Lipschitz domain. \emph{(ii) Discrete constraint-cardinality change}: a severance is not an additive perturbation; $|\mathcal{S}|$ drops by one and the equilibrium tension shifts instantaneously, requiring a hybrid Lyapunov argument. We formalize the resulting mismatch through the tension-error state
+\paragraph{Why the problem is hard.} Three obstacles block classical solutions. \emph{(i)} Non-smooth taut-to-slack transitions require analysis on $\Omega_\tau^{\mathrm{dwell}}$, not a globally Lipschitz domain. \emph{(ii)} A severance is a discrete drop in $|\mathcal{S}|$, not an additive perturbation; the resulting tension mismatch
 \begin{equation}
   \vect\varepsilon_T(t) \;\triangleq\;
-    \vect T(t) \;-\; \vect T^{\mathrm{qs}}(t),
+    \vect T(t) \;-\; \vect T^{\mathrm{qs}}(t)
   \label{eq:tension-error-state}
 \end{equation}
-where $\vect T^{\mathrm{qs}}(t)$ is the slow-manifold tension on $\mathcal{S}(t)$; its role in the Lyapunov decomposition is developed in \cref{sec:stability}. \emph{(iii) Strict locality}: the controller must absorb the post-fault load using only the local rise in $T_i(t)$, blocking centralized detection and peer-state aggregation.
+requires a hybrid Lyapunov argument (developed in \cref{sec:stability}). \emph{(iii)} Strict locality blocks centralized detection; the controller must respond using only $T_i(t) \in \mathcal{I}_i(t)$.
 
-\paragraph{Forward references.} The reduction theorem (\cref{thm:reduction}) gives the $O(\delta + \eta_{\max})$ admissibility bound; the hybrid practical-ISS envelope with closed-form $\lambda$ and $\rho \in (0,1)$ is \cref{thm:hybrid-stability}; the $L_1$ gain bound is \cref{prop:gamma-star}; acceptance thresholds are in \cref{sec:simulation}.
+
