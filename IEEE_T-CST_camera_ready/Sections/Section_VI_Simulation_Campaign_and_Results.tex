@@ -366,27 +366,9 @@ V4 fixes $t_1=12$~s. We ask whether the recovery envelope depends on \emph{where
 \subsection{Actuator-Margin and Recovery-Time Audit}
 \label{sec:VI-actuator-recovery}
 
-A reviewer concern with cascade architectures is that the controller may rely on actuator saturation to absorb post-fault loads. We audit this with the per-drone maximum commanded thrust ratio $f_i(t)/f_{\max}$ over $[8,30]\,\si{\second}$ for V3--V6 (\cref{tab:actuator-margin}). Peak ratio is $0.73$ on V3--V5 (drone~4 right after fault~1) and $0.79$ on V6, with zero cruise-window time above $0.9\,f_{\max}$. Recovery is not actuator-limited.
+A reviewer concern with cascade architectures is that the controller may rely on actuator saturation to absorb post-fault loads. We audit this with the per-drone maximum commanded thrust ratio $f_i(t)/f_{\max}$ over $[8,30]\,\si{\second}$ for V3--V6. The variant maxima are $0.73$ on V3, V4, V5 and $0.79$ on V6, all attained on drone~4, with zero cruise-window time above $0.9\,f_{\max}$ on every variant. The V3--V5 maxima coincide because the three variants share the first-fault schedule (drone 0 severs at $t=\SI{12}{\second}$) and the simulations are deterministic on a common wind seed: the variant peak is drone 4's transient at $t=\SI{12.68}{\second}$, $\SI{0.68}{\second}$ into the fault-1 recovery, and the second-fault spike (V4: $t=\SI{17}{\second}$, V5: $t=\SI{22}{\second}$) lands on a different drone with the trajectory at a different phase and stays below the fault-1 peak on drone 4. V6 reaches $0.79$ because the full-stack extensions ($L_1$ + MPC + reshape) shift the altitude command. Recovery is not actuator-limited on any variant.
 
-\begin{table}[htbp]
-  \caption{Actuator-margin audit. Per-variant maximum commanded thrust ratio $\max_i (f_i/f_{\max})$ over the $[8,30]\,\si{\second}$ cruise window and the fraction of time above $0.9\,f_{\max}$.}
-  \label{tab:actuator-margin}
-  \centering
-  \small
-  \begin{tabular}{lccc}
-    \toprule
-    Variant & $\max_i (f_i / f_{\max})$ & argmax drone &
-      $\%$ time over $0.9\,f_{\max}$ \\
-    \midrule
-    V3 & 0.73 & 4 & $0.0\,\%$ \\
-    V4 & 0.73 & 4 & $0.0\,\%$ \\
-    V5 & 0.73 & 4 & $0.0\,\%$ \\
-    V6 & 0.79 & 4 & $0.0\,\%$ \\
-    \bottomrule
-  \end{tabular}
-\end{table}
-
-\paragraph{Spike-then-relax thrust dynamics on V4.} The aggregate ratio in \cref{tab:actuator-margin} hides the intra-fault dynamic that directly evidences H2 on the actuator channel. \Cref{tab:thrust-transient} reports, per V4 survivor ($i\in\{1,3,4\}$), the within-1\,s peak commanded thrust at each fault and the settled mean 2--4\,s after. Survivors show a $1.18$--$1.79\times$ peak-over-settled overshoot, decaying to a new steady state within $\sim \tau_{\mathrm{pend}}\approx\SI{2.24}{\second}$. Steady-state thrust per survivor rises $+25$ to $+34\%$ vs the pre-fault baseline; the survivor sum settles near $\SI{179}{\newton}$ at $t \in [27,30]$\,s, balancing $m_L g + 3 m_{\mathrm{drone}} g \approx \SI{142}{\newton}$ plus centripetal/tilt overhead---an independent check of the post-fault load redistribution. This is the actuator-channel signature of the same recovery the Lyapunov-proxy contraction of \cref{sec:VI-C} reports for the state error.
+\paragraph{Spike-then-relax thrust dynamics on V4.} The variant-level maximum hides the intra-fault dynamic that directly evidences H2 on the actuator channel. \Cref{tab:thrust-transient} reports, per V4 survivor ($i\in\{1,3,4\}$), the within-1\,s peak commanded thrust at each fault and the settled mean 2--4\,s after. Survivors show a $1.18$--$1.79\times$ peak-over-settled overshoot, decaying to a new steady state within $\sim \tau_{\mathrm{pend}}\approx\SI{2.24}{\second}$. Steady-state thrust per survivor rises $+25$ to $+34\%$ vs the pre-fault baseline; the survivor sum settles near $\SI{179}{\newton}$ at $t \in [27,30]$\,s, balancing $m_L g + 3 m_{\mathrm{drone}} g \approx \SI{142}{\newton}$ plus centripetal/tilt overhead---an independent check of the post-fault load redistribution. This is the actuator-channel signature of the same recovery the Lyapunov-proxy contraction of \cref{sec:VI-C} reports for the state error.
 
 \begin{table}[htbp]
   \caption{V4 spike-then-relax thrust dynamics on the three surviving drones. Peak: max within 1\,s of each fault; Settled: mean 2--4\,s after the fault. $\Delta$: steady-state increase ($t\!\in\![27,30]$\,s) over the pre-fault $[10,12]$\,s baseline.}
@@ -450,4 +432,4 @@ A reviewer concern with cascade architectures is that the controller may rely on
   Ablations (P2-A through robustness sweep) are deterministic point estimates at seed~42; CRN-paired replication yielding bootstrap CIs is follow-up work. The seed manifest (\texttt{seed\_manifest.csv}: \texttt{seed\_wind}, \texttt{seed\_init}, \texttt{seed\_sensor}, \texttt{seed\_fault}, \texttt{seed\_solver}) is archived alongside simulation outputs.
 \end{remark}
 
-The audit trail: C1 is supported by \cref{tab:domain-audit,tab:reduction-residuals}; C2 by \cref{fig:fault-zoom,fig:dwell-sweep}; C3 by \cref{fig:l1-stability-dashboard}; FF causality by \cref{tab:ff-ablation,fig:self-announcement}; actuator margin and recovery time by \cref{tab:actuator-margin,tab:thrust-transient,tab:recovery-iae}; operating-boundary characterisation by \cref{sec:VI-failure}.
+The audit trail: C1 is supported by \cref{tab:domain-audit,tab:reduction-residuals}; C2 by \cref{fig:fault-zoom,fig:dwell-sweep}; C3 by \cref{fig:l1-stability-dashboard}; FF causality by \cref{tab:ff-ablation,fig:self-announcement}; actuator margin and recovery time by \cref{tab:thrust-transient,tab:recovery-iae} (with the variant-level maxima reported inline in \cref{sec:VI-actuator-recovery}); operating-boundary characterisation by \cref{sec:VI-failure}.
