@@ -1,22 +1,3 @@
-% ============================================================
-%  Figure — Per-drone decentralised controller cascade.
-%  Strict orthogonal block diagram: every connection is one
-%  horizontal or vertical segment (no slopes), every signal arrow
-%  has exactly ONE arrowhead at its endpoint, and no signal line
-%  passes through any block.
-%
-%  Layout (centred on x=0):
-%    y=  1.7  : feed-forward sum (sumT, FF identity, red)
-%    y=  0.0  : baseline cascade row
-%               refin  PD  sumL1  QP  att  plant
-%               x:    -8.6 -6.0 -3.0 0.0 3.4 6.7
-%    y= -2.6  : sensor block, centred at x = 1.7
-%               (column gap between qp and att, so sense.north
-%                runs cleanly UP to sumT without crossing blocks)
-%    y= -4.6  : extension band
-%               reshape  L1  MPC, x = -6.0 / -3.0 / 0.0
-%               (vertically aligned with their injection points)
-% ============================================================
 \begin{figure*}[t]
 \centering
 \begin{tikzpicture}[

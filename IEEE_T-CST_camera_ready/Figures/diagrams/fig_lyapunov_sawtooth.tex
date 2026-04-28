@@ -1,10 +1,3 @@
-% ============================================================
-%  Figure — Fault timeline (top), survivor cardinality decrement,
-%  and Lyapunov sawtooth (bottom).  On-figure labels are SHORT
-%  ("flow", "jump", "contraction") and the math expressions and
-%  lemma references are deferred to the caption.  This keeps
-%  every label legible and never overlapping the plot curves.
-% ============================================================
 \begin{figure}[t]
 \centering
 \begin{tikzpicture}[
@@ -32,9 +25,9 @@
     \draw[flow, dotted] (5.0, 1.0) -- (5.0, 0.5);
     \draw[flow] (5.0, 0.5) -- (8.0, 0.5);
 
-    \node[tick, anchor=east] at (-0.1, 1.5) {$N{=}5$};
-    \node[tick, anchor=east] at (-0.1, 1.0) {$4$};
-    \node[tick, anchor=east] at (-0.1, 0.5) {$3$};
+    \node[tick, anchor=east] at (+1.0, 1.7) {$N{=}5$};
+    \node[tick, anchor=east] at (+3.0, 1.2) {$N{=}4$};
+    \node[tick, anchor=east] at (+6.0, 0.7) {$N{=}3$};
 
     \draw[fault] (2.0, -0.1) -- (2.0, 1.85);
     \draw[fault] (5.0, -0.1) -- (5.0, 1.85);
@@ -79,9 +72,9 @@
         {$t_2^\star$};
 
   % H2 dwell brace below the bottom panel
-  \draw[decorate, decoration={brace, amplitude=2pt, mirror},
-        thin] (2.0, -0.6) -- (5.0, -0.6)
-        node[annot, midway, below=2pt]
+  \draw[decorate, decoration={brace, amplitude=2pt},
+        thin] (2.0, 4.5) -- (5.0, 4.5)
+        node[annot, midway, above=2pt]
         {$\tau_{d,1} \ge \tau_{\mathrm{pend}}$ (H2)};
 
   % ===== Short on-figure labels =============================
@@ -120,18 +113,18 @@ function across two unannounced cable-severance events.
 at each fault $t_k^\star$; cardinality is right-continuous.
 \emph{Bottom:} $V(\boldsymbol{\xi})$ exhibits three regimes,
 labelled inline. \textbf{Flow:} between events the continuous-time
-decay of Lemma~\ref{lem:altitude-iss} gives
+decay of \cref{lem:altitude-iss} gives
 $\dot V \le -\lambda V + \gamma_w(\|w\|) +
 \gamma_\theta(\|\theta-\theta^\ast\|) + \gamma_\eta(\eta)$.
 \textbf{Jump:} at each fault $t_k^\star$ the post-redistribution
 geometry term satisfies
 $V(t_k^{\star,+}) \le V(t_k^{\star,-}) + \chi(\Delta_f)$
-(Lemma~\ref{lem:jump-continuity}). \textbf{Contraction:} composing
+(\cref{lem:jump-continuity}). \textbf{Contraction:} composing
 flow with jumps over one inter-fault dwell yields the
 per-cycle bound
 $V(t_{k+1}^-) \le \rho\,V(t_k^-) + c$ with
-$\rho = \exp(-\alpha_{\min}\tau_{\mathrm{pend}}) \approx 0.005$
-(Lemma~\ref{lem:dwell-decay}). The H2 hypothesis
+$\rho = \exp(-\alpha_{\min}\tau_d)\,\mu^2 \approx 0.005$
+(\cref{lem:dwell-decay}). The H2 hypothesis
 $\tau_{d,k} \ge \tau_{\mathrm{pend}}$ is structural: it is the
 minimum window over which the feed-forward identity
 $T_i^{\mathrm{ff}} = T_i$ contracts the post-jump overshoot
