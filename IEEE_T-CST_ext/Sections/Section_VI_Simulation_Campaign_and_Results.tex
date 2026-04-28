@@ -311,10 +311,20 @@ controller.
 
 \begin{figure}[htbp]
   \centering
-  \includegraphics[width=\columnwidth]{Figures/fig_self_announcement_V4.png}
+  \subfloat[Surviving rope tension $T_1(t)$.]{%
+    \includegraphics[width=\columnwidth]{Figures/fig_self_announcement_V4_a.png}%
+    \label{fig:self-announcement-a}}\\[-0.5ex]
+  \subfloat[Feed-forward command $T_1^{\mathrm{ff}}(t)$.]{%
+    \includegraphics[width=\columnwidth]{Figures/fig_self_announcement_V4_b.png}%
+    \label{fig:self-announcement-b}}\\[-0.5ex]
+  \subfloat[Commanded thrust $f_1(t)$.]{%
+    \includegraphics[width=\columnwidth]{Figures/fig_self_announcement_V4_c.png}%
+    \label{fig:self-announcement-c}}\\[-0.5ex]
+  \subfloat[Payload altitude error $e_{L,z}(t)$.]{%
+    \includegraphics[width=\columnwidth]{Figures/fig_self_announcement_V4_d.png}%
+    \label{fig:self-announcement-d}}
   \caption{%
-    \emph{Self-announcement causal chain.} Single-canvas,four-row stacked view of fault~1 of the V4 schedule
-    ($t_1{=}\SI{12}{\second}$, drone~0 severed). Rows, top to bottom: surviving rope tension $T_1(t)$; feed-forward command $T_1^{\mathrm{ff}}(t)$; commanded thrust $f_1(t)$; payload altitude error $e_{L,z}(t)$. Teal solid: baseline (FF-on); orange dashed: P2-A ablation (FF-off, identity disabled). At fault, the surviving rope's measured tension rises immediately (row~1) regardless of controller configuration. With the identity active, $T_1^{\mathrm{ff}}$ tracks $T_1$ at the next control tick (row~2), commanded thrust steps proportionally (row~3), and the altitude error is bounded (row~4). With the identity disabled, $T_1^{\mathrm{ff}} \equiv 0$, the thrust step is absent, and the altitude error grows by $\sim\!300$~mm before the slow PD recovers --- visually closing the causal chain \emph{measured tension} $\to$ \emph{feed-forward} $\to$ \emph{thrust step} $\to$ \emph{altitude recovery}.%
+    \emph{Self-announcement causal chain.} Fault~1 of V4 ($t_1{=}\SI{12}{\second}$, drone~0 severed). Teal solid: baseline (FF-on); orange dashed: P2-A ablation (FF-off, identity disabled). At fault, the surviving rope's measured tension rises immediately~(a) regardless of controller configuration. With the identity active, $T_1^{\mathrm{ff}}$ tracks $T_1$ at the next control tick~(b), commanded thrust steps proportionally~(c), and altitude error stays bounded~(d). With the identity disabled, $T_1^{\mathrm{ff}}\!\equiv\!0$, the thrust step is absent, and altitude error grows by $\sim\!\SI{300}{\milli\metre}$ before the slow PD recovers --- closing the causal chain \emph{measured tension} $\to$ \emph{feed-forward} $\to$ \emph{thrust step} $\to$ \emph{altitude recovery}.%
   }
   \label{fig:self-announcement}
 \end{figure}

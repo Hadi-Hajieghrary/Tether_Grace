@@ -56,7 +56,7 @@
   % and att (left edge x=2.3), so sense.north runs vertically up
   % to sumT without crossing any block.
   \node[sens] (sense) at (1.7, -2.6)
-        {Local sensors\\$x_i,\;\; T_i,\;\; x_L$};
+        {Local sensors\\$x_i,\;\; T_i,\;\; v_L$};
 
   % Plant -> sensors: |- (vertical down then horizontal left)
   \draw[senseflow] (plant.south) |- (sense.east);
@@ -64,7 +64,7 @@
   % Sensors -> PD: horizontal left at y = -2.6, then vertical up
   % at x = -6.0.  Single draw call -> ONE arrowhead at pd.south.
   \draw[senseflow] (sense.west)
-        -- node[sig, pos=0.65, above] {$x_i,\,x_L$}
+        -- node[sig, pos=0.65, above] {$x_i,\,v_L$}
         (-6.0, -2.6) -- (pd.south);
 
   % T_i tap (red) — sense.NORTH straight up, then horizontal

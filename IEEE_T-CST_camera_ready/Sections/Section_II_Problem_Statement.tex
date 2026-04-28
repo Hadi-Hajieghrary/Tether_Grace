@@ -257,6 +257,6 @@ Given the plant
     \vect T(t) \;-\; \vect T^{\mathrm{qs}}(t),
   \label{eq:tension-error-state}
 \end{equation}
-where $\vect T^{\mathrm{qs}}(t)$ is the slow-manifold tension profile restricted to the active cable set $\mathcal{S}(t)$. \emph{(iii)} Strict information locality \eqref{eq:info-set} blocks centralized fault-detection and peer-state-aggregation architectures; the controller must absorb the post-fault load increment using only the local rise in $T_i(t)$. No existing cooperative aerial transport formulation addresses these three jointly.
+where $\vect T^{\mathrm{qs}}(t)$ is the slow-manifold tension profile restricted to the active cable set $\mathcal{S}(t)$; the formal role of $\vect\varepsilon_T$ in the Lyapunov decomposition is developed in \cref{sec:stability}. \emph{(iii)} Strict information locality \eqref{eq:info-set} blocks centralized fault-detection and peer-state-aggregation architectures; the controller must absorb the post-fault load increment using only the local rise in $T_i(t)$. No existing cooperative aerial transport formulation addresses these three jointly.
 
 \paragraph{Forward references.} The reduction theorem (\cref{thm:reduction}) gives the $O(\delta + \eta_{\max})$ admissibility bound on $\Omega_\tau^{\mathrm{dwell}}$; the hybrid practical-ISS envelope with closed-form $\lambda$ and $\rho \in (0,1)$ is \cref{thm:hybrid-stability} of \cref{sec:stability}. The closed-form $L_1$ gain bound is \cref{prop:gamma-star} in \cref{sec:extensions}. Acceptance thresholds and performance targets are in \cref{sec:simulation}.

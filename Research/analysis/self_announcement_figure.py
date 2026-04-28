@@ -1,22 +1,21 @@
 #!/usr/bin/env python3
 """A1: Self-announcement mechanism figure.
 
-Single canvas, four stacked rows on a shared time axis covering a
-fault-zoom window around fault 1 (t1=12s) of the V4 dual-fault
-schedule:
-  Row 1: per-rope tension T_i(t)         (FF-on solid vs FF-off dashed)
-  Row 2: feed-forward command T_i^ff(t)
-  Row 3: per-drone commanded thrust f_i(t)
-  Row 4: payload altitude error e_{L,z}(t)
+Four panels on a common fault-zoom window around fault 1 (t1=12s)
+of the V4 dual-fault schedule, each saved as its own PNG:
+  (a): per-rope tension T_i(t)         (FF-on solid vs FF-off dashed)
+  (b): feed-forward command T_i^ff(t)
+  (c): per-drone commanded thrust f_i(t)
+  (d): payload altitude error e_{L,z}(t)
 
-This single figure exposes the causal chain: peer cable severs ->
+These four panels expose the causal chain: peer cable severs ->
 surviving T_i jumps -> the identity T_i^ff = T_i propagates the
 jump -> thrust steps up at the plant's native rate -> altitude
 error stays bounded. With FF off, the same fault triggers the
 same T_i jump but T_i^ff and thrust do NOT step, and the altitude
 error grows.
 
-Output: IEEE_T-CST/Figures/fig_self_announcement_V4.png
+Output: IEEE_T-CST/Figures/fig_self_announcement_V4_{a,b,c,d}.png
 """
 from __future__ import annotations
 import sys
@@ -55,74 +54,76 @@ def main():
         print("missing required data")
         return
 
-    fig, axes = plt.subplots(4, 1, figsize=(7.5, 8.0), sharex=True)
-    ax_T, ax_Tff, ax_f, ax_e = axes
-
-    for ax in axes:
-        ax.axvline(T1, color="red", linestyle=":", linewidth=1.0,
-                   alpha=0.65)
-
     on_color = "#1F6F6F"     # teal for FF-on (the claim)
     off_color = "#D3580B"    # orange for FF-off (the counterfactual)
 
-    # Row 1 — surviving rope tension (drone 1, the clean signal).
-    for df, lab, c, ls in [(ff_on, "FF-on", on_color, "-"),
-                            (ff_off, "FF-off", off_color, "--")]:
+    def _trim(df):
         t = df["time"].values
         m = (t >= T_LO) & (t <= T_HI)
-        ax_T.plot(t[m], df[f"tension_{DRONE_FOCUS}"].values[m],
-                  color=c, linewidth=1.6, linestyle=ls,
-                  label=lab)
-    ax_T.set_ylabel(rf"$T_{DRONE_FOCUS}(t)$ $[\mathrm{{N}}]$  (peer-cable"
-                    rf" severance announces here)", fontsize=9)
-    ax_T.legend(loc="upper right", fontsize=8, framealpha=0.92)
-    # Short panel title; full description in caption.
-    ax_T.set_title(r"V4 self-announcement chain "
-                   r"$T_i\!\to\!T_i^{\mathrm{ff}}\!\to\!f_i\!\to\!e_{L,z}$",
-                   fontsize=9, pad=4)
+        return t[m], m
 
-    # Row 2 — feed-forward command (the identity T_ff = T applied,
-    # or NOT applied in the FF-off case).
-    for df, lab, c, ls in [(ff_on, "FF-on", on_color, "-"),
-                            (ff_off, "FF-off", off_color, "--")]:
-        t = df["time"].values
-        m = (t >= T_LO) & (t <= T_HI)
-        ax_Tff.plot(t[m], df[f"T_ff_{DRONE_FOCUS}"].values[m],
-                    color=c, linewidth=1.6, linestyle=ls)
-    ax_Tff.set_ylabel(rf"$T_{DRONE_FOCUS}^{{\mathrm{{ff}}}}(t)$ $[\mathrm{{N}}]$  "
-                      r"(identity translates announcement)",
-                      fontsize=9)
+    def _new_axes(width_in: float = 7.5, height_in: float = 1.6):
+        fig, ax = plt.subplots(figsize=(width_in, height_in))
+        ax.axvline(T1, color="red", linestyle=":", linewidth=1.0,
+                   alpha=0.65)
+        ax.set_xlim(T_LO, T_HI)
+        return fig, ax
 
-    # Row 3 — commanded thrust (the response).
-    for df, lab, c, ls in [(ff_on, "FF-on", on_color, "-"),
-                            (ff_off, "FF-off", off_color, "--")]:
-        t = df["time"].values
-        m = (t >= T_LO) & (t <= T_HI)
-        ax_f.plot(t[m], df[f"thrust_cmd_{DRONE_FOCUS}"].values[m],
-                  color=c, linewidth=1.6, linestyle=ls)
-    ax_f.set_ylabel(rf"$f_{DRONE_FOCUS}(t)$ $[\mathrm{{N}}]$  "
-                    r"(commanded thrust steps up)",
-                    fontsize=9)
+    def _save(fig, suffix: str):
+        out = FIG / f"fig_self_announcement_V4_{suffix}.png"
+        fig.tight_layout(pad=0.4)
+        fig.savefig(out, dpi=200, bbox_inches="tight",
+                    pad_inches=0.05)
+        plt.close(fig)
+        print(f"  wrote {out.name}")
 
-    # Row 4 — payload altitude error.
+    # Panel (a) — surviving rope tension.
+    fig, ax = _new_axes()
     for df, lab, c, ls in [(ff_on, "FF-on", on_color, "-"),
                             (ff_off, "FF-off", off_color, "--")]:
-        t = df["time"].values
-        m = (t >= T_LO) & (t <= T_HI)
+        t, m = _trim(df)
+        ax.plot(t, df[f"tension_{DRONE_FOCUS}"].values[m],
+                color=c, linewidth=1.6, linestyle=ls, label=lab)
+    ax.set_ylabel(rf"$T_{DRONE_FOCUS}(t)$ [N]", fontsize=9)
+    ax.set_xlabel(r"time [s]", fontsize=9)
+    ax.legend(loc="upper right", fontsize=8, framealpha=0.92)
+    _save(fig, "a")
+
+    # Panel (b) — feed-forward command.
+    fig, ax = _new_axes()
+    for df, lab, c, ls in [(ff_on, "FF-on", on_color, "-"),
+                            (ff_off, "FF-off", off_color, "--")]:
+        t, m = _trim(df)
+        ax.plot(t, df[f"T_ff_{DRONE_FOCUS}"].values[m],
+                color=c, linewidth=1.6, linestyle=ls)
+    ax.set_ylabel(rf"$T_{DRONE_FOCUS}^{{\mathrm{{ff}}}}(t)$ [N]",
+                  fontsize=9)
+    ax.set_xlabel(r"time [s]", fontsize=9)
+    _save(fig, "b")
+
+    # Panel (c) — commanded thrust.
+    fig, ax = _new_axes()
+    for df, lab, c, ls in [(ff_on, "FF-on", on_color, "-"),
+                            (ff_off, "FF-off", off_color, "--")]:
+        t, m = _trim(df)
+        ax.plot(t, df[f"thrust_cmd_{DRONE_FOCUS}"].values[m],
+                color=c, linewidth=1.6, linestyle=ls)
+    ax.set_ylabel(rf"$f_{DRONE_FOCUS}(t)$ [N]", fontsize=9)
+    ax.set_xlabel(r"time [s]", fontsize=9)
+    _save(fig, "c")
+
+    # Panel (d) — payload altitude error.
+    fig, ax = _new_axes()
+    for df, lab, c, ls in [(ff_on, "FF-on", on_color, "-"),
+                            (ff_off, "FF-off", off_color, "--")]:
+        t, m = _trim(df)
         ez = df["ref_z"].values[m] - df["payload_z"].values[m]
-        ax_e.plot(t[m], ez * 1000, color=c, linewidth=1.6,
-                  linestyle=ls)
-    ax_e.set_ylabel(r"$e_{L,z}(t)$ $[\mathrm{mm}]$  "
-                    r"(payload altitude error)", fontsize=9)
-    ax_e.set_xlabel(r"time $[\mathrm{s}]$", fontsize=10)
-    ax_e.axhline(0, color="black", linewidth=0.4, linestyle=":",
-                 alpha=0.6)
-
-    fig.tight_layout(pad=0.4, h_pad=0.25)
-    fig.savefig(FIG / "fig_self_announcement_V4.png", dpi=200,
-                bbox_inches="tight", pad_inches=0.05)
-    plt.close(fig)
-    print("  wrote fig_self_announcement_V4.png")
+        ax.plot(t, ez * 1000, color=c, linewidth=1.6, linestyle=ls)
+    ax.axhline(0, color="black", linewidth=0.4, linestyle=":",
+               alpha=0.6)
+    ax.set_ylabel(r"$e_{L,z}(t)$ [mm]", fontsize=9)
+    ax.set_xlabel(r"time [s]", fontsize=9)
+    _save(fig, "d")
 
     # Compact metrics for the §VI text: tension-rise latency,
     # thrust-response latency, peak sag, recovery time.
