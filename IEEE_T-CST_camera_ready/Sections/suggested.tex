@@ -1,0 +1,422 @@
+## Executive Summary
+
+**No — not yet.** The paper now clears several important hurdles for an IEEE Transactions review, but it still does **not** clear the acceptance hurdle with high confidence. My likely reviewer recommendation would be:
+
+> **Major Revision**
+> Promising contribution, technically interesting mechanism, but not yet sufficiently protected against reviewer objections on overclaiming, proof scope, evidence generality, and baseline comparison.
+
+It is **credible enough to be reviewed seriously**, but I would not expect smooth acceptance in its current form.
+
+---
+
+## What the Paper Already Passes
+
+### 1. It has a real technical idea
+
+The core idea is strong: cable severance is treated as a **self-announcing structural transition**, because the surviving drones directly observe the load redistribution through local rope tension. The identity (T_i^{\mathrm{ff}}=T_i) is then used as a passive local response mechanism without detection or peer communication. The Introduction now states the novelty more defensibly: not cable severance alone, and not locality alone, but **stability certification of a decentralized tension-to-thrust mechanism**.
+
+### 2. It has a coherent theory/evidence chain
+
+The manuscript connects:
+
+* taut-cable reduction,
+* local tension cancellation,
+* altitude/horizontal ISS,
+* bounded fault jump,
+* dwell-cycle contraction,
+* hybrid practical-ISS recovery.
+
+That is a legitimate Transactions-style structure. The paper explicitly says the guarantee is conditional on bounded slack, spaced faults, and a single-active-regime QP condition, and reports that these gates are audited in simulation.
+
+### 3. The main ablation is strong
+
+The feed-forward ablation is the strongest experimental evidence. Removing (T_i^{\mathrm{ff}}=T_i) increases cruise RMSE by **34–39%** and peak post-fault altitude sag by **3.6–4.0×** across V3–V5. That is a meaningful effect size and strongly supports the causal role of the identity within the tested controller architecture.
+
+### 4. The simulation campaign is more serious than a toy example
+
+The paper includes six main variants, targeted ablations, dual-fault cases, reduction-fidelity checks, dwell-boundary characterization, and a reproducibility manifest. The V3–V6 results show single- and dual-fault recovery without fault signals or peer communication, with reported contraction evidence and bounded sag.
+
+---
+
+## What It Still Does Not Pass
+
+### 1. The paper still overclaims
+
+This is the biggest remaining problem. The Conclusion still says the architecture “eliminates” the detection–reconfiguration timeline and that “the identity is the response.” It also says the “contribution is the category itself.” Those statements are too broad for the evidence, which is one simulation family, one fixed seed, and no active baseline comparison.
+
+A safer claim is:
+
+> Within the analyzed baseline architecture and declared admissibility domain, local measured-tension feed-forward supplies the bounded post-fault jump mechanism required by the hybrid practical-ISS certificate.
+
+That is publishable. “The contribution is the category itself” is vulnerable.
+
+---
+
+### 2. The evidence is still single-seed
+
+The paper admits that the simulation and ablation results are deterministic point estimates at fixed Dryden seed 42, and that CRN-paired replication with bootstrap intervals is future work.
+
+This is acceptable for a mechanism audit, but weak for a Transactions-level robustness claim. A strict reviewer can say:
+
+> The central effect may be seed-specific.
+
+The paper should add at least **10 Dryden seeds** for FF-on/FF-off across V3–V5. Without that, acceptance depends heavily on reviewer tolerance.
+
+---
+
+### 3. There is no active fault-tolerant baseline
+
+The paper criticizes detection–classification–reconfiguration pipelines, but the Conclusion itself lists a head-to-head comparison against active fault-tolerant baselines as future work.
+
+That is dangerous. If a paper’s motivation is “we avoid active FT latency,” then a reviewer may reasonably expect comparison against:
+
+* delayed detection + load redistribution,
+* observer-based load reassignment,
+* centralized tension allocation,
+* filtered tension feed-forward,
+* retuned high-gain PD without feed-forward.
+
+The current ablation proves the identity matters relative to **your own controller without the identity**. It does not prove superiority over reasonable active FT alternatives.
+
+---
+
+### 4. The theoretical framing is still too strong in places
+
+The paper still uses language like “identity delivers hybrid practical ISS” and “this single identity is the carrier of hybrid practical-ISS.” But the actual mechanism is composite:
+
+* the identity bounds the jump,
+* the PD/QP/anti-swing/attitude cascade supplies inter-fault contraction,
+* the dwell condition composes jump and flow.
+
+The paper itself has places that recognize this, but the wording is inconsistent. For a control-theory reviewer, this matters.
+
+---
+
+### 5. There is still a model/information consistency issue
+
+Fig. 1 says each drone measures local payload state (x_L), while the formal admissible information set excludes payload position and says only payload velocity (v_L) enters the baseline controller.  The later controller section confirms the baseline does not access (p_L), but Fig. 3 still labels local sensors as (x_i,T_i,x_L).
+
+This is easy to fix, but if left unresolved, it gives reviewers a clean objection:
+
+> The controller’s claimed locality pattern is inconsistent across figures and formal definitions.
+
+---
+
+## Reviewer-Style Verdict by Hurdle
+
+| Hurdle                   |   Current Status | Judgment                                                      |
+| ------------------------ | ---------------: | ------------------------------------------------------------- |
+| Novelty                  |    Mostly passes | Strong mechanism, but category claim overreaches              |
+| TCST scope               |           Passes | Control + robotics + stability + simulation                   |
+| Mathematical rigor       |       Borderline | Good structure, but proof scope must be stated more carefully |
+| Experimental evidence    | Borderline/fails | Strong ablation, but single seed and no active baseline       |
+| Claim discipline         |  Fails in places | Conclusion and some remarks still overclaim                   |
+| Reproducibility          |    Mostly passes | Fixed seed and manifest help                                  |
+| Presentation consistency |       Borderline | Figure/info-set inconsistency remains                         |
+| Acceptance readiness     |          Not yet | Major revision likely                                         |
+
+---
+
+## My Final Judgment
+
+**The paper does not yet pass the full IEEE Transactions acceptance hurdle.** It is **promising and reviewable**, but in its current form I would expect a strong reviewer to request major revision.
+
+To make it acceptance-grade, do these four things before submission:
+
+1. **Add multi-seed FF-on/FF-off ablation** for V3–V5.
+2. **Add one simple active FT baseline**, preferably delayed detection + load redistribution.
+3. **Remove all category-level and universal language**, especially “the identity is the response” and “the contribution is the category itself.”
+4. **Fix the information-set inconsistency** in Fig. 1/Fig. 3 and soften “identity alone delivers ISS” language.
+
+With those fixes, I would judge the paper as a **credible TCST submission with a realistic chance after revision**. Without them, it is likely to receive **major revision or rejection from a strict control/robotics reviewer**, not because the idea is weak, but because the paper still asks the reader to accept more than the current evidence proves.
+
+
+
+
+
+
+
+
+This is a technically ambitious paper with genuine strengths, but it faces several meaningful hurdles against IEEE T-CST standards. Here is a structured assessment.
+
+---
+
+## Strengths That Support Acceptance
+
+**Novelty and Framing**
+The core claim — that the feed-forward identity T_ff_i = Ti converts a self-announcing structural fault into a passive thrust response without detection, classification, or reconfiguration — is genuinely novel and cleanly motivated. The distinction between "eliminating the detection pipeline" versus "substituting a faster one" is a crisp intellectual contribution.
+
+**Theoretical Rigor**
+The lemma stack (Lemmas 2–7 → Theorem 8) is well-organized. Closed-form expressions for λ, ρ, and the Lyapunov matrix Pv add reproducibility. The taut-cable reduction theorem with an explicit O(δ + η_max) error budget is properly bounded. The paper earns credit for honestly stating the conditional nature of its guarantees and identifying the partial circularity in H1/H3 validation (Section IV-A).
+
+**Ablation Discipline**
+The P2-A campaign is the strongest element of the paper. A 34–39% RMSE inflation and 3.6–4.0× sag amplification from disabling a single identity is a compelling causal isolation, rare in cooperative UAV papers.
+
+**Honest Null Findings**
+Reporting NF2 and NF3 — that MPC and reshape are structurally inactive on the demonstrated family — is scientifically honest and actually strengthens the passive-mechanism claim, even if it raises questions about the architecture's overall complexity.
+
+---
+
+## Hurdles That Would Likely Trigger Rejection or Major Revision
+
+**1. No Hardware Experiments — The Critical Gap**
+IEEE T-CST virtually always requires hardware validation for physically-motivated control papers, especially those making fault-tolerance claims. Bead-chain Kelvin–Voigt models in Drake, however high-fidelity, do not capture motor wash, real attachment compliance, IMU noise under shock, or the actual cable-severance transient. The paper's own scope excludes tension-sensor failures, yet a physical cut would involve sensor dropout. This is the single most likely reason for rejection.
+
+**2. Single Simulation Seed**
+All quantitative results — RMSE, sag, contraction ratios — come from one fixed Dryden seed (42). The paper acknowledges this and defers CRN-paired replication to future work, but a reviewer is entitled to ask: how many of the ablation effect sizes survive averaging over even ten seeds? The 2σ exceedance property of seed 42 makes it a stress case, but stress-case performance does not substitute for distributional validity.
+
+**3. The Analytical-Empirical ρ Gap Is Large and Inadequately Resolved**
+ρ_ana ≈ 0.005 versus ρ̂_V4 = 0.20 is a factor-of-40 discrepancy. Remark 2 explains it through the additive constant c/V(t^−_k), and the argument is logically sound, but the bound (63) is not quantitatively tight. A reviewer may reasonably conclude the theoretical contraction rate is vacuous for the demonstrated operating regime.
+
+**4. Partial Circularity in Hypothesis Defense**
+The paper explicitly acknowledges in Section IV-A that the empirical defense of H1 and H3 uses the same pre-declared missions as the theorem's consequences. Two mitigations are offered (physics-motivated gate bounds; independent Tikhonov validation of C1), but the validation is still post-hoc for H3. For a journal claiming a conditional guarantee, this circularity needs stronger treatment — ideally a holdout trajectory family or a design-time H1/H3 certificate.
+
+**5. Team-Size Independence Is Theoretical Only**
+The paper demonstrates only N = 5. The team-size independence claim rests entirely on the structural argument that N does not appear in the per-drone law or lemma stack, with dependence concentrating in the actuator-margin envelope. A reviewer may require at least one additional N (e.g., N = 3 or N = 7) to empirically support the claim, even in simulation.
+
+**6. Proposition 1 Is Acknowledged to Be Weak**
+Remark 5 states that the L1 necessary condition (72) ignores predictor error, projection, cross-coupling, and filter dynamics. With canonical Γ three orders of magnitude below Γ*, the bound is non-vacuous but barely falsifiable. This weakens C3 as a standalone contribution.
+
+**7. Extensions Add Complexity Without Demonstrated Benefit**
+The MPC layer (Section V-B) and reshape supervisor (Section V-C) together constitute a substantial fraction of the paper's length, yet both are structurally inactive on the demonstrated trajectory family. A reviewer might argue these should be a companion paper or a shorter technical note, not primary contributions here.
+
+---
+
+## Verdict
+
+| Criterion | Assessment |
+|---|---|
+| Novelty | Strong |
+| Theoretical rigor | Good, with caveats on ρ gap and Proposition 1 scope |
+| Experimental validation | Insufficient for T-CST (no hardware, single seed) |
+| Clarity | High, though the paper is very long |
+| Journal scope fit | Well-matched |
+
+The paper is not ready for acceptance in its current form. It would most likely receive a **major revision** decision, with hardware experiments as a required condition. If the authors cannot conduct hardware experiments (which is a real constraint), they would need to at minimum: demonstrate across multiple N values, provide multi-seed statistics on the ablation effect sizes, and tighten the ρ gap discussion into a quantitative bound rather than a qualitative explanation. The core passive fault-tolerance result is genuinely publishable — the question is whether the supporting evidence meets T-CST's empirical bar.
+
+
+
+
+
+My judgment: **not yet**. The current paper is **much closer** to being TCST-submittable than earlier versions, but **as it stands I would not say it clears the IEEE Transactions acceptance hurdle**. As a strict reviewer, I would likely recommend **Major Revision**, not acceptance.
+
+It has a publishable core idea, but a few remaining issues are still serious enough that an expert reviewer could object.
+
+## What is now improved
+
+The Introduction is much stronger. It now correctly says the identity (T_i^{\mathrm{ff}}=T_i) provides the **dominant passive fault-response mechanism**, and it acknowledges that measured interaction-force feedback is not new. It also fixes the earlier timing inconsistency by saying response is required within one payload-pendulum period, (\tau_{\mathrm{pend}}=2.24) s for (L=1.25) m.
+
+The contribution hierarchy is also improved: C2, the hybrid practical-ISS theorem, is now presented as the primary contribution, while C1 and C3 are supporting results. The paper also explicitly says the guarantee is conditional on bounded slack excursions, spaced faults, and QP active-set regularity.
+
+Those are important improvements.
+
+## What still prevents acceptance as-is
+
+### 1) The Abstract still overstates the result
+
+The Abstract is better than before, but it still says:
+
+> “The identity delivers hybrid practical input-to-state stability…”
+
+That is still too strong. The identity alone does not deliver ISS. The identity supplies the **bounded-jump mechanism**; the PD/QP/anti-swing/attitude cascade supplies inter-fault contraction. The Abstract also still presents “three closed-form guarantees” almost equally, which weakens the now-improved contribution hierarchy.
+
+I would change the Abstract so it says:
+
+> “The identity supplies the bounded-jump mechanism required by the hybrid practical-ISS certificate.”
+
+not:
+
+> “The identity delivers hybrid practical ISS.”
+
+### 2) Section VI still uses “validation” language
+
+The Simulation section still opens with:
+
+> “We validate the controller through a pre-specified simulation campaign…”
+
+and says the campaign “validates” C1 and gives “direct evidence” for C2. It also states that all numerical claims are deterministic point estimates from a single Dryden seed selected as a worst-case realization.
+
+That remains a reviewer red flag. For TCST, simulation-only fixed-seed evidence should be framed as an **audit**, not broad validation.
+
+The section should instead say:
+
+> “This section audits the theoretical claims on a pre-specified Drake multibody campaign…”
+
+The current wording still sounds broader than the evidence supports.
+
+### 3) Single-seed simulation remains a significant weakness
+
+The paper reports all headline results from one fixed Dryden seed, with confidence intervals left as future work.  That is acceptable only if the claims are carefully scoped. But the paper still uses strong phrases such as “causal mechanism,” “validates,” and “worst-case realization.”
+
+A strict reviewer may ask:
+
+> How do we know the 34–39% RMSE increase and 3.6–4.0× sag increase are not seed-specific?
+
+This is probably the biggest empirical weakness. A small multi-seed FF-on/FF-off ablation would greatly improve the paper.
+
+### 4) Lemma 6 is improved but still not fully robust
+
+The revised Lemma 6 now gives a bounded jump with
+
+[
+\chi(\Delta_f)\le \bar c_f(\Delta_f+\Delta_f^2),
+]
+
+and treats the equal-sharing hover case as a calibration/special case. That is better than the earlier brittle symmetric formula.
+
+However, it still does not fully implement the more rigorous form:
+
+[
+V^+ \le \mu_f V^- + \bar c_f\Delta_f^2 + c_\eta.
+]
+
+The dwell contraction still appears to use a pure exponential factor rather than a jump-gain-aware condition of the form:
+
+[
+\rho_k=\mu_f e^{-\alpha_{\min}\tau_{d,k}}<1.
+]
+
+That is a mathematical vulnerability. It may pass if reviewers are charitable, but a rigorous hybrid-systems reviewer may challenge it.
+
+### 5) The paper still contains “identity alone” or “suffices” language
+
+In Section III, the paper says:
+
+> “Identity (31) is necessary, not merely convenient…”
+
+and later says without it the closed loop loses hybrid practical-ISS.
+
+In Section IV, the paper says the lemma stack certifies the architectural claim that “a single decentralized feed-forward identity suffices.”
+
+This is still too broad. It should be scoped to:
+
+> “within the analyzed baseline architecture and gain schedule.”
+
+Otherwise a reviewer can ask:
+
+> Necessary among what class of controllers?
+
+### 6) Fig. 1 / information pattern inconsistency remains
+
+Fig. 1 says each drone measures “local payload state (x_L),” but the formal information set says payload position (p_L) is deliberately excluded and only (v_L) enters the baseline controller.
+
+This is easy to fix but important. Change the caption and Fig. 3 labels from (x_L) to (v_L), or explicitly say “payload estimate restricted to (v_L) in the baseline law.”
+
+## My acceptance-level judgment
+
+As a TCST reviewer, I would currently write something like:
+
+> The paper presents an interesting and potentially publishable decentralized passive fault-response mechanism for cable severance in cooperative aerial transport. The revised framing is substantially improved, and the conditional nature of the stability result is now more visible. However, the paper still overstates the role of the feed-forward identity, the simulation evidence is fixed-seed and simulation-only, the main jump/dwell proof should be made more rigorous, and the empirical section should be framed as an admissibility/mechanism audit rather than validation. I recommend Major Revision.
+
+## What must be fixed before I would call it acceptable
+
+Minimum required changes:
+
+1. Rewrite Abstract so the identity “supplies the bounded-jump mechanism,” not “delivers ISS.”
+2. Rewrite Section VI opening as an audit, not validation.
+3. Replace “worst-case seed” with “fixed reproducible stress realization.”
+4. Add explicit text after Table VI: H1–H3 are audited for demonstrated missions only, not guaranteed globally.
+5. Scope all “necessary/suffices/identity alone” claims to the analyzed baseline architecture.
+6. Either revise Lemma 6/dwell theorem to include a jump gain (\mu_f), or clearly justify why the additive jump form is sufficient.
+7. Fix Fig. 1/Fig. 3 payload-state vs payload-velocity inconsistency.
+8. Ideally add a small multi-seed FF-on/FF-off ablation.
+
+## Final verdict
+
+**Does it pass the hurdles right now?**
+**Not fully.** It is **credible and close**, but I would expect **Major Revision** from a serious IEEE Transactions reviewer.
+
+**Could it pass after targeted revisions?**
+Yes. The paper has a strong core and a publishable idea. If you fix the remaining claim-framing, simulation-evidence, and jump/dwell proof issues, it could become a serious TCST submission.
+
+
+
+I completely understand wanting to gauge a manuscript's readiness for a high-impact journal. However, I want to be upfront about my nature: as an AI, I cannot replicate the nuanced, expert evaluation of a peer-review panel, nor can I guarantee acceptance. [cite_start]Decisions for journals like *IEEE Transactions on Control Systems Technology* depend heavily on the novelty of the field at the exact moment of submission and the subjective evaluations of domain experts[cite: 1].
+
+That being said, based strictly on the text provided, the paper appears to clear many of the foundational structural and methodological hurdles expected for an IEEE Transactions submission. Here is a breakdown of how the manuscript aligns with typical journal standards, as well as a few areas where peer reviewers might focus their scrutiny.
+
+### Strong Indicators for IEEE Transactions Suitability
+
+* **Clear Theoretical Contributions**: IEEE Transactions require rigorous mathematical foundations. [cite_start]This paper delivers explicit closed-form guarantees, including a taut-cable reduction theorem [cite: 8][cite_start], a hybrid practical input-to-state stability (ISS) theorem [cite: 9][cite_start], and a discrete-time stability bound for $L_{1}$-adaptive altitude augmentation[cite: 10].
+* [cite_start]**Comprehensive Validation Structure**: The authors validate their claims using a high-fidelity Drake multibody simulation[cite: 46]. [cite_start]The validation is structured rigorously through a pre-declared six-variant capability demonstration and four targeted stress campaigns[cite: 46].
+* **Detailed Causal Isolation**: The paper doesn't just show that the system works; it isolates *why* it works. [cite_start]The authors use ablation studies (disabling the feed-forward mechanism) to prove that their specific identity, $T_{i}^{ff}=T_{i}$, is the causal mechanism for fault recovery[cite: 13, 47].
+* [cite_start]**Transparent Domain Constraints**: The authors clearly define the boundaries of their architecture, explicitly noting what lies outside the analysis domain, such as rapid multi-faults or drone-side faults like rotor loss[cite: 654, 657].
+
+### Potential Hurdles and Areas for Peer Review Scrutiny
+
+While the paper is robust, reviewers evaluating it for a *Technology*-focused journal will likely probe the following areas:
+
+* [cite_start]**Reliance on Simulation Over Hardware Experiments**: The primary validation relies on the Drake simulation environment, utilizing rigid multibody systems and Dryden wind models[cite: 665, 671]. Because the *IEEE Transactions on Control Systems Technology* highly values practical application and real-world implementation, reviewers may ask why physical flight tests were not included, or they may view purely simulation-based validation as a limitation.
+* [cite_start]**"Partial Circularity" in Analytical Hypotheses**: The authors candidly admit to a "partial circularity" regarding their empirical defense of hypotheses H1 and H3[cite: 423]. [cite_start]They acknowledge that the defense uses the same pre-declared missions as the theorem's consequences, making the validation partially post hoc[cite: 423]. [cite_start]While they offer mitigations—such as the gate bounds being set by the physics of bead-chain re-tension rather than data-fitting [cite: 425]—reviewers are likely to scrutinize whether this limits the generalizability of the findings to unseen trajectories.
+* [cite_start]**Sub-Threshold Dwell Time Assertions**: The analytical dwell condition states that consecutive faults must be separated by at least one payload-pendulum period[cite: 412]. [cite_start]However, the authors note that empirical results show stability even at sub-threshold dwell times (e.g., half a pendulum period)[cite: 769]. [cite_start]Reviewers might ask for a deeper theoretical explanation or an extension of the bounds to cover this observed behavior, which the authors currently designate as future work[cite: 894].
+
+Overall, the manuscript is structurally sound, mathematically rigorous, and transparent about its limitations—all hallmarks of a strong academic paper. Preparing strong defenses for the simulation-only validation and the hypothesis circularity will best position it for the peer-review process.
+
+
+## Summary of Contributions
+
+The manuscript identifies a single decentralized control law — set each drone's altitude thrust feed-forward equal to its own measured rope tension, $T_i^{\mathrm{ff}} = T_i$ — and certifies that this identity, embedded in an otherwise textbook three-layer cascade, delivers hybrid practical input-to-state stability across unannounced cable severances on a multi-quadrotor slung-load plant. The architectural claim is timescale-based: the post-fault tension redistribution arrives at the surviving drones through their own actuator-side measurement on the plant's native (pendulum) timescale, and the identity converts that arrival into a thrust increment at the next control tick, eliminating the announcement–detection–reconfiguration timeline as a system-level construct. Three closed-form certificates accompany the architecture: a taut-cable singular-perturbation reduction with $O(\delta + \eta_{\max})$ admissibility, a hybrid practical-ISS theorem with closed-form decay rate $\lambda$ and per-fault-cycle contraction $\rho \in (0,1)$, and a discrete-time L1 sampling-rate bound. Validation runs in Drake at $N=5$, $m_L=10$ kg, with a feed-forward ablation isolating the identity as the causal mechanism (RMSE +34–39%, peak sag $3.6\text{–}4.0\times$).
+
+## Strengths
+
+1. **The contribution is precise and the mechanism is named.** The architecture is not "a new method"; it is a single equation with a non-obvious stability consequence, and the manuscript stays disciplined about that.
+2. **Mechanism decomposition (Remark 4) is unusually clean** — the jump-bound role of the identity is separated from the contraction-rate role of the closed-loop spectrum, and the ablation maps onto exactly the first.
+3. **Lemma 6's explicit $\chi(\Delta_f) \le \bar c_f(\Delta_f + \Delta_f^2)$ and its symmetric-hover specialization to $\kappa_V \Delta_f^2/(2N_s)$** turn what was a hand-wave in earlier prior-art treatments into a calibrated bound.
+4. **Remark 2 reconciles $\rho_{\mathrm{ana}} \approx 0.005$ with $\hat\rho_{V4} = 0.20$** through the additive constant $c$ in (58), instead of leaving the two-order-of-magnitude gap unexplained.
+5. **The out-of-scope enumeration (V-D, end of section)** distinguishes analysis-domain regimes from out-of-category conditions, and explicitly disclaims the latter rather than pretending coverage.
+6. **The two null findings (NF2, NF3) are kept and reframed** rather than excised; the binding-regime identification is honest about why MPC and reshape are inactive.
+
+## Criterion (1) — Understandability
+
+**Pass.** I closed the manuscript and was able to restate the contribution unaided to a peer: problem (cooperative aerial transport, unannounced cable severance, strict locality, response within $\tau_{\mathrm{pend}}$), idea ($T_i^{\mathrm{ff}} = T_i$ exploits self-announcement through actuator-side measurement), claim (hybrid practical-ISS with $\rho \in (0,1)$ across each fault, no detection or peer communication required), and intuition (load redistributes at pendulum timescale, surviving rope's own tension rises, identity converts that rise into thrust at next tick, contracting the post-jump Lyapunov value back below the pre-fault level within one dwell). The paper-level structural argument — that the cable-severance instance is the certification vehicle and the contribution is the architectural category — is recoverable from the introduction and the discussion without additional rereading.
+
+## Criterion (2) — Reproducibility / Extensibility
+
+**Reproducibility: conditional pass.** A competent senior PhD student equipped with Drake could rebuild the controller from Tables II, IV and the equations of Section III, and reproduce Section VI on the declared seed. The seed manifest is acknowledged in Remark 8. Three real gaps:
+
+(i) **No code-availability statement.** Drake is open, the controller is fully specified in the prose, but for a paper whose headline numbers come from one Drake simulation, the absence of a stated repository or replication package is now a T-CST reviewer concern by default.
+
+(ii) **Single-seed protocol.** The "worst-case seed" defense via the post-hoc 2$\sigma$ wind exceedance is plausible but unverified; a sceptical reader cannot tell whether seed 42 is genuinely worst-case or simply convenient. A 3–5 seed sensitivity check on the headline RMSE/sag/$\hat\rho$ numbers would close this without a full Monte Carlo.
+
+(iii) **Existential constants in closed-form bounds.** $C_1, C_2$ in Theorem 1, $\bar c_f$ and $c_{f,1}, c_{f,2}$ in Lemma 6, and $\kappa_V$ throughout, are introduced and never numerically instantiated. The phrasing "their numerical values are not needed" is acceptable for $C_1, C_2$ because Theorem 1 is asymptotic; it is less acceptable for $\bar c_f$, which is invoked in the equal-sharing specialization that empirical Table III maps onto.
+
+**Extensibility: pass.** Hypotheses H1–H3 are stated up front; the admissibility domain $\Omega_\tau^{\mathrm{dwell}} \cap \Omega_{\mathrm{QP,active}}$ is named; the four out-of-category conditions are enumerated; the actuator-margin envelope (21) gives a one-line designability criterion across $(N, m_L, F)$. A follow-on researcher can extend the dwell argument, weaken H3, or swap the inner cascade without reverse-engineering hidden steps.
+
+## Major Concerns
+
+**M1. Algebraic error in Lemma 4 ($P_{xy}$ matrix entries).** The proof of Lemma 4 (eqs. 51–52) reports $P_{xy} = \begin{pmatrix} 4.833 & 0.03 \\ 0.03 & 0.1444 \end{pmatrix}$ with $\lambda_{\min}(P_{xy}) \approx 0.144$ and $\lambda_{\max}(P_{xy}) \approx 4.833$, claiming this is the unique solution of $A_{m,xy}^\top P_{xy} + P_{xy} A_{m,xy} = -I$ at $K_p^{xy}=30$, $K_d^{xy}=15$. Solving the equation directly: $-60 b = -1 \Rightarrow b = 1/60 \approx 0.0167$; $2b - 30c = -1 \Rightarrow c = 31/900 \approx 0.0344$; $a - 15b - 30c = 0 \Rightarrow a \approx 1.283$. The correct matrix is $P_{xy} \approx \begin{pmatrix} 1.283 & 0.0167 \\ 0.0167 & 0.0344 \end{pmatrix}$ with eigenvalues $\approx (1.28, 0.034)$. The claim in (51) that $p_{12}^{xy} = 1/(2K_d^{xy})$ is the source of the error: by analogy with Lemma 3 (where $p_{12} = 1/(2K_p^z)$), the correct denominator is $2K_p^{xy}$, not $2K_d^{xy}$. *Why this matters:* (a) Table III's "$\alpha_{xy} = 2.38$ s$^{-1}$ from $P_{xy}$ in (52)" is logically misleading — $\alpha_{xy}$ comes from the eigenvalues of $A_{m,xy}$, not from $P_{xy}$, and is correct independently; (b) the ISS gain prefactors in Lemma 4 inherit the wrong condition number; (c) any reader reproducing the proof will hit the same wall. The fix is local — recompute $P_{xy}$ — but it must be made and the consequences (Table III footnote, any numerical reference to $\lambda_{\max}/\lambda_{\min}$ of $P_{xy}$) propagated.
+
+**M2. Single-seed empirical protocol.** Every quantitative claim in Section VI — RMSE 0.312/0.324/0.328 m, peak sags, $\hat\rho_{V4}=0.20$, $\hat\rho_{V5}=0.045$, the 34–39% / $3.6\text{–}4.0\times$ ablation effect — rests on Dryden seed 42 alone. Remark 8 frames this as "deterministic worst-case", but worst-case relative to what distribution is unaudited. For a T-CST submission whose headline conclusions are empirical effect sizes, this is the largest exposed surface. *What would fix it:* a 3–5 seed sanity check on the V4 ablation showing the $3.6\text{–}4.0\times$ sag ratio holds across seeds, with the bracketed range reported. Full Monte Carlo can remain follow-up; a small CRN check inside the manuscript closes the credibility gap at low cost.
+
+**M3. Undisclosed constants in claimed closed-form bounds.** Theorem 1 declares $C_1, C_2$ "depending on bead-chain parameters and the wind bound" without numerical instantiation; the manuscript explicitly says these are "not needed elsewhere". Lemma 6 introduces $\bar c_f$, $c_{f,1}$, $c_{f,2}$ symbolically. The equal-sharing specialization $\chi(\Delta_f) \le \kappa_V \Delta_f^2/(2N_s)$ is invoked in Table III as an empirical anchor without giving $\kappa_V$. *Why this matters:* the manuscript markets three "closed-form" certificates; "closed-form" is weaker if the form contains uncomputed constants. A single numerical instantiation of $\bar c_f$ at the canonical operating point — or even the demonstration that $\bar c_f \le 1$ in the Lyapunov-proxy units used by Table III — would convert the existential claim into a verifiable one.
+
+**M4. Code and reproducibility package.** The seed manifest is mentioned ("archived alongside simulation outputs") but no public location, no Drake version pin, no reference container. Modern T-CST practice expects either a repository link or a clear statement that the simulator is not being released and why.
+
+## Minor Concerns
+
+1. (51) leaves $p_{11}^{xy}$ blank in the inline expression, with the value appearing only inside the matrix in (52). After the M1 correction, supply the explicit value.
+2. Lemma 3 proof: "the ISS gains $\gamma_w, \gamma_q$ are proportional to $\lambda_{\max}(P_v)/\lambda_{\min}(P_v) \approx 106$" — the ratio $2.224/0.021 \approx 106$ is correct, but stating the conditioning numerically without spelling out how it enters the gain formula leaves the reader to fill in the Young's-inequality step.
+3. Theorem 8 (64): $\lambda \triangleq \alpha_{\min}/2 = 1.19$ s$^{-1}$ from quadratic equivalence is correct but introduced abruptly; a half-sentence pointing out that $V \sim \|\xi\|^2$ and so $V$-level decay at $\alpha$ implies norm-level decay at $\alpha/2$ would help the reader who has not internalized the convention.
+4. Remark 2's bound $\hat\rho_k \le \rho_{\mathrm{ana}} + c/V(t_k^{\star,-})$ is given as an inequality but defended numerically as an equality (the V4 datum 0.20 - 0.005 = 0.195 is read as $c/V$). This is fine if $c/V$ is roughly tight, but the manuscript should state whether the inequality is conservative or whether the gap is genuinely attributable to the disturbance floor.
+5. The "indexing convention" footnote (drones $0,\ldots,N-1$ in figures vs $i=1,\ldots,N$ in theory) is correct, but Lemma 4 mixes "Theorem 4" self-reference (from the renumbering pass) with "Theorem 4" forward reference; verify all internal cross-references after the revision.
+6. Table III's "Bounded fault jump" row claims "consistent with the bounded redistribution estimate (54); under equal-sharing hover, the canonical coefficient reduces to $\kappa_V/(2N_s)$" — but the reader cannot map $\hat\chi_{\max}^{V4} = 1.1\times 10^{-4}$ onto $\kappa_V/(2 N_s) \cdot \Delta_f^2$ without knowing $\kappa_V$ and $\Delta_f$. Either give the substitution or remove the implication of agreement.
+7. Lemma 6 proof: "no impulsive force acts on the remaining taut cables, so the survivor tensions are continuous at the fault instant to leading order." The Kelvin–Voigt tension $k_{\mathrm{eff}}(\ell_i - L)^+$ is exactly continuous in the kinematic state, not "to leading order"; the leading-order qualifier is unnecessary and slightly confusing.
+8. Section II's "Why the problem is hard" tightening to a numbered list is well-judged; but obstacle (ii) introduces $\varepsilon_T(t)$ as the tension-error state without re-using it until Lemma 6. Consider deferring the definition to Section IV-A where it first matters.
+9. Section V-A's "the filtered $u_{\mathrm{ad}}$ is added to the altitude component of $a_{\mathrm{target}}$" — a forward reference to (28) and the injection point in Figure 3 would close the loop for the reader.
+10. Reference [21] (Patton 1997) is a 28-year-old plenary survey; consider supplementing with a more recent passive-FT reference, since the literature has moved on.
+
+## Questions to the Authors
+
+1. Can you supply the corrected $P_{xy}$ matrix and confirm it is consistent with $\lambda_{xy} = 2.38$ s$^{-1}$?
+2. What is the numerical value of $\bar c_f$ at the canonical operating point, and how does it compare to $\hat\chi_{\max}^{V4} = 1.1\times 10^{-4}$ when scaled by $\Delta_{f,V4}^2$?
+3. Will the Drake simulator code and seed manifest be released as part of the supplementary material? If yes, where; if no, is a simpler reduced-rope reference implementation feasible?
+4. Have any of V3–V5 ablation effects been spot-checked at a second Dryden seed? If so, please report; if not, would a 3-seed sanity check be feasible before resubmission?
+5. Lemma 6's linear term $c_{f,1} \Delta_f$ is set to zero by symmetric equal sharing at hover. Under V4's mid-trajectory fault timing (centripetal-load peak), the survivor tensions are not equal-sharing pre-fault; does the linear term become non-negligible, and does this account for any of the $\hat\rho$ residual not captured by Remark 2?
+
+## Recommendation
+
+**Major Revision.** The paper passes Criterion (1) cleanly and passes Criterion (2) on extensibility. Reproducibility passes conditionally — the gaps are cosmetic on their own, but the algebraic flaw in Lemma 4 (M1) and the single-seed protocol (M2) together cross the threshold from "polish" to "rigor". M1 is a localized error that the authors can fix in a week; M2 requires a 3–5 seed amendment to the empirical evidence; M3 and M4 require disclosure rather than new science. After these are addressed, the paper would in my judgment be accept-with-minor on a second pass: the contribution is genuine, the mechanism explanation is the cleanest I have read on this topic, and the reduction from the previous (longer) version of this manuscript shows editorial discipline that T-CST reviewers reward. The contribution itself is publishable; the rigor of its empirical and algebraic backing needs one more revision cycle.
+
+## Confidence
+
+**4.** I am familiar with the cooperative-payload, hybrid-ISS, and L1-augmentation literatures, and have rederived the Lyapunov-matrix calculations of Lemmas 3 and 4 by hand to support M1. I am less expert in the specific Drake bead-chain calibration than in the control-theoretic claims; if a Drake-internals reviewer flags a parameter inconsistency I have missed, I would defer.

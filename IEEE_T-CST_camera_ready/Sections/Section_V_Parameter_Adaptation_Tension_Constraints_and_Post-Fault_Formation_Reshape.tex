@@ -1,6 +1,6 @@
-We introduce three components that extend the baseline of \cref{sec:proposed}: an $L_1$-adaptive altitude augmentation, a receding-horizon MPC with a penalized tension-ceiling constraint (slack-implemented; \cref{sec:mpc-layer}), and a fault-triggered formation-reshape supervisor. Each targets a distinct regime. The $L_1$ layer compensates in-flight parameter deviations $(m_L, k_{\mathrm{eff}})$ from the nominal $q^\star$, addressing the matched-disturbance channel the outer-loop PD cannot cancel. The MPC layer enforces a horizon-aware linearized tension-ceiling constraint and is binding when safe working load is the dominant requirement. The reshape supervisor reassigns surviving angular slots to a closed-form configuration that minimises worst-case rope tension under a symmetric-load-sharing hover model; it is binding when post-fault tension is dominated by the hover-equilibrium asymmetry rather than by dynamic load (P2-D, \cref{rem:reshape-null}, identifies the regime where this dominance breaks down). Together they broaden the admissibility domain of \cref{thm:hybrid-stability} along three orthogonal axes; \cref{sec:theorem-preservation} shows each preserves H1--H3, so \eqref{eq:iss-envelope-explicit} continues to hold with the relevant $\gamma$-gain reduced on the addressed channel.
+Three components extend the baseline of \cref{sec:proposed}: an $L_1$-adaptive altitude augmentation, a receding-horizon MPC with a penalized tension-ceiling constraint (\cref{sec:mpc-layer}), and a fault-triggered formation-reshape supervisor. The $L_1$ layer compensates parameter deviations $(m_L, k_{\mathrm{eff}})$ from the nominal $q^\star$. The MPC layer enforces a horizon-aware linearized tension ceiling, binding when safe working load dominates. The reshape supervisor reassigns surviving slots to minimise worst-case tension under a symmetric hover model, binding when hover-equilibrium asymmetry rather than dynamic load dominates (P2-D, \cref{rem:reshape-null}). Each preserves H1--H3 (\cref{sec:theorem-preservation}), so \eqref{eq:iss-envelope-explicit} holds with the relevant $\gamma$-gain reduced.
 
-The campaigns exercise the three components to different degrees. The $L_1$ layer is probed by P2-B (mass-mismatch with FF off), recovering $\sim 40\%$ of the induced altitude sag. MPC is probed by P2-C (tension-ceiling sweep, V4) and reshape by P2-D (lemniscate-period sweep, V4). On the demonstrated schedule, the peak post-fault tension is dominated by the pre-fault dynamic spike rather than the hover-equilibrium asymmetry or the steady-state ceiling; neither MPC nor reshape is the binding mechanism in these campaigns. Each subsection identifies its binding regime; \cref{sec:theorem-preservation} shows enabling a layer outside its binding regime leaves the envelope unchanged.
+The $L_1$ layer is probed by P2-B (mass-mismatch, FF off), recovering $\sim 40\%$ of the induced altitude sag; MPC by P2-C (tension-ceiling sweep, V4); reshape by P2-D (lemniscate-period sweep, V4). On the demonstrated schedule, peak tension is dominated by the pre-fault dynamic spike; neither MPC nor reshape binds. Each subsection identifies its binding regime; \cref{sec:theorem-preservation} shows enabling a layer outside that regime leaves the envelope unchanged.
 
 \subsection{$L_1$-Adaptive Altitude Augmentation}
 \label{sec:l1-augmentation}
@@ -22,26 +22,47 @@ The standard $L_1$ architecture~\cite{Hovakimyan2010book}---Hurwitz reference mo
 \end{align}
 runs at $T_s = \SI{2e-4}{\second}$; the filtered $u_{\mathrm{ad}}$ is added to the altitude component of $\vect a_{\mathrm{target}}$ \eqref{eq:a-target}, at the injection point labelled in \cref{fig:controller-cascade}. The cutoff $\omega_c = \SI{25}{\radian\per\second}$ separates the estimator from the reference natural frequency $\omega_n^z = \sqrt{K_p^z} = \SI{10}{\radian\per\second}$ by a factor of $2.5$. Contractivity of the scalar Euler-discretized update gives the following bound.
 
-\begin{proposition}[Scalar $L_1$ sampling-rate bound]
+\begin{proposition}[Scalar $L_1$ admissible-window bound]
 \label{prop:gamma-star}
-A necessary condition for contractivity of the scalar component of the Euler-discretized adaptive-law update \eqref{eq:l1-adaptive} is
+For the Euler-discretized adaptive-law update \eqref{eq:l1-adaptive} running at step $T_s$, the scalar proxy of the discrete adaptation map yields two necessary conditions:
+\begin{enumerate}[label=(\roman*),leftmargin=2em]
+  \item \emph{(Discretization stability)}
+    \begin{equation}
+      \Gamma \;<\; \Gamma^\star
+        \;\triangleq\; \frac{2}{T_s\,p_{22}};
+      \label{eq:gamma-star}
+    \end{equation}
+  \item \emph{(Bandwidth coverage)} the continuous-time adaptation rate
+    must lie within the filter passband,
+    \begin{equation}
+      \Gamma \;>\; \Gamma_{\min}
+        \;\triangleq\; \frac{\omega_c}{p_{22}}.
+      \label{eq:gamma-min}
+    \end{equation}
+\end{enumerate}
+For $T_s = \SI{2e-4}{\second}$, $p_{22} = 0.0210$, $\omega_c = \SI{25}{\radian\per\second}$:
 \begin{equation}
-  \Gamma \;<\; \Gamma^\star
-    \;\triangleq\; \frac{2}{T_s\,p_{22}}.
-  \label{eq:gamma-star}
+  \Gamma_{\min} \;\approx\; 1{,}190
+  \;<\;
+  \underbrace{\Gamma = 2{,}000}_{\text{operating point}}
+  \;<\;
+  \Gamma^\star \;\approx\; 4.75\times 10^5.
+  \label{eq:gamma-window}
 \end{equation}
-For the canonical $T_s = \SI{2e-4}{\second}$ and
-$p_{22} \approx 0.0210$,
-$\Gamma^\star \approx 4.76\times 10^5$.
 \end{proposition}
 
 \begin{proof}
-Isolating the scalar $\hat\delta_m$-update in the absence of predictor error, projection activation, and filter dynamics, we obtain $\hat\delta_m \mapsto (1 - T_s\Gamma p_{22})\,\hat\delta_m + \mathrm{const}$. Contractivity of this scalar map requires $|1 - T_s\Gamma p_{22}| < 1$, i.e.\
-$T_s\Gamma p_{22} \in (0, 2)$, which rearranges to \eqref{eq:gamma-star}.
+Isolating the scalar $\hat\delta_m$-update in the absence of predictor error, projection, and filter dynamics gives the one-step map $\hat\delta_m \mapsto (1-T_s\Gamma p_{22})\hat\delta_m + \mathrm{const}$, with scalar pole $z^\star = 1 - T_s\Gamma p_{22}$.
+
+\smallskip
+\noindent\emph{(i) Stability.} $|z^\star| < 1$ requires $T_s\Gamma p_{22} \in (0,2)$, which gives \eqref{eq:gamma-star}.
+
+\smallskip
+\noindent\emph{(ii) Bandwidth.} The equivalent continuous-time adaptation rate is $\gamma_{\mathrm{ad}} = -\ln(z^\star)/T_s$. Since $T_s\Gamma p_{22} = 8.4\times10^{-3} \ll 1$ at the operating point, $\gamma_{\mathrm{ad}} \approx \Gamma p_{22}$ with error $< 0.4\%$. The low-pass filter with bandwidth $\omega_c$ attenuates disturbances above $\omega_c$ before the adaptation can correct them; avoiding this requires $\gamma_{\mathrm{ad}} \ge \omega_c$, i.e.\ $\Gamma p_{22} \ge \omega_c$, which gives \eqref{eq:gamma-min}.
 \end{proof}
 
-\begin{remark}[Scope of \cref{prop:gamma-star}]
-\eqref{eq:gamma-star} is a necessary condition isolating the diagonal Euler coefficient; it ignores predictor error, projection, cross-coupling, and filter dynamics, which the full discrete interconnection handles empirically. The canonical $\Gamma = 2{,}000$ lies three orders of magnitude below $\Gamma^\star$, removing the dominant $L_1$ hyper-parameter from empirical tuning. Composite Lyapunov analysis yields the standard $L_1$ ISS guarantee w.r.t.\ the unmatched residual $d_\perp$~\cite{Hovakimyan2010book}; matched components are rejected up to the filter cutoff. Empirical validation (P2-B) is in \cref{sec:VI-G}. Parameters: $\Gamma = 2{,}000$, $\omega_c = \SI{25}{\radian\per\second}$, $[\delta_{m,\min}, \delta_{m,\max}] = [-5, 5]~\mathrm{m/s^2}$, $T_s = \SI{2e-4}{\second}$.
+\begin{remark}[Design interpretation of \eqref{eq:gamma-window}]
+Both bounds operate on the scalar proxy; the full discrete interconnection (predictor error, projection, filter dynamics) is handled by composite Lyapunov analysis following~\cite{Hovakimyan2010book}. Within the proxy, \eqref{eq:gamma-window} partitions the gain axis into three regimes: below $\Gamma_{\min}$ the adaptation is too slow to track disturbances within the filter passband; above $\Gamma^\star$ the Euler integration becomes contractive only in the unstable direction. The canonical $\Gamma = 2{,}000$ is $1.68\times\Gamma_{\min}$ — chosen on the performance side of the window where the adaptation rate is $68\%$ faster than the filter bandwidth. The $238\times$ gap to $\Gamma^\star$ is a deliberately maintained discretization safety margin, not a sign of conservatism; operating near $\Gamma_{\min}$ (not near $\Gamma^\star$) keeps the adaptation rate well separated from the sampling frequency and avoids exciting unmodelled predictor-error cross-coupling. Composite Lyapunov analysis yields the standard $L_1$ ISS guarantee w.r.t.\ the unmatched residual $d_\perp$; matched components are rejected up to $\omega_c$. Empirical validation (P2-B) is in \cref{sec:VI-G}.
 \end{remark}
 
 \subsection{Receding-Horizon MPC with a Penalized Tension-Ceiling Constraint}
@@ -115,7 +136,7 @@ Regime}
 
 Each component modifies the closed loop through a disjoint channel and preserves H1--H3 of \cref{thm:hybrid-stability} on $\Omega = \Omega_\tau^{\mathrm{dwell}} \cap \Omega_{\mathrm{QP, active}}$. The $L_1$ layer adds $u_{\mathrm{ad}}$ to the altitude component of $\vect a_{\mathrm{target}}$ before the QP, leaving the QP active set and the identity unchanged; H1, H3 hold verbatim, H2 is controller-independent, and the layer reduces $\gamma_q$ in \eqref{eq:iss-envelope-explicit} by the composite $V_{L_1}$ contraction. The MPC layer replaces \eqref{eq:qp} with \eqref{eq:mpc-qp}; \cref{cor:mpc-recfeas} guarantees unconditional feasibility, \cref{prop:mpc-slack} bounds the slack by the parameter mismatch, and the closed loop reduces to the baseline in the unconstrained regime. The reshape supervisor injects a $C^2$-bounded slot perturbation through the override hook; H1, H3 hold provided the smoothstep keeps the perturbation in the admissible-reference set, and H2 reduces to a latching rule firing at most once per dwell period. \eqref{eq:iss-envelope-explicit} therefore remains valid under any combination of enabled components; cross-layer interactions are evaluated empirically.
 
-\paragraph{Admissibility regime and out-of-scope conditions.} Within $\Omega = \Omega_\tau^{\mathrm{dwell}} \cap \Omega_{\mathrm{QP, active}}$ and under H1--H3, the full architecture satisfies \eqref{eq:iss-envelope-explicit} with the closed-form gains of \cref{thm:hybrid-stability} and the channel-wise reductions above. The analysis treats the reference waypoints as a time-varying ISS input; the result is practical stability with $\bar{e}_\infty \sim \SI{0.3}{\metre}$ under nominal operation (analytical $\SI{0.27}{\metre}$, measured 3-D RMSE $\SI{0.312}{\metre}$ on V1/V2) and $\Gamma_f e^{-\lambda(t-t_k^\star)} + \bar{e}_\infty$ after each fault, with the norm-level rate $\lambda = \alpha_{xy}/2 = \SI{1.19}{\second^{-1}}$. At the Lyapunov level, $\rho_{\mathrm{ana}} = \exp(-\alpha_{xy}\tau_{\mathrm{pend}}) \approx 0.005$, while empirical $\hat\rho_{\text{V4}}=0.20$, $\hat\rho_{\text{V5}}=0.045$ both remain below unity (\cref{sec:VI-C,tab:stability-evidence}). The analytical-vs-empirical gap arises from the additive constant $c > 0$ in \eqref{eq:dwell-contraction}: under non-zero wind and reduction residuals, $\hat\rho_k \le \rho_{\mathrm{ana}} + c/V(t_k^{\star,-})$ (\cref{rem:rho-gap}), converging to $\rho_{\mathrm{ana}}$ only when the pre-fault Lyapunov value dominates the disturbance floor $c_0/\alpha_{\min}$. This baseline practical-stability envelope is delivered by the identity $T_i^{\mathrm{ff}} = T_i$ alone; no detection or inter-drone communication is required.
+\paragraph{Admissibility regime and out-of-scope conditions.} The admissibility domain, $\rho$-gap analysis, and conditional certificate are as in \cref{rem:rho-gap,sec:stability-setup}; the three extension layers do not alter these bounds.
 
 Three regimes lie outside the analysis domain. \emph{Rapid multi-fault} ($\tau_d < \tau_{\mathrm{pend}}$) violates H2 and voids the contraction of \cref{lem:dwell-decay}. \emph{Long slack excursions} (slack-run $> \SI{40}{\milli\second}$ or duty $> 2.5\%$) violate H1 and exit $\Omega_\tau^{\mathrm{dwell}}$. \emph{QP fallback}, in which infeasibility forces the component-wise clamp, violates H3 and breaks D1.
 

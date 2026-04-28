@@ -1,9 +1,18 @@
 @misc{drake,
-  author    = {{Tedrake, Russ and the Drake Development Team}},
-  title     = {Drake: Model-Based Design and Verification for Robotics},
-  year      = {2019},
-  url       = {https://drake.mit.edu},
-  note      = {Available at \url{https://drake.mit.edu}}
+  author = {{Tedrake, Russ and the Drake Development Team}},
+  title  = {Drake: Model-Based Design and Verification for Robotics},
+  year   = {2019},
+  url    = {https://drake.mit.edu},
+  note   = {Available at \url{https://drake.mit.edu}}
+}
+
+@misc{tether_grace_code,
+  author = {Hajieghrary, Hadi},
+  title  = {{Tether\_Grace}: Simulation Code for Passive Fault Tolerance
+            through Tension-to-Thrust Feed-Forward},
+  year   = {2026},
+  url    = {https://github.com/Hadi-Hajieghrary/Tether_Grace},
+  note   = {Available at \url{https://github.com/Hadi-Hajieghrary/Tether_Grace}}
 }
 
 @article{Michael2011,
@@ -461,49 +470,51 @@
 }
 
 @article{LiuSuspensionFailure2021,
-title = {Fault-tolerant control for the multi-quadrotors cooperative transportation under suspension failures},
-journal = {Aerospace Science and Technology},
-volume = {119},
-pages = {107139},
-year = {2021},
-issn = {1270-9638},
-author = {Xiao Liang and Zikang Su and Wenzhe Zhou and Guanglei Meng and Linlin Zhu},
-keywords = {Multiple quadrotors, Payload transportation, Trajectory control, Fault-tolerant, Disturbance observer},
-abstract = {This paper focuses on the fault-tolerant control of the multi-quadrotors cooperative payload transportation under suspension failures. A dynamic load reassignment and control strategy is proposed for the cooperative quadrotors by incorporating the high-order sliding mode disturbance observer into a dynamic surface control-based backstepping design. The dynamics of the cable-suspended payload transportation with multiple quadrotors are formulated. The unmeasurable suspension cable tensions, which will greatly impact the quadrotors' dynamics and stability, are respectively viewed as one part of the lumped disturbance and estimated by the super-twisting sliding mode-based finite-time disturbance observers. With the estimated disturbance compensation, the dynamic surface control laws are established for the cooperative quadrotors. Moreover, to guarantee the fault-tolerant control under suspension cable broken, a dynamic load assignment strategy is proposed to stably recover the cooperative load transportation. Finally, the stability of tethered quadrotors' flight control systems is analyzed. The simulation results show the effectiveness of the proposed algorithm under suspension failures.}
+  title    = {Fault-tolerant control for the multi-quadrotors cooperative transportation under suspension failures},
+  journal  = {Aerospace Science and Technology},
+  volume   = {119},
+  pages    = {107139},
+  year     = {2021},
+  issn     = {1270-9638},
+  author   = {Xiao Liang and Zikang Su and Wenzhe Zhou and Guanglei Meng and Linlin Zhu},
+  keywords = {Multiple quadrotors, Payload transportation, Trajectory control, Fault-tolerant, Disturbance observer},
+  abstract = {This paper focuses on the fault-tolerant control of the multi-quadrotors cooperative payload transportation under suspension failures. A dynamic load reassignment and control strategy is proposed for the cooperative quadrotors by incorporating the high-order sliding mode disturbance observer into a dynamic surface control-based backstepping design. The dynamics of the cable-suspended payload transportation with multiple quadrotors are formulated. The unmeasurable suspension cable tensions, which will greatly impact the quadrotors' dynamics and stability, are respectively viewed as one part of the lumped disturbance and estimated by the super-twisting sliding mode-based finite-time disturbance observers. With the estimated disturbance compensation, the dynamic surface control laws are established for the cooperative quadrotors. Moreover, to guarantee the fault-tolerant control under suspension cable broken, a dynamic load assignment strategy is proposed to stably recover the cooperative load transportation. Finally, the stability of tethered quadrotors' flight control systems is analyzed. The simulation results show the effectiveness of the proposed algorithm under suspension failures.}
 }
 
-@INPROCEEDINGS{GassnerPassiveForce2017,
-  author={Tagliabue, Andrea and Kamel, Mina and Verling, Sebastian and Siegwart, Roland and Nieto, Juan},
-  booktitle={2017 IEEE International Conference on Robotics and Automation (ICRA)},
-  title={Collaborative transportation using MAVs via passive force control},
-  year={2017},
-  volume={},
-  number={},
-  pages={5766-5773},
-  abstract={This paper shows a strategy based on passive force control for collaborative object transportation using Micro Aerial Vehicles (MAVs), focusing on the transportation of a bulky object by two hexacopters. The goal is to develop a robust approach which does not rely on: (a) communication links between the MAVs, (b) the knowledge of the payload shape and (c) the position of grasping point. The proposed approach is based on the master-slave paradigm, in which the slave agent guarantees compliance to the external force applied by the master to the payload via an admittance controller. The external force acting on the slave is estimated using a non-linear estimator based on the Unscented Kalman Filter (UKF) from the information provided by a Visual-Inertial (VI) navigation system. Experimental results (online video [1]) demonstrate the performance of the force estimator and show the collaborative transportation of a 1.2 m long object.},
-  keywords={Force;Payloads;Torque;Transportation;Collaboration;Quaternions;Admittance},
-  ISSN={},
-  month={May},}
+@inproceedings{GassnerPassiveForce2017,
+  author    = {Tagliabue, Andrea and Kamel, Mina and Verling, Sebastian and Siegwart, Roland and Nieto, Juan},
+  booktitle = {2017 IEEE International Conference on Robotics and Automation (ICRA)},
+  title     = {Collaborative transportation using MAVs via passive force control},
+  year      = {2017},
+  volume    = {},
+  number    = {},
+  pages     = {5766-5773},
+  abstract  = {This paper shows a strategy based on passive force control for collaborative object transportation using Micro Aerial Vehicles (MAVs), focusing on the transportation of a bulky object by two hexacopters. The goal is to develop a robust approach which does not rely on: (a) communication links between the MAVs, (b) the knowledge of the payload shape and (c) the position of grasping point. The proposed approach is based on the master-slave paradigm, in which the slave agent guarantees compliance to the external force applied by the master to the payload via an admittance controller. The external force acting on the slave is estimated using a non-linear estimator based on the Unscented Kalman Filter (UKF) from the information provided by a Visual-Inertial (VI) navigation system. Experimental results (online video [1]) demonstrate the performance of the force estimator and show the collaborative transportation of a 1.2 m long object.},
+  keywords  = {Force;Payloads;Torque;Transportation;Collaboration;Quaternions;Admittance},
+  issn      = {},
+  month     = {May}
+}
 
-@INPROCEEDINGS{NoCommTransport2021,
-  author={Wu, Pin-Xian and Hung, Hsin-Ai and Yang, Cheng-Cheng and Cheng, Teng-Hu},
-  booktitle={2020 American Control Conference (ACC)},
-  title={Cooperative Transportation of Drones without Inter-Agent Communication},
-  year={2020},
-  volume={},
-  number={},
-  pages={677-682},
-  abstract={A control strategy for a leader-follower system without inter-agent communication is developed for cooperative transportation in this work. Two cascaded UKFs (unscented Kalman filters) are developed to estimate the external force of the leader as to eliminate the need of force sensors. Compared to most existing results, performance of the developed force estimators is invariant to lighting conditions since the developed UKFs do not require measurement from vision systems. To enhance robustness of the control scheme, a switching controller along with a triggering condition is developed for the follower, so that the impact to the performance of the closed-loop system caused by the disturbances can be minimized. Experiments are conducted to evaluate the control performance. Additionally, interesting phenomena are observed from the experiments and discussed, which can facilitate the improvement of the next generation cable-based transportation systems.},
-  keywords={Payloads;Force;Drones;Control systems;Noise measurement;Dynamics;Cooperative Transportation;Force Estimate;Leader-Follower systems},
-  ISSN={2378-5861},
-  month={July},}
+@inproceedings{NoCommTransport2021,
+  author    = {Wu, Pin-Xian and Hung, Hsin-Ai and Yang, Cheng-Cheng and Cheng, Teng-Hu},
+  booktitle = {2020 American Control Conference (ACC)},
+  title     = {Cooperative Transportation of Drones without Inter-Agent Communication},
+  year      = {2020},
+  volume    = {},
+  number    = {},
+  pages     = {677-682},
+  abstract  = {A control strategy for a leader-follower system without inter-agent communication is developed for cooperative transportation in this work. Two cascaded UKFs (unscented Kalman filters) are developed to estimate the external force of the leader as to eliminate the need of force sensors. Compared to most existing results, performance of the developed force estimators is invariant to lighting conditions since the developed UKFs do not require measurement from vision systems. To enhance robustness of the control scheme, a switching controller along with a triggering condition is developed for the follower, so that the impact to the performance of the closed-loop system caused by the disturbances can be minimized. Experiments are conducted to evaluate the control performance. Additionally, interesting phenomena are observed from the experiments and discussed, which can facilitate the improvement of the next generation cable-based transportation systems.},
+  keywords  = {Payloads;Force;Drones;Control systems;Noise measurement;Dynamics;Cooperative Transportation;Force Estimate;Leader-Follower systems},
+  issn      = {2378-5861},
+  month     = {July}
+}
 
 @article{stellato2020osqp,
-  author={Stellato, B. and Banjac, G. and Goulart, P. and Bemporad, A. and Boyd, S.},
-  title={{OSQP}: an operator splitting solver for quadratic programs},
-  journal={Mathematical Programming Computation},
-  year={2020},
-  volume={12},
-  number={4},
-  pages={637--672},
+  author  = {Stellato, B. and Banjac, G. and Goulart, P. and Bemporad, A. and Boyd, S.},
+  title   = {{OSQP}: an operator splitting solver for quadratic programs},
+  journal = {Mathematical Programming Computation},
+  year    = {2020},
+  volume  = {12},
+  number  = {4},
+  pages   = {637--672}
 }

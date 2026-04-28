@@ -13,20 +13,7 @@ The argument proceeds through the analytical hypotheses, six
 lemmas, the main theorem, and a claims-to-evidence map.
 
 \paragraph{Status of the lemma stack.}
-The six lemmas and the main theorem certify the architectural
-claim of \cref{sec:Introduction}---that within the analyzed
-baseline architecture and its declared admissibility domain, a
-single decentralized feed-forward identity supplies the
-bounded-jump mechanism required for hybrid practical-ISS---rather
-than constituting a stand-alone theoretical contribution. The
-hybrid-systems framework is borrowed
-from~\cite{GoebelSanfeliceTeel2012}; the practical-ISS
-composition tools are standard. The value added is showing that
-the framework's hypotheses hold for the proposed architecture on
-the declared admissibility domain $\Omega_\tau^{\mathrm{dwell}}$,
-with closed-form expressions for $\rho$ and $\lambda$, and a
-calibrated class-$\mathcal{K}$ bound for the per-fault jump
-$\chi(\Delta_f)$.
+The five lemmas and main theorem certify the architectural claim of \cref{sec:Introduction}---that a single decentralized feed-forward identity supplies the bounded-jump mechanism required for hybrid practical-ISS on the declared admissibility domain---rather than constituting a stand-alone theoretical contribution. The hybrid-systems framework is from~\cite{GoebelSanfeliceTeel2012}; the practical-ISS composition tools are standard. The value added is verifying the framework's hypotheses on $\Omega_\tau^{\mathrm{dwell}}$ with closed-form $\rho$, $\lambda$, and $\chi(\Delta_f)$. Among the recovery-envelope constants, $\lambda$ and $\rho$ are fully explicit from $P_v$, $P_{xy}$ \eqref{eq:Pv-numeric}; the jump bound $\chi(\Delta_f)$ is explicit in structure with coefficient $\kappa_V$ bounded but not numerically calibrated here---its quantification is identified as follow-on work in \cref{sec:discussion-audit}.
 
 % ----------------------------------------------------------
 \subsection{Setup, Notation, and Analytical Hypotheses}
@@ -72,38 +59,29 @@ violating them.
 \paragraph{Partial circularity and its mitigation.}
 The empirical defence of H1 and H3 uses the same pre-declared
 missions as the theorem's consequences, so the validation is
-partially \emph{post hoc}. The theorem therefore provides a
-\emph{conditional} guarantee: it holds whenever the trajectory
-satisfies H1--H3, and the margins of \cref{tab:domain-audit}
-document how far inside the domain the demonstrated missions
-sit. Two measures mitigate the circularity. First, the gate
-bounds ($\tau_{\mathrm{slack,max}} = \SI{40}{\milli\second}$,
-$\eta_{\max} = 2.5\%$) are set by the physics of bead-chain
-re-tension, not by data-fitting: $\tau_{\mathrm{slack,max}}$ is
-one quarter of the Tikhonov frozen-window $\tau_{\mathrm{pend}}
-/(2\pi)$ and $\eta_{\max}$ is a Rayleigh-turbulence budget.
-Second, the taut-cable reduction (\cref{thm:reduction}, C1) is
-independently validated against the bead-chain truth model in
-\cref{sec:VI-reduction}, providing an \emph{a~priori} check
-that the reduced model tracks the full plant within
-$O(\delta + \eta_{\max})$ on $\Omega_\tau^{\mathrm{dwell}}$;
-the constants $C_1, C_2$ are bounded by the bead-chain
-parameters $(m_{\mathrm{bead}}, c_s, k_s, N_b)$ and the wind
-bound $W_{\max}$ via the Tikhonov singular-perturbation argument
-of \cref{sec:reduction-and-reference}, and the stability
-analysis absorbs the residual into $\gamma_\eta$ of
-\cref{thm:hybrid-stability} without appeal to the simulated
-missions.
+partially \emph{post hoc}; the theorem provides a \emph{conditional}
+guarantee, and \cref{tab:domain-audit} documents the margins.
+Two measures mitigate the circularity. First, the gate bounds
+are set by the physics of bead-chain re-tension:
+$\tau_{\mathrm{slack,max}} = \SI{40}{\milli\second}$ is one quarter
+of the Tikhonov frozen window $\tau_{\mathrm{pend}}/(2\pi)$, and
+$\eta_{\max} = 2.5\%$ is a Rayleigh-turbulence budget.
+Second, \cref{thm:reduction} is independently validated against
+the bead-chain truth model in \cref{sec:VI-reduction},
+providing an \emph{a~priori} check that the reduced model tracks
+the full plant within $O(\delta + \eta_{\max})$ on
+$\Omega_\tau^{\mathrm{dwell}}$; the stability analysis absorbs
+the residual into $\gamma_\eta$ of \cref{thm:hybrid-stability}
+without appeal to the simulated missions.
 Design-time certification of H1 and H3 for unseen trajectory
-families---which would require trajectory-planning machinery
-beyond the present scope---is identified as future work.
+families is identified as future work.
 
 % ----------------------------------------------------------
 \subsection{Lemmas Underpinning the Hybrid Practical-ISS Theorem}
 \label{sec:five-lemmas}
 % ----------------------------------------------------------
 
-We state six lemmas that support the main theorem.
+We state five lemmas that support the main theorem.
 \Cref{lem:tension-cancel} establishes algebraic tension
 cancellation on the altitude channel;
 \cref{lem:altitude-iss} gives exponential ISS for the altitude
@@ -158,225 +136,90 @@ regardless of $N_s$, and is absorbed by $\gamma_q$ of
 \cref{lem:altitude-iss}.
 \end{proof}
 
-% ---- Lemma 3 (altitude ISS — expanded proof) --------------
-\begin{lemma}[Altitude ISS via Lyapunov matrix]
+% ---- Lemmas 3--4: ISS decay (altitude + horizontal) — merged
+\begin{lemma}[ISS decay via Lyapunov matrices]
 \label{lem:altitude-iss}
-Under hypotheses H1--H3, the altitude tracking error
-$e_{p,z,i}$ satisfies exponential input-to-state stability
-with explicit gain functions: there exist $\lambda_z > 0$
-and $\gamma_w, \gamma_q \in \mathcal{K}$ such that, along
-trajectories between fault events,
+\label{lem:horizontal-iss}
+Under H1--H3, both the altitude error $e_{p,z,i}$ and horizontal
+error $e_{p,xy,i}$ satisfy exponential ISS between fault events.
+Let $A_m\!=\!\begin{bmatrix}0&1\\-K_p^z&-K_d^z\end{bmatrix}$ and
+$A_{m,xy}\!=\!\begin{bmatrix}0&1\\-K_p^{xy}&-K_d^{xy}\end{bmatrix}$
+be the closed-loop matrices for gains $(K_p^z,K_d^z)\!=\!(100,24)$
+and $(K_p^{xy},K_d^{xy})\!=\!(30,15)$.
+The unique solutions $P_v \succ 0$ and $P_{xy} \succ 0$ of
+$A_m^\top P_v + P_v A_m = -I$ and
+$A_{m,xy}^\top P_{xy} + P_{xy} A_{m,xy} = -I$ are
 \begin{equation}
-  \dot V_z \;\le\; -\lambda_z\,V_z
-    \;+\; \gamma_w(\|w\|_\infty)
-    \;+\; \gamma_q(\|q - q^\star\|_\infty),
-  \label{eq:lyapunov-decay-alt}
-\end{equation}
-where $V_z(e,\dot e) \triangleq \tfrac{1}{2}
-[e,\dot e]^\top P_v\,[e,\dot e]$ and $P_v \succ 0$ is the
-unique positive-definite solution of
-$A_m^\top P_v + P_v A_m = -I$ for the closed-loop matrix
-$A_m$. The ISS decay rate is
-$\lambda_z = \alpha_z \triangleq |\mathrm{Re}(s_1)| =
-\SI{5.37}{\second^{-1}}$, where $s_1$ is the dominant pole
-of $A_m$.
-\end{lemma}
-
-\begin{proof}
-After tension cancellation (\cref{lem:tension-cancel}), the
-altitude slot-tracking error $e_{p,z,i} \triangleq
-p_{\mathrm{slot},i,z} - p_{i,z}$ satisfies
-\begin{equation}
-  \ddot{e}_{p,z,i}
-    + K_d^z \dot{e}_{p,z,i}
-    + K_p^z e_{p,z,i}
-    = \ddot{p}_{\mathrm{slot},z} + r_i(t),
-  \label{eq:alt-error-ode}
-\end{equation}
-with residual $r_i(t) = O\!\left(\theta_{c,\max}^2
-T_i/m_i\right) + O(\delta)$ bounded uniformly on
-$\Omega_\tau^{\mathrm{dwell}}$ under H1. The closed-loop
-matrix
-\begin{equation}
-  A_m = \begin{bmatrix}0 & 1\\ -K_p^z & -K_d^z\end{bmatrix}
-      = \begin{bmatrix}0 & 1\\ -100 & -24\end{bmatrix}
-\end{equation}
-has characteristic polynomial
-$s^2 + 24s + 100 = 0$, yielding eigenvalues
-\begin{equation}
-  s_{1,2}
-    = \frac{-24 \pm \sqrt{576 - 400}}{2}
-    = -12 \pm \sqrt{44},
-\end{equation}
-so $s_1 = -12 + \sqrt{44} \approx -5.37\,\si{\second^{-1}}$
-(dominant) and $s_2 \approx -18.63\,\si{\second^{-1}}$.
-Both eigenvalues have strictly negative real parts, so $A_m$
-is Hurwitz and the unique solution to
-$A_m^\top P_v + P_v A_m = -I$ is $P_v \succ 0$:
-\begin{equation}
-  P_v = \begin{bmatrix}
-    p_{11} & p_{12}\\ p_{12} & p_{22}
-  \end{bmatrix}.
-  \label{eq:Pv-generic}
-\end{equation}
-Expanding $A_m^\top P_v + P_v A_m = -I$ at $K_p^z = 100$,
-$K_d^z = 24$ gives the three scalar equations
-$-2K_p^z p_{12} = -1$, $p_{11} - K_p^z p_{22} - K_d^z p_{12}
-= 0$, and $2 p_{12} - 2 K_d^z p_{22} = -1$, whence
-\begin{equation}
-  p_{12} = \frac{1}{2K_p^z} = \frac{1}{200} = 0.005,\quad
-  p_{22} = \frac{1 + 2 p_{12}}{2K_d^z}
-         = \frac{1.01}{48} \approx 0.0210,\quad
-  p_{11} = K_p^z p_{22} + K_d^z p_{12} \approx 2.224,
-\end{equation}
-yielding the numerical matrix
-\begin{equation}
-  P_v = \begin{bmatrix} 2.224 & 0.005 \\ 0.005 & 0.0210
-        \end{bmatrix},
-  \qquad \lambda_{\min}(P_v) \approx 0.021,\quad
-         \lambda_{\max}(P_v) \approx 2.224.
+  P_v = \begin{bmatrix} 2.224 & 0.005 \\ 0.005 & 0.0210 \end{bmatrix},
+  \qquad
+  P_{xy} = \begin{bmatrix} 1.283 & 0.0167 \\ 0.0167 & 0.0344 \end{bmatrix}.
   \label{eq:Pv-numeric}
 \end{equation}
-Setting $\zeta \triangleq [e_{p,z,i},\,\dot{e}_{p,z,i}]^\top$
-and $V_z = \tfrac{1}{2}\zeta^\top P_v \zeta$, differentiating
-along trajectories of \eqref{eq:alt-error-ode} and applying
-Young's inequality to the cross-terms from
-$\ddot{p}_{\mathrm{slot},z} + r_i(t)$ yields
-\eqref{eq:lyapunov-decay-alt} with decay rate $\lambda_z =
-\alpha_z = |\mathrm{Re}(s_1)| = \SI{5.37}{\second^{-1}}$; the
-ISS gains $\gamma_w, \gamma_q$ are proportional to
-$\lambda_{\max}(P_v)/\lambda_{\min}(P_v) \approx 106$ and to
-the magnitudes of $w$ and $r_i$ from \cref{lem:tension-cancel}
-and $\delta$ from \cref{thm:reduction}. Concretely, the
-Young's-inequality bound $2\zeta^\top P_v r_i \le
-\varepsilon\,\zeta^\top P_v\zeta +
-\kappa(P_v)\,\varepsilon^{-1}\|r_i\|^2$ (with
-$\kappa(P_v) = \lambda_{\max}(P_v)/\lambda_{\min}(P_v)\approx
-106$ and $\varepsilon = \alpha_z$) absorbs $r_i$ into a
-$\mathcal{K}$-gain at the cost of the condition number.
-The decay rate
-$\lambda_z$ is independent of $N_s$ because $A_m$ depends only
-on the per-drone outer-loop gains $(K_p^z, K_d^z)$.
-\end{proof}
-
-% ---- Lemma 3b (horizontal ISS — NEW) ----------------------
-\begin{lemma}[Horizontal ISS via Lyapunov matrix]
-\label{lem:horizontal-iss}
-Under hypotheses H1--H3, the horizontal slot-tracking error
-$e_{p,xy,i} \in \R^2$ satisfies exponential ISS: there exist
-$\lambda_{xy} > 0$ and $\gamma_w^{xy}, \gamma_q^{xy} \in
-\mathcal{K}$ such that, between fault events,
-\begin{equation}
-  \dot V_{xy} \;\le\; -\lambda_{xy}\,V_{xy}
-    \;+\; \gamma_w^{xy}(\|w\|_\infty)
-    \;+\; \gamma_q^{xy}(\|q - q^\star\|_\infty),
+Setting $V_z = \tfrac{1}{2}[e_{p,z},\dot{e}_{p,z}]^\top P_v
+[e_{p,z},\dot{e}_{p,z}]$ and analogously $V_{xy}$, there exist
+$\gamma_w,\gamma_q,\gamma_w^{xy},\gamma_q^{xy} \in \mathcal{K}$
+such that, between fault events,
+\begin{align}
+  \dot V_z &\;\le\; -\lambda_z\,V_z
+    + \gamma_w(\|w\|_\infty) + \gamma_q(\|q - q^\star\|_\infty),
+  \label{eq:lyapunov-decay-alt}\\
+  \dot V_{xy} &\;\le\; -\lambda_{xy}\,V_{xy}
+    + \gamma_w^{xy}(\|w\|_\infty) + \gamma_q^{xy}(\|q - q^\star\|_\infty),
   \label{eq:lyapunov-decay-xy}
-\end{equation}
-where $V_{xy}(e,\dot e) \triangleq \tfrac{1}{2}
-[e,\dot e]^\top P_{xy}\,[e,\dot e]$ and $P_{xy} \succ 0$ is
-the unique positive-definite solution of
-$A_{m,xy}^\top P_{xy} + P_{xy} A_{m,xy} = -I$ for the
-horizontal closed-loop matrix $A_{m,xy}$.
-The ISS decay rate satisfies
-$\lambda_{xy} = \alpha_{xy} \triangleq
-|\mathrm{Re}(s_1^{xy})| = \SI{2.38}{\second^{-1}}$,
-where $s_1^{xy}$ is the dominant pole of $A_{m,xy}$.
-Since $\alpha_{xy} < \alpha_z$, the horizontal rate is
-$\alpha_{\min} = \min(\alpha_z,\alpha_{xy}) = \alpha_{xy}$,
-which drives the dwell-cycle contraction of
-\cref{lem:dwell-decay}.
+\end{align}
+with $\lambda_z = \alpha_z = |\mathrm{Re}(s_1)| =
+\SI{5.37}{\second^{-1}}$ (dominant altitude pole
+$s_1 = -12+\sqrt{44}$) and $\lambda_{xy} = \alpha_{xy} =
+|\mathrm{Re}(s_1^{xy})| = \SI{2.38}{\second^{-1}}$ (dominant
+horizontal pole $s_1^{xy} = (-15+\sqrt{105})/2$). Since
+$\alpha_{xy} < \alpha_z$, the horizontal channel is the
+bottleneck: $\alpha_{\min} = \alpha_{xy} =
+\SI{2.38}{\second^{-1}}$, which drives the dwell-cycle
+contraction of \cref{lem:dwell-decay}. Both rates are
+independent of $N_s$.
 \end{lemma}
 
 \begin{proof}
-The horizontal slot-tracking error in each of the $x$- and
-$y$-channels satisfies an identical scalar second-order ODE:
+After tension cancellation (\cref{lem:tension-cancel}), each
+scalar tracking error $e$ satisfies
+$\ddot{e} + K_d \dot{e} + K_p e = \ddot{p}_{\mathrm{slot}}
++ r_i(t)$ with $|r_i| = O(\theta_{c,\max}^2 T_i/m_i) +
+O(\delta)$ bounded uniformly on $\Omega_\tau^{\mathrm{dwell}}$
+under H1; for altitude this is \eqref{eq:alt-error-ode} with
+$r_i$ from \cref{lem:tension-cancel}.
 \begin{equation}
-  \ddot{e}_{p,xy,i}
-    + K_d^{xy} \dot{e}_{p,xy,i}
-    + K_p^{xy} e_{p,xy,i}
-    = \ddot{p}_{\mathrm{slot},xy} + r_{xy,i}(t),
+  \ddot{e}_{p,z,i} + K_d^z \dot{e}_{p,z,i} + K_p^z e_{p,z,i}
+    = \ddot{p}_{\mathrm{slot},z} + r_i(t).
+  \label{eq:alt-error-ode}
 \end{equation}
-where $r_{xy,i}(t) = O(\theta_{c,\max} T_i/m_i) + O(\delta)$
-is bounded by H1 and \cref{lem:tension-cancel}. No tension
-feed-forward enters the horizontal channels, so
-\cref{lem:tension-cancel} does not directly apply here; the
-horizontal residual is the tilt-projection component
-$T_i \sin\theta_i$ redistributed through the attitude loop.
-The horizontal closed-loop matrix is
-\begin{equation}
-  A_{m,xy} = \begin{bmatrix}0 & 1 \\ -K_p^{xy} & -K_d^{xy}
-              \end{bmatrix}
-           = \begin{bmatrix}0 & 1 \\ -30 & -15
-              \end{bmatrix},
-\end{equation}
-with characteristic polynomial $s^2 + 15s + 30 = 0$ and
-eigenvalues
-\begin{equation}
-  s_{1,2}^{xy}
-    = \frac{-15 \pm \sqrt{225 - 120}}{2}
-    = \frac{-15 \pm \sqrt{105}}{2},
-\end{equation}
-yielding $s_1^{xy} = (-15 + \sqrt{105})/2 \approx
--2.38\,\si{\second^{-1}}$ (dominant) and
-$s_2^{xy} \approx -12.625\,\si{\second^{-1}}$.
-The unique solution to
-$A_{m,xy}^\top P_{xy} + P_{xy} A_{m,xy} = -I$
-is obtained by solving the three scalar equations
-$-2K_p^{xy} p_{12}^{xy} = -1$,
-$2p_{12}^{xy} - 2K_d^{xy} p_{22}^{xy} = -1$, and
-$p_{11}^{xy} = K_p^{xy} p_{22}^{xy} + K_d^{xy} p_{12}^{xy}$:
-\begin{equation}
-  p_{12}^{xy} = \frac{1}{2K_p^{xy}} = \frac{1}{60} \approx 0.0167,\quad
-  p_{22}^{xy} = \frac{1 + 2p_{12}^{xy}}{2K_d^{xy}}
-              = \frac{31}{900}
-              \approx 0.0344,\quad
-  p_{11}^{xy} = K_p^{xy} p_{22}^{xy} + K_d^{xy} p_{12}^{xy}
-              = \frac{77}{60} \approx 1.283,
-\end{equation}
-giving
-\begin{equation}
-  P_{xy} = \begin{bmatrix}
-    1.283 & 0.0167 \\
-    0.0167 & 0.0344
-  \end{bmatrix},
-  \qquad
-  \lambda_{\min}(P_{xy}) \approx 0.034,\quad
-  \lambda_{\max}(P_{xy}) \approx 1.283.
-  \label{eq:Pxy-numeric}
-\end{equation}
-The Lyapunov argument of \cref{lem:altitude-iss} applies
-verbatim to $V_{xy} = \tfrac{1}{2}\zeta_{xy}^\top P_{xy}
-\zeta_{xy}$ with decay rate $\lambda_{xy} = \alpha_{xy} =
-|\mathrm{Re}(s_1^{xy})| = \SI{2.38}{\second^{-1}}$.
-Since $\alpha_{xy} = 2.38 < \alpha_z = 5.37$, we have
-$\alpha_{\min} = \alpha_{xy}$, confirming the horizontal
-channel as the bottleneck for the dwell-cycle contraction.
-The ISS property is independent of $N_s$ for the same reason
-as in \cref{lem:altitude-iss}.
+For each channel, the closed-loop matrix is Hurwitz ($A_m$:
+eigenvalues $s_{1,2} = -12 \pm \sqrt{44}$; $A_{m,xy}$:
+$s_{1,2}^{xy} = (-15\pm\sqrt{105})/2$), so the unique
+$P \succ 0$ satisfying $A^\top P + PA = -I$ exists. The
+$2\times2$ Lyapunov equation is solved algebraically via
+$p_{12} = 1/(2K_p)$, yielding the matrices in
+\eqref{eq:Pv-numeric}. Setting $\zeta = [e,\dot{e}]^\top$,
+$V = \tfrac{1}{2}\zeta^\top P \zeta$, differentiating along
+trajectories, and applying Young's inequality to the
+cross-terms from $\ddot{p}_{\mathrm{slot}} + r_i$ gives the
+ISS inequalities \eqref{eq:lyapunov-decay-alt}--\eqref{eq:lyapunov-decay-xy}
+with decay rates $|\mathrm{Re}(s_1)|$ of each $A$; the ISS
+gains are proportional to $\lambda_{\max}(P)/\lambda_{\min}(P)$
+and the input magnitude. Independence from $N_s$ follows
+because neither $A_m$ nor $A_{m,xy}$ depends on $|\mathcal{S}|$.
 \end{proof}
 
-% ---- Lemma 4 (unchanged) ----------------------------------
-\begin{lemma}[Pendulum damping invariance]
+% ---- Remark: pendulum damping invariance (formerly Lemma 4) ---
+\begin{remark}[Pendulum damping invariance]
 \label{lem:antiswing-invariant}
-The active anti-swing damping coefficient
-$B_{\mathrm{swing}}$ is independent of the number of
-surviving drones $N_s$, ensuring that the pendulum damping
-ratio $\zeta > 1$ is preserved across any cable-severance
-fault transition.
-\end{lemma}
-
-\begin{proof}
-The restoring force is
-$F_{\mathrm{restore}} = N_s T_i^{\mathrm{ss}}
-k_{\mathrm{swing}} v_{L,\perp}/L$
-with $T_i^{\mathrm{ss}} = m_L g / N_s$, so
-$N_s T_i^{\mathrm{ss}} = m_L g$ cancels the $N_s$ dependence
-and leaves $B_{\mathrm{swing}} = m_L g\,k_{\mathrm{swing}}/L
-= \SI{62.8}{\newton\second\per\metre}$.
-With $\omega_p = \SI{2.80}{\radian\per\second}$, the damping
-ratio $\zeta = B_{\mathrm{swing}}/(2 m_L \omega_p) = 1.12 >
-1$; the pendulum is overdamped for any $N_s \ge 2$.
-\end{proof}
+The anti-swing damping coefficient is $N_s$-independent: the
+restoring force $N_s T_i^{\mathrm{ss}} k_{\mathrm{swing}}
+v_{L,\perp}/L$ with $T_i^{\mathrm{ss}} = m_L g/N_s$ satisfies
+$N_s T_i^{\mathrm{ss}} = m_L g$, leaving $B_{\mathrm{swing}} =
+m_L g\,k_{\mathrm{swing}}/L = \SI{62.8}{\newton\second\per\metre}$
+and damping ratio $\zeta = B_{\mathrm{swing}}/(2m_L\omega_p)
+= 1.12 > 1$ (overdamped) for any $N_s \ge 2$.
+\end{remark}
 
 % ---- Lemma 5 (jump — expanded proof, explicit chi) --------
 \begin{lemma}[Bounded fault jump with explicit $\chi$]
@@ -550,12 +393,10 @@ $\tau_{\mathrm{pend}} > 0$, we have $\rho \in (0,1)$.
 \label{rem:rho-gap}
 \Cref{lem:dwell-decay} gives $\rho_{\mathrm{ana}} =
 \exp(-\alpha_{xy}\tau_{\mathrm{pend}}) \approx 0.005$, yet
-the Lyapunov-proxy measurements of \cref{sec:VI-D} yield
-$\hat\rho_{\mathrm{V4}} = 0.20$ and
-$\hat\rho_{\mathrm{V5}} = 0.045$.
-The gap does not indicate a failure of the exponential decay
-rate; it arises from the additive constant $c > 0$ in
-\eqref{eq:dwell-contraction}. The empirical ratio is
+Lyapunov-proxy measurements yield
+$\hat\rho_{\mathrm{V4}} = 0.20$ and $\hat\rho_{\mathrm{V5}} = 0.045$.
+The gap arises from the additive constant $c > 0$ in
+\eqref{eq:dwell-contraction}: the empirical ratio satisfies
 \begin{equation}
   \hat\rho_k
     \;\triangleq\;
@@ -565,27 +406,18 @@ rate; it arises from the additive constant $c > 0$ in
     \;+\; \frac{c}{V(t_k^{\star,-})},
   \label{eq:rho-hat-decomp}
 \end{equation}
-so $\hat\rho$ equals the true contraction rate $\rho_{\mathrm{ana}}$
-only when $c \ll V(t_k^{\star,-})$. The inequality
-\eqref{eq:rho-hat-decomp} is conservative: the additive constant
-$c$ acts as a floor that is always non-negative, so the empirical
-ratio $\hat\rho_k$ upper-bounds the true $\rho_{\mathrm{ana}}$
-plus the disturbance contribution; it is not expected to be
-tight except in the zero-disturbance limit. Under the Dryden
-$\SI{4}{\metre\per\second}$ wind of V4--V5, the disturbance
-floor $c_0/\alpha_{\min}$ constitutes a non-negligible fraction
-of the pre-fault Lyapunov value: from \eqref{eq:c-def},
-$c_0 \approx \gamma_w(W_{\max}) + \gamma_\eta(\eta_{\max})$
-is set by the wind and reduction residuals, which are $O(1)$
-in the Lyapunov proxy units. The ratio $c/V(t_k^{\star,-})
-\approx 0.20 - 0.005 = 0.195$ for V4 and $\approx 0.040$
-for V5 (where the longer dwell allows $V(t_2^{\star,-})$ to
-reach a lower floor). The improvement from V4 to V5
-($\hat\rho = 0.20 \to 0.045$) confirms \eqref{eq:rho-hat-decomp}:
-with ten seconds of dwell instead of five, $V(t_2^{\star,-})$
-has decayed further toward the disturbance floor, reducing the
-$c/V$ ratio. In disturbance-free conditions ($w \equiv 0$,
-$\delta \to 0$, $\eta_{\max} \to 0$), $c \to \rho\,\chi(\Delta_f)$
+so $\hat\rho_k$ converges to $\rho_{\mathrm{ana}}$ only when
+$c \ll V(t_k^{\star,-})$. The inequality is conservative;
+$\hat\rho_k$ upper-bounds $\rho_{\mathrm{ana}}$ plus the
+disturbance floor and is tight only in the zero-disturbance
+limit. Under Dryden $\SI{4}{\metre\per\second}$ wind, the floor
+$c_0/\alpha_{\min}$ constitutes a non-negligible fraction of
+the pre-fault Lyapunov value; from \eqref{eq:c-def},
+$c/V(t_k^{\star,-}) \approx 0.195$ for V4 and $\approx 0.040$
+for V5. The improvement from V4 to V5 ($\hat\rho: 0.20 \to 0.045$)
+confirms \eqref{eq:rho-hat-decomp}: with ten seconds of dwell,
+$V(t_2^{\star,-})$ decays further, reducing the $c/V$ ratio.
+In disturbance-free conditions, $c \to \rho\,\chi(\Delta_f)$
 and $\hat\rho \to \rho_{\mathrm{ana}}$ asymptotically.
 \end{remark}
 
@@ -594,7 +426,7 @@ and $\hat\rho \to \rho_{\mathrm{ana}}$ asymptotically.
 \label{sec:main-theorem-and-robustness}
 % ----------------------------------------------------------
 
-We now compose the six lemmas into the hybrid practical-ISS
+We now compose the five lemmas into the hybrid practical-ISS
 theorem and state corollaries on robustness, the steady-state
 tracking bound, and multi-fault feasibility.
 
@@ -739,50 +571,17 @@ required square root yields the norm-level rate $\lambda$.
 
 \input{Figures/diagrams/fig_lyapunov_sawtooth.tex}
 
-\begin{remark}[Practical-stability interpretation]
-\Cref{thm:hybrid-stability} is a practical stability bound,
-not asymptotic convergence. The ISS framework treats the
-reference waypoints as a time-varying input, not a
-disturbance; the residual captured by the $\gamma$ terms
-reflects the reference's dynamic content---principally the
-quasi-static pendulum offset---rather than a closed-loop
-failure. Within the analyzed baseline architecture and gain schedule,
-$T_i^{\mathrm{ff}} = T_i$ supplies the bounded-jump mechanism
-that makes \eqref{eq:iss-envelope-explicit} applicable; no
-detection or inter-drone communication is required.
-\end{remark}
-
 \begin{remark}[Jump-bound vs.\ contraction-rate mechanism]
 \label{rem:jump-vs-rate}
-Two distinct mechanisms produce the dwell-cycle contraction.
-The \emph{jump-bound mechanism} is the identity
-$T_i^{\mathrm{ff}} = T_i$, whose contribution is to reduce the
-size of the bounded reset observed in
-\cref{lem:jump-continuity}; the continuity of the tracking
-coordinates follows from state continuity at the severance.
-The
-\emph{contraction-rate mechanism} is the closed-loop
-spectrum encoded in $\alpha_{xy}$ of
-\cref{lem:horizontal-iss}; the inter-event flow contracts
-$V$ at this rate. The ablation of \cref{sec:VI-D} supports
-the first mechanism empirically: disabling the identity
-increases peak sag by $3.6$--$4.0\times$ and produces larger
-post-fault Lyapunov jumps in \cref{fig:fault-zoom}. The
-jump analysis uses only the bounded-jump property; the exact
-inflation without feed-forward is scenario-dependent. The
-architectural innovation is the jump-bound mechanism, while
-$\alpha_{xy}$ determines the Lyapunov contraction rate and,
-through quadratic equivalence, the induced norm recovery rate
-$\lambda = \alpha_{xy}/2$ that governs how quickly each
-bounded jump is forgotten between faults.
+The ablation (\cref{sec:VI-D}) confirms that disabling $T_i^{\mathrm{ff}}=T_i$ increases peak sag by $3.6$--$4.0\times$ and produces larger post-fault Lyapunov jumps (\cref{fig:fault-zoom}), directly evidencing the jump-bound role of the identity vs.\ the contraction-rate role of $\alpha_{xy}$.
 \end{remark}
 
 % ---- Corollaries (unchanged except minor notation) --------
 \begin{corollary}[Pre-fault steady-state tracking bound]
 \label{cor:steady-state}
 Prior to any fault event, the payload tracking error is
-dominated by the quasi-static pendulum offset induced by the
-reference acceleration, and admits the explicit envelope
+dominated by the quasi-static pendulum offset and the outer-loop
+PD residual:
 \begin{equation}
   \bar{e}_{p,xy} \le \frac{L A_{xy,\max}}{g}
     \left(1 - \frac{1}{2\zeta^2}\right)
@@ -792,51 +591,17 @@ reference acceleration, and admits the explicit envelope
 \end{equation}
 where $A_{xy,\max}$ is the maximum reference acceleration,
 $\zeta = 1.12$ from \cref{lem:antiswing-invariant}, and
-$\kappa_{\mathrm{QP}} = w_t/(w_t + w_e) \approx 0.98$ the
-QP regularization factor. At canonical $A_{xy,\max} \approx
-\SI{2.47}{\metre\per\second\squared}$,
-\begin{align}
-  \bar{e}_{p,xy}
-    \;\lesssim\;
-    \frac{1.25 \times 2.47}{9.81}\!
-    &\left(1 - \frac{1}{2\times 1.12^2}\right)
-      + \frac{2.47}{0.98 \times 30}
-    \approx 0.19 + 0.08
-    \approx \SI{0.27}{\metre}.
-  \label{eq:ss-numeric}
-\end{align}
-\eqref{eq:ss-numeric} is a leading-order scale, not a strict
-envelope: the first term uses a low-frequency approximation
-of the pendulum transfer-function bias.
+$\kappa_{\mathrm{QP}} = w_t/(w_t + w_e) \approx 0.98$. At
+canonical $A_{xy,\max} \approx \SI{2.47}{\metre\per\second\squared}$,
+\eqref{eq:ss-bound} gives $\bar{e}_{p,xy} \approx
+\SI{0.27}{\metre}$, consistent with V1 horizontal RMSE
+$\SI{0.306}{\metre}$ (gap from centripetal acceleration on
+curved segments, excluded by the quasi-static derivation).
 \end{corollary}
-
-\begin{proof}[Derivation]
-The pendulum transfer function settles to
-$\bar{e}_{\mathrm{pend}} = (LA_{xy,\max}/g)(1 -
-1/(2\zeta^2))$ at quasi-static frequency; the outer-loop PD
-contributes $A_{xy,\max}/(\kappa_{\mathrm{QP}} K_p^{xy})$;
-the reduction error is $O(\delta)$ by \cref{thm:reduction}.
-Summing gives \eqref{eq:ss-bound}. V1 reports horizontal
-RMSE $\SI{0.306}{\metre}$ vs.\ the analytical
-$\SI{0.27}{\metre}$; the gap is the centripetal contribution
-on the curved segments, which the quasi-static derivation
-excludes.
-\end{proof}
 
 \begin{corollary}[Robustness to mass, stiffness, drag, and wind]
 \label{cor:robustness}
-The envelope \eqref{eq:iss-envelope-explicit} is robust along
-four axes. \emph{Mass mismatch}: $T_i^{\mathrm{ff}} = T_i$
-uses measured tension, making \cref{lem:tension-cancel,%
-lem:altitude-iss} mass-independent to leading order.
-\emph{Stiffness and drag mismatches}: enter through
-$O(\delta + \eta_{\max})$, absorbed by $\gamma_\eta$ without
-degrading $\rho$ or $\alpha_{xy}$. \emph{Wind}: enters
-through $\gamma_w$ with steady-state gain $1/K_p^{xy}$.
-The P2-B mass sweep yields only $1.9\%$ RMSE variation over
-a $56\%$ mass range with FF active; V2 yields
-$\SI{0.312}{\metre}$ RMSE under Dryden wind, matching
-the no-wind V1.
+The envelope \eqref{eq:iss-envelope-explicit} is robust along four axes: (i)~mass mismatch: $T_i^{\mathrm{ff}} = T_i$ uses measured tension, making \cref{lem:tension-cancel,lem:altitude-iss} mass-independent to leading order; (ii)~stiffness and drag mismatches: enter through $O(\delta + \eta_{\max})$, absorbed by $\gamma_\eta$ without degrading $\rho$ or $\alpha_{xy}$; (iii)~wind: enters through $\gamma_w$ with steady-state gain $1/K_p^{xy}$. Empirically: P2-B yields $<1.9\%$ RMSE variation over a $56\%$ mass range with FF active; V2 yields $\SI{0.312}{\metre}$ RMSE under Dryden wind, matching V1 (\cref{cor:steady-state}).
 \end{corollary}
 
 \paragraph{Multi-fault feasibility.}
@@ -876,7 +641,7 @@ observation; full context is in \cref{sec:simulation}.
     Horizontal ISS decay (\cref{lem:horizontal-iss})
       & V1--V5 series
       & $\alpha_{xy} = \SI{2.38}{\second^{-1}}$
-        from $P_{xy}$ in \eqref{eq:Pxy-numeric};
+        from $P_{xy}$ in \eqref{eq:Pv-numeric};
         $\rho = \exp(-\alpha_{xy}\tau_{\mathrm{pend}})
         \approx 0.005$ \\
     Anti-swing invariance (\cref{lem:antiswing-invariant})

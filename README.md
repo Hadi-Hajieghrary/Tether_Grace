@@ -528,6 +528,78 @@ camera-ready campaigns:
 Two video presentations of the work are checked in alongside the
 camera-ready manuscript: see [§12.3](#123-video-presentations) below.
 
+### 10.1 Meshcat recording previews
+
+Each scenario also writes a `recording.gif` (alongside the `recording.mp4`)
+for quick inline inspection without a video player. The GIFs are lossily
+compressed Meshcat screen captures at reduced frame rate; the matching MP4
+is the authoritative artefact consumed by the presentation builder. The
+frames show: five quadrotors (dark silhouettes) tethered to a red-sphere
+payload, green trajectory trails for every vehicle, and the
+lemniscate-of-Bernoulli reference path as a light dashed loop.
+
+#### Fault-time sweep
+
+Cable severance is injected at $t_1 \in \{8\,\text{s},\,12\,\text{s},\,16\,\text{s}\}$ while the
+formation tracks a figure-eight lemniscate at 1 m altitude. The three clips
+below sample representative moments from each sweep member.
+
+| Fault at $t_1 = 8$ s | Fault at $t_1 = 12$ s |
+|:---:|:---:|
+| RMSE 0.324 m · peak $T$ 130.6 N · sag 45.4 mm | RMSE 0.328 m · peak $T$ 87.3 N · sag 55.4 mm |
+| ![Fault at t₁=8 s](output/fault_time_sweep/t1_8s/recording.gif) | ![Fault at t₁=12 s](output/fault_time_sweep/t1_12s/recording.gif) |
+
+| Fault at $t_1 = 16$ s |
+|:---:|
+| RMSE 0.313 m · peak $T$ 68.3 N · sag 35.3 mm |
+| ![Fault at t₁=16 s](output/fault_time_sweep/t1_16s/recording.gif) |
+
+The early fault ($t_1 = 8$ s) occurs when the formation is still
+accelerating into the first lobe, causing the highest post-fault peak
+tension (130.6 N, against the 150 N actuator ceiling). The mid-trajectory
+fault ($t_1 = 12$ s) is the canonical V4 scenario analysed in the paper
+(Figure 14). The late fault ($t_1 = 16$ s) strikes during the gentler
+exit arc, producing the lowest peak tension and smallest RMSE of the three.
+In all three cases the passive feed-forward identity $T_i^{\mathrm{ff}} = T_i$
+absorbs the load redistribution without any explicit fault detector; the
+formation remains stable and on-trajectory within one payload-pendulum
+period.
+
+#### L₁ adaptive augmentation — gain sweep
+
+The next three clips hold the fault scenario fixed ($t_1 = 12$ s, V4
+configuration) and vary the L₁ adaptation bandwidth $\Gamma \in
+\{2{,}000,\,30{,}000,\,50{,}000\}$. This sweep probes the sensitivity of
+the closed loop to the tuning knob that governs how quickly the online
+stiffness estimator $\hat{k}_{\mathrm{eff}}(t)$ tracks the true Kelvin–Voigt
+spring constant (nominal $k_{\mathrm{eff}} = 2{,}778$ N/m).
+
+| $\Gamma = 2{,}000$ (low gain) | $\Gamma = 30{,}000$ (mid gain) |
+|:---:|:---:|
+| RMSE 0.297 m · sag 116 mm · slow $\hat{k}$ convergence | RMSE 0.297 m · sag 114 mm · plateau confirmed |
+| ![L1 gamma=2000](output/l1_gain_map/gamma_2000/recording.gif) | ![L1 gamma=30000](output/l1_gain_map/gamma_30000/recording.gif) |
+
+| $\Gamma = 50{,}000$ (high gain) |
+|:---:|
+| RMSE 0.301 m · sag 113 mm · highest variance ratio |
+| ![L1 gamma=50000](output/l1_gain_map/gamma_50000/recording.gif) |
+
+At low $\Gamma = 2{,}000$, $\hat{k}_{\mathrm{eff}}$ converges slowly and the
+adaptive correction $u_{\mathrm{ad}}$ remains small throughout the run. The
+RMSE is already indistinguishable from the higher-gain runs (0.297 m),
+confirming that the passive feed-forward alone supplies most of the fault
+recovery and L₁ is a refinement, not a necessity.  At mid gain
+$\Gamma = 30{,}000$ the estimator converges within roughly two pendulum
+periods and the RMSE is unchanged — the plateau showing that the PD/QP
+cascade has already saturated the achievable accuracy. At
+$\Gamma = 50{,}000$ (near the closed-form stability ceiling
+$\Gamma^\star \approx 4.76 \times 10^5$) the variance growth ratio is
+highest (0.374) but actuator saturation remains at 0 %, and the trajectory
+tracks as accurately as the lower-gain variants. All three clips look
+visually identical because the residual tracking error is sub-pixel in the
+Meshcat viewport at this scale — the differences are in the diagnostic
+signals shown in the right half of the presentation video.
+
 ---
 
 ## 11. Verification tests
