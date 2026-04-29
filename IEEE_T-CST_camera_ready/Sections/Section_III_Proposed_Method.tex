@@ -74,12 +74,7 @@ where $\hat{\vect v}_{L,\perp}$ is the unit vector of $\vect v_{L,\perp}$. The s
 \end{align}
 The altitude gain $K_p^z = 100$ exceeds the horizontal gain $K_p^{xy} = 30$ because vertical rope forces dominate the disturbance budget; the formal pole and Lyapunov-matrix analysis is in \cref{lem:altitude-iss}. When $L_1$ is active, its altitude correction $u_{\mathrm{ad}}(t)$ is added to the $z$-component of $\vect a_{\mathrm{target}}$ between the outer PD and the QP (\cref{sec:extensions}); horizontal channels are unmodified.
 
-% ----------------------------------------------------------------
-\subsection{Actuator Projection and Feed-Forward Tension}
-\label{sec:qp-and-ff}
-% ----------------------------------------------------------------
-
-\paragraph{Single-step convex QP.} $\vect a_{\mathrm{target}}$ may lie outside the tilt-and-thrust actuator envelope. We project onto the feasible set with a single-step convex QP that also regularises large commands:
+The target acceleration $\vect a_{\mathrm{target}}$ may lie outside the tilt-and-thrust actuator envelope. We project onto the feasible set with a single-step convex QP that also regularises large commands:
 \begin{subequations}
 \label{eq:qp}
 \begin{align}
@@ -96,26 +91,18 @@ The altitude gain $K_p^z = 100$ exceeds the horizontal gain $K_p^{xy} = 30$ beca
     \label{eq:qp-vert}
 \end{align}
 \end{subequations}
-where the vertical bounds incorporate the rope tension
-feed-forward,
+where the vertical bounds incorporate the rope tension feed-forward,
 \begin{align}
 \label{eq:az-bounds}
-  a_{z,\min}(t) &= \frac{f_{\min} - T_i^{\mathrm{ff}}(t)}{m_i} - g,\\
-  a_{z,\max}(t) &= \frac{f_{\max} - T_i^{\mathrm{ff}}(t)}{m_i} - g.\nonumber
+  a_{z,\min/\max}(t) &= \frac{f_{\min\max} - T_i^{\mathrm{ff}}(t)}{m_i} - g.
 \end{align}
-\paragraph{Feasibility.} The vertical interval in \eqref{eq:qp-vert} is non-empty whenever $f_{\min} < f_{\max}$; hover feasibility holds in all scenarios, and Doctrine~D1 is satisfied at the $0.10\%$ worst QP-transition fraction (\cref{tab:domain-audit}).
-
-\paragraph{Feed-forward tension.} For the canonical campaigns \texttt{initial\_pretensioned}=\texttt{true}, so the feed-forward is the identity from $t=0$:
+The vertical interval in \eqref{eq:qp-vert} is non-empty whenever $f_{\min} < f_{\max}$; hover feasibility holds in all scenarios, and Doctrine~D1 is satisfied at the $0.10\%$ worst QP-transition fraction (\cref{tab:domain-audit}). For the canonical campaigns, the feed-forward is the identity from $t=0$:
 \begin{equation}
   \boxed{T_i^{\mathrm{ff}}(t) \;=\; T_i(t).}
   \label{eq:Tff}
 \end{equation}
-A smoothstep pickup ramp $\alpha(\tau) = 3\tau^2 - 2\tau^3$ handles cold-start engagement; it is bypassed in every reported campaign. The flag \texttt{disable\_tension\_ff} overrides \eqref{eq:Tff} to $T_i^{\mathrm{ff}} = 0$ for the feed-forward ablation campaign.
+A smoothstep pickup ramp $\alpha(\tau) = 3\tau^2 - 2\tau^3$ handles cold-start engagement; it is bypassed in every reported campaign.
 
-\subsection{Inner Loop: Attitude PD and Controller Parameters}
-\label{sec:inner-loop}
-
-\paragraph{Thrust and desired attitude.}
 Given the QP solution $a_{d,z}^\star$, the commanded thrust is
 \begin{equation}
 \label{eq:thrust}
@@ -131,8 +118,7 @@ Under the small-angle approximation, the horizontal acceleration commands map to
   \theta_{\mathrm{roll}}^d
     &= \operatorname{sat}\!\!\left(-\frac{a_{d,y}^\star}{g},\;\pm\theta_{\max}\right).\nonumber
 \end{align}
-
-\paragraph{Euler-angle attitude PD and output wrench.} With body angular velocity $\vect\omega_i^{\mathcal{B}} = \mat R_i^{\top}\, \vect\omega_i^{\mathcal{W}}$, the body torques are
+With body angular velocity $\vect\omega_i^{\mathcal{B}} = \mat R_i^{\top}\, \vect\omega_i^{\mathcal{W}}$, the body torques are
 \begin{align}
   \tau_{i,x}
     &= K_p^{\mathrm{att}}\!\left(
@@ -159,9 +145,7 @@ each saturated to $[-\tau_{\max}, \tau_{\max}]$. The law \eqref{eq:att-pd-roll}-
     [\tau_{i,x},\; \tau_{i,y},\; \tau_{i,z}]^{\top},
   \label{eq:wrench}
 \end{equation}
-applied at the same continuous-time evaluation instant as the upstream computations.
-
-\paragraph{Canonical controller parameters.} \Cref{tab:baseline-params} collects the parameters used throughout all simulation campaigns.
+applied at the same continuous-time evaluation instant as the upstream computations. \Cref{tab:baseline-params} collects the canonical controller parameters used throughout all simulation campaigns.
 
 \begin{table}[t]
   \centering
@@ -225,5 +209,3 @@ applied at the same continuous-time evaluation instant as the upstream computati
     \bottomrule
   \end{tabular}
 \end{table}
-
-

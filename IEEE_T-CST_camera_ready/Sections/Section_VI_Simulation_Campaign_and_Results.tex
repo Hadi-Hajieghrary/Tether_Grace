@@ -148,12 +148,54 @@ V1 (no wind) yields 3-D RMSE $\SI{0.312}{\metre}$ over $[8,30]$~s. The bound of 
 
 V2 (Dryden wind, $\SI{4}{\metre\per\second}$ mean, seed~42) yields RMSE $\SI{0.312}{\metre}$, indistinguishable from V1 at single-seed precision. The PD/QP layer absorbs the turbulence without adaptive augmentation, exercising the wind margin of \cref{cor:robustness}. \Cref{tab:performance-ci} consolidates per-variant RMSE, sag, and tension; \cref{fig:trajectory-3d-V4} shows the V4 payload trajectory in 3-D with the lemniscate reference, fault events, and three formation snapshots.
 
-\begin{figure*}[htbp]
+% \begin{figure*}[htbp]
+%   \centering
+%   \includegraphics[width=0.92\textwidth]{Figures/fig_trajectory_3d_V4.png}
+%   \caption{V4 dual-fault payload trajectory. Time-coloured curve: payload over $t \in [8,30]\,\si{\second}$. Dashed: lemniscate reference. Red crosses: fault events at $t_1{=}12$\,s (drone~0) and $t_2{=}17$\,s (drone~2). Formation snapshots at $t\in\{10,15,20\}$\,s show pre-fault, post-fault~1, and post-fault~2 geometries (solid: taut, dashed: severed). Grey shadows: top-down and side-view projections.}
+%   \label{fig:trajectory-3d-V4}
+% \end{figure*}
+
+\begin{figure*}[!t]
   \centering
-  \includegraphics[width=0.92\textwidth]{Figures/fig_trajectory_3d_V4.png}
-  \caption{V4 dual-fault payload trajectory. Time-coloured curve: payload over $t \in [8,30]\,\si{\second}$. Dashed: lemniscate reference. Red crosses: fault events at $t_1{=}12$\,s (drone~0) and $t_2{=}17$\,s (drone~2). Formation snapshots at $t\in\{10,15,20\}$\,s show pre-fault, post-fault~1, and post-fault~2 geometries (solid: taut, dashed: severed). Grey shadows: top-down and side-view projections.}
+
+  % ---------- Left: 3D trajectory ----------
+  \begin{minipage}[t]{0.55\textwidth}
+    \vspace{0pt}
+    \centering
+    \includegraphics[width=\linewidth]{Figures/fig_trajectory_3d_V4.png}
+  \end{minipage}
+  \hfill
+  % ---------- Right: self-announcement chain ----------
+  \begin{minipage}[t]{0.40\textwidth}
+    \vspace{0pt}
+    \centering
+
+    \subfloat[Surviving rope tension $T_1(t)$.]{%
+      \includegraphics[width=\linewidth]{Figures/fig_self_announcement_V4_a.png}%
+      \label{fig:self-announcement-a}}\\[-0.8ex]
+
+    \subfloat[Feed-forward command $T_1^{\mathrm{ff}}(t)$.]{%
+      \includegraphics[width=\linewidth]{Figures/fig_self_announcement_V4_b.png}%
+      \label{fig:self-announcement-b}}\\[-0.8ex]
+
+    \subfloat[Commanded thrust $f_1(t)$.]{%
+      \includegraphics[width=\linewidth]{Figures/fig_self_announcement_V4_c.png}%
+      \label{fig:self-announcement-c}}\\[-0.8ex]
+
+    \subfloat[Payload altitude error $e_{L,z}(t)$.]{%
+      \includegraphics[width=\linewidth]{Figures/fig_self_announcement_V4_d.png}%
+      \label{fig:self-announcement-d}}
+  \end{minipage}
+
+  \caption{V4 fault-response visualization. Left: dual-fault payload trajectory over $t \in [8,30]\,\si{\second}$, with the dashed lemniscate reference, fault events at $t_1{=}12$\,s and $t_2{=}17$\,s, and formation snapshots at
+  $t\in\{10,15,20\}$\,s. Right: self-announcement causal chain for fault~1, where drone~0 is severed at $t=\SI{12}{\second}$. Teal solid denotes the baseline FF-on case, and orange dashed denotes the P2-A FF-off ablation. With the identity active,
+  $T_1^{\mathrm{ff}}$ tracks $T_1$ at the next tick, thrust steps proportionally, and altitude error remains bounded. With the identity disabled, $T_1^{\mathrm{ff}}\!=\!0$ remains flat, the thrust step is absent, and altitude error grows by approximately
+  $\SI{300}{\milli\metre}$.}
+  \label{fig:v4-trajectory-and-self-announcement}
   \label{fig:trajectory-3d-V4}
+  \label{fig:self-announcement}
 \end{figure*}
+
 
 \Cref{tab:performance-ci} reports integrated system-level performance for V1--V6 (deterministic seed-42 estimates). The rightmost column marks each variant against the pre-registered thresholds: 3-D RMSE $\le \SI{0.35}{\metre}$, sag $\le \SI{100}{\milli\metre}$, tension $\le \SI{120}{\newton}$.
 
@@ -236,23 +278,23 @@ Without the identity, the altitude channel carries an unrejected load increment,
   \end{tabular}
 \end{table}
 
-\begin{figure}[htbp]
-  \centering
-  \subfloat[Surviving rope tension $T_1(t)$.]{%
-    \includegraphics[width=\columnwidth]{Figures/fig_self_announcement_V4_a.png}%
-    \label{fig:self-announcement-a}}\\[-0.5ex]
-  \subfloat[Feed-forward command $T_1^{\mathrm{ff}}(t)$.]{%
-    \includegraphics[width=\columnwidth]{Figures/fig_self_announcement_V4_b.png}%
-    \label{fig:self-announcement-b}}\\[-0.5ex]
-  \subfloat[Commanded thrust $f_1(t)$.]{%
-    \includegraphics[width=\columnwidth]{Figures/fig_self_announcement_V4_c.png}%
-    \label{fig:self-announcement-c}}\\[-0.5ex]
-  \subfloat[Payload altitude error $e_{L,z}(t)$.]{%
-    \includegraphics[width=\columnwidth]{Figures/fig_self_announcement_V4_d.png}%
-    \label{fig:self-announcement-d}}
-  \caption{Self-announcement causal chain (V4, fault~1, drone~0 severed at $t=\SI{12}{\second}$). Teal solid: baseline (FF-on); orange dashed: P2-A ablation (FF-off). With the identity active, $T_1^{\mathrm{ff}}$ tracks $T_1$ at the next tick (b), thrust steps proportionally (c), and altitude error stays bounded (d); with it disabled, $T_1^{\mathrm{ff}}\!=\!0$ flat, the thrust step is absent, and altitude error grows by $\sim\!\SI{300}{\milli\metre}$.}
-  \label{fig:self-announcement}
-\end{figure}
+% \begin{figure}[htbp]
+%   \centering
+%   \subfloat[Surviving rope tension $T_1(t)$.]{%
+%     \includegraphics[width=\columnwidth]{Figures/fig_self_announcement_V4_a.png}%
+%     \label{fig:self-announcement-a}}\\[-0.5ex]
+%   \subfloat[Feed-forward command $T_1^{\mathrm{ff}}(t)$.]{%
+%     \includegraphics[width=\columnwidth]{Figures/fig_self_announcement_V4_b.png}%
+%     \label{fig:self-announcement-b}}\\[-0.5ex]
+%   \subfloat[Commanded thrust $f_1(t)$.]{%
+%     \includegraphics[width=\columnwidth]{Figures/fig_self_announcement_V4_c.png}%
+%     \label{fig:self-announcement-c}}\\[-0.5ex]
+%   \subfloat[Payload altitude error $e_{L,z}(t)$.]{%
+%     \includegraphics[width=\columnwidth]{Figures/fig_self_announcement_V4_d.png}%
+%     \label{fig:self-announcement-d}}
+%   \caption{Self-announcement causal chain (V4, fault~1, drone~0 severed at $t=\SI{12}{\second}$). Teal solid: baseline (FF-on); orange dashed: P2-A ablation (FF-off). With the identity active, $T_1^{\mathrm{ff}}$ tracks $T_1$ at the next tick (b), thrust steps proportionally (c), and altitude error stays bounded (d); with it disabled, $T_1^{\mathrm{ff}}\!=\!0$ flat, the thrust step is absent, and altitude error grows by $\sim\!\SI{300}{\milli\metre}$.}
+%   \label{fig:self-announcement}
+% \end{figure}
 
 % ----------------------------------------------------------------
 \subsection{Dwell-Time Boundary Characterisation}

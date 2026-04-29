@@ -1,8 +1,5 @@
 
-We study cooperative aerial transport under unannounced cable-severance faults and formalize the plant, fault model, admissible controller class, reference trajectory, taut-cable reduction, and formal problem.
-
-\subsection{Plant Description and Admissible Disturbance Set}
-\label{sec:plant}
+We study cooperative aerial transport under unannounced cable-severance faults and formalize the plant, fault model, admissible controller class, reference trajectory, taut-cable reduction, and formal problem. The system consists of:
 
 \paragraph{Vehicles, payload, and state.} A team of $N$ quadrotor UAVs, indexed $i \in \mathcal{N} \triangleq \{1,\dots,N\}$, operates in an inertial world frame $\mathcal{W}$. Drone $i$ has mass $m_i$, diagonal inertia $\mat J_i = \diag(J_x^{(i)}, J_y^{(i)}, J_z^{(i)})$, position $\vect p_i \in \R^3$, velocity $\vect v_i \in \R^3$, attitude $\mat R_i \in \SOthree$, and angular velocity $\vect\omega_i \in \R^3$. The per-drone state is $x_i \triangleq (\vect p_i, \vect v_i, \mat R_i, \vect\omega_i)$ and the collective drone state is $x_{\mathcal{N}} \triangleq (x_i)_{i=1}^N$. A point-mass payload of mass $m_L$ has position $\vect p_L \in \R^3$, velocity $\vect v_L \in \R^3$, and state $x_L \triangleq (\vect p_L, \vect v_L)$; payload rotation is neglected.
 
@@ -80,12 +77,7 @@ where $W_{\max} = \SI{1}{\newton}$. The Dryden realization used in V2--V6 remain
 
 \input{Figures/diagrams/fig_physical_setup.tex}
 
-% ----------------------------------------------------------------
-\subsection{Fault Model and Admissible Controller Class}
-\label{sec:fault-and-controller}
-% ----------------------------------------------------------------
-
-\paragraph{Structural fault event.} At a time $t_k^\star$, cable $i_k^\star \in \mathcal{N}$ severs instantaneously. Severance permanently removes cable $i_k^\star$ from the constraint set:
+At a time $t_k^\star$, cable $i_k^\star \in \mathcal{N}$ severs instantaneously. This structural fault event permanently removes cable $i_k^\star$ from the constraint set:
 \begin{equation}
  T_{i_k^\star}(t) \;=\; 0
   \qquad \forall\, t \ge t_k^\star.
@@ -99,7 +91,7 @@ The active cable set transitions discretely:
 \end{equation}
 reducing the cardinality from $|\mathcal{S}|$ to $|\mathcal{S}| - 1$. For an elastic cable, the kinematic state $(\vect p_i, \vect v_i, \mat R_i, \vect\omega_i, \vect p_L, \vect v_L)$ is continuous across severance; only the ODE right-hand side changes discontinuously at $t_k^\star$.
 
-\paragraph{Compound faults and spaced-fault assumption.} We consider a sequence of $F \le N-2$ fault events at times $\{t_k^\star\}_{k=1}^F$ with $t_1^\star < \cdots < t_F^\star$. The bound $F \le N-2$ keeps at least two cables intact; actuator margins limit the demonstrated scenario ($N = 5$, $m_L = \SI{10}{\kilo\gram}$) to $F \le 2$. The inter-fault interval $\tau_{d,k} \triangleq t_{k+1}^\star - t_k^\star$ is the \emph{dwell time}. We assume each fault is separated from the previous by at least one payload-pendulum period:
+We consider a sequence of $F \le N-2$ fault events at times $\{t_k^\star\}_{k=1}^F$ with $t_1^\star < \cdots < t_F^\star$. The bound $F \le N-2$ keeps at least two cables intact; actuator margins limit the demonstrated scenario ($N = 5$, $m_L = \SI{10}{\kilo\gram}$) to $F \le 2$. The inter-fault interval $\tau_{d,k} \triangleq t_{k+1}^\star - t_k^\star$ is the \emph{dwell time}. We assume each fault is separated from the previous by at least one payload-pendulum period:
 \begin{equation}
   \tau_{d,k} \;\ge\; \tau_{\mathrm{pend}} \;\triangleq\;
     2\pi\sqrt{L/g}, \qquad k = 1, \dots, F-1,
@@ -137,24 +129,24 @@ possibly with a finite-dimensional internal state, but never with access to info
 \subsection{Reference Trajectory and Taut-Cable Reduction}
 \label{sec:reduction-and-reference}
 
-\paragraph{Reference trajectory.} The desired payload motion is a three-dimensional lemniscate trajectory with a sinusoidal altitude variation,
+The desired payload motion is a three-dimensional lemniscate trajectory with a sinusoidal altitude variation,
 \begin{align}
   \label{eq:lemniscate}
-  \vect p_L^d(t) &\;=\;
+  \vect p_L^d(t) \;=\;
     \begin{bmatrix}
       \dfrac{a\cos\phi(t)}{1 + \sin^2\!\phi(t)} \\[6pt]
       \dfrac{a\sin\phi(t)\cos\phi(t)}{1 + \sin^2\!\phi(t)} \\[6pt]
  z_0 + h_z\sin(\phi(t))
-    \end{bmatrix},\\
-  \phi(t) &= \frac{2\pi(t - t_0)}{T_{\mathrm{ref}}},\nonumber
+    \end{bmatrix},
+  \phi(t) = \frac{2\pi(t - t_0)}{T_{\mathrm{ref}}},
 \end{align}
 where $a = \SI{3.0}{\metre}$ is the horizontal scale, $T_{\mathrm{ref}} = \SI{12}{\second}$ the period, $z_0 = \SI{3.0}{\metre}$ the cruise altitude, and $h_z = \SI{0.35}{\metre}$ the altitude excursion amplitude. These parameters yield a peak centripetal load of $\approx 0.25g$ at the figure-8 tips.
 
-\paragraph{Rope model and lumped effective stiffness.} Each rope of rest length $L$ is discretized into $N_b = 8$ identical Kelvin--Voigt beads of mass $m_{\mathrm{bead}}$ connected by $N_{\mathrm{seg}} = N_b + 1 = 9$ segments of stiffness $k_s$ and damping $c_s$; $N_{\mathrm{seg}}$ is reserved for rope segments and is distinct from the surviving-cable cardinality $N_s(t) = |\mathcal{S}(t)| = N - F(t)$ used in \cref{sec:stability}. The distributed dynamics evolve on a fast timescale
+Each rope of rest length $L$ is discretized into $N_b = 8$ identical Kelvin--Voigt beads of mass $m_{\mathrm{bead}}$ connected by $N_{\mathrm{seg}} = N_b + 1 = 9$ segments of stiffness $k_s$ and damping $c_s$; $N_{\mathrm{seg}}$ is reserved for rope segments and is distinct from the surviving-cable cardinality $N_s(t) = |\mathcal{S}(t)| = N - F(t)$ used in \cref{sec:stability}. The distributed dynamics evolve on a fast timescale,
 \begin{equation}
   \tau_{\mathrm{rope}}
     \;=\; 2\pi\sqrt{m_{\mathrm{bead}}/k_s}
-    \;\approx\; \SI{6.3}{\milli\second}
+    \;\approx\; \SI{6.3}{\milli\second},
   \label{eq:tau-rope}
 \end{equation}
 separated from the payload-pendulum timescale $\tau_{\mathrm{pend}} \approx \SI{2.24}{\second}$ by $\delta = \tau_{\mathrm{rope}} / \tau_{\mathrm{pend}} \approx 0.003$. On the slow manifold, the net tensile force at the drone-side attachment equals the scalar $\xi_i = k_{\mathrm{eff}}(\ell_i - L)^+$, with effective stiffness
@@ -265,9 +257,9 @@ bead-chain parameters $(m_{\mathrm{bead}},c_s,k_s,N_b)$ and $W_{\max}$.
 
 \end{proof}
 
-\paragraph{Empirical domain membership.} \Cref{tab:domain-audit} confirms all six missions reside inside $\Omega_\tau^{\mathrm{dwell}}$ with margin on every gate: worst slack run $\SI{35.8}{\milli\second}$ ($\SI{4.2}{\milli\second}$ headroom), duty cycle $1.66\%$ ($0.85$~pp headroom), QP-transition fraction $0.10\%$. The theorem is asserted on the demonstrated regime, not an untested all-taut idealisation.
+\Cref{tab:domain-audit} confirms all six missions reside inside $\Omega_\tau^{\mathrm{dwell}}$ with margin on every gate: worst slack run $\SI{35.8}{\milli\second}$ ($\SI{4.2}{\milli\second}$ headroom), duty cycle $1.66\%$ ($0.85$~pp headroom), QP-transition fraction $0.10\%$. The theorem is asserted on the demonstrated regime, not an untested all-taut idealization.
 
-\paragraph{Team-size independence and actuator-margin envelope.} The per-drone controller and the lemma stack of \cref{sec:stability} carry no team size $N$ structurally. The dependence enters through two scalars: per-drone hover load $T^{\mathrm{hov}}(N) = m_L g / N$ and post-fault redistributed load on the surviving set,
+The per-drone controller and the lemma stack in \cref{sec:stability} are structurally independent of the team size $N$. The dependence enters through two scalars: per-drone hover load $T^{\mathrm{hov}}(N) = m_L g / N$ and post-fault redistributed load on the surviving set,
 \begin{equation}
   T^{\mathrm{post}}(N, F) \;=\; \frac{m_L g}{N - F}
    \;=\; T^{\mathrm{hov}}(N) \cdot \frac{N}{N - F},

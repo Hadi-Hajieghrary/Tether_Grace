@@ -10,7 +10,6 @@ $T_i$ rises immediately and the feed-forward converts that step
 into a proportional thrust increment at the plant's native rate,
 without any detection, annunciation, or reconfiguration interval.
 
-\paragraph{Status of the lemma stack.}
 The five lemmas verify the hybrid-systems hypotheses of~\cite{GoebelSanfeliceTeel2012} on $\Omega_\tau^{\mathrm{dwell}}$, certifying that the feed-forward identity $T_i^{\mathrm{ff}}=T_i$ supplies the bounded-jump mechanism for hybrid practical-ISS. The decay rates $\lambda$ and $\rho$ are fully explicit from the closed-loop Lyapunov matrices $P_v$, $P_{xy}$ of \cref{lem:altitude-iss,lem:horizontal-iss}. The jump bound $\chi(\Delta_f)$ is structurally explicit via \eqref{eq:chi-explicit}, but the weighting constant $\kappa_V$ that scales the tension Lyapunov channel depends on the relative magnitudes of the tracking and tension error states; its numerical calibration is deferred to follow-on work and does not affect the $\rho < 1$ certificate or the $\rho_\mathrm{ana} \approx 0.005$ computation.
 
 % ----------------------------------------------------------
@@ -23,9 +22,7 @@ The analysis operates on the reduced-order model of
 $e_{p,z,i}(t) = p_{\mathrm{slot},i,z}(t) - p_{i,z}(t)$ be
 drone $i$'s altitude slot-tracking error and
 $\vect{e}_p(t) \in \R^{3N_s}$ the stacked position error over
-$\mathcal{S}(t)$ with $N_s = |\mathcal{S}(t)|$. Fault events
-and the dwell condition follow \cref{sec:fault-and-controller};
-consecutive faults are separated by at least one
+$\mathcal{S}(t)$ with $N_s = |\mathcal{S}(t)|$. Consecutive faults are separated by at least one
 payload-pendulum period,
 \begin{equation}
   \tau_{d,k} \;\ge\; \tau_{\mathrm{pend}}
@@ -62,8 +59,7 @@ The empirical defence of H1 and H3 uses the same pre-declared missions as the th
 \label{sec:five-lemmas}
 % ----------------------------------------------------------
 
-Five lemmas underpin \cref{thm:hybrid-stability}: tension
-cancellation on the altitude channel
+Five lemmas underpin \cref{thm:hybrid-stability}: tension cancellation on the altitude channel
 (\cref{lem:tension-cancel}); exponential ISS for altitude and
 horizontal channels through Lyapunov matrices $P_v$ and
 $P_{xy}$ (\cref{lem:altitude-iss,lem:horizontal-iss});
@@ -72,12 +68,8 @@ anti-swing invariance to surviving cardinality
 $\chi(\Delta_f)$ at each fault
 (\cref{lem:jump-continuity}); and the dwell-cycle
 contraction $\rho \in (0,1)$ composing jump and decay
-(\cref{lem:dwell-decay}).
-
-For fault jumps, the tension coordinates are compared on the
-post-fault survivor set by restricting the pre-fault vector to
-the remaining cables; this convention is only needed in
-\cref{lem:jump-continuity}.
+(\cref{lem:dwell-decay}). The tension coordinates at a fault jump are compared on the
+post-fault survivor set by restricting the pre-fault vector to the remaining cables; this convention is needed in \cref{lem:jump-continuity}.
 
 % ---- Lemma 2 (unchanged) ----------------------------------
 \begin{lemma}[Tension cancellation]
@@ -301,16 +293,15 @@ function satisfies a per-fault-cycle contraction
   \label{eq:rho-def}
 \end{align}
 where
-\begin{equation}
-  c \;=\; \rho\,\chi(\Delta_f) \;+\;
-          \frac{c_0}{\alpha_{\min}},
-  \quad
-  c_0 = \sup_{t}\!
+\begin{align}
+\label{eq:c-def}
+  c \;&=\; \rho\,\chi(\Delta_f) \;+\;
+          \frac{c_0}{\alpha_{\min}},\\
+  c_0 &= \sup_{t}\!
     \bigl[\gamma_w(\|w(t)\|_\infty)
           + \gamma_q(\|q - q^\star\|_\infty)
-          + \gamma_\eta(\eta_{\max})\bigr].
-  \label{eq:c-def}
-\end{equation}
+          + \gamma_\eta(\eta_{\max})\bigr].\nonumber
+\end{align}
 At canonical parameters, $\rho \approx
 \exp(-2.38 \times 2.24) \approx 0.005$.
 \end{lemma}
@@ -328,13 +319,13 @@ composite Lyapunov function $V = V_z + V_{xy} + \kappa_V
 V_{\mathrm{tension}}$, using $\alpha_{\min} =
 \min(\alpha_z, \alpha_{xy}) = \alpha_{xy}$). Integrating
 over an interval of length $\tau \ge \tau_{\mathrm{pend}}$:
-\begin{equation}
+\begin{align}
   V(t_{k+1}^{\star,-})
     \;\le\;
-    e^{-\alpha_{\min}\tau}\bigl(V(t_k^{\star,-})
-      + \chi(\Delta_f)\bigr)
-    \;+\; \frac{c_0}{\alpha_{\min}}(1 - e^{-\alpha_{\min}\tau}).
-\end{equation}
+    e^{-\alpha_{\min}\tau}&\bigl(V(t_k^{\star,-})
+      + \chi(\Delta_f)\bigr)\\
+    &\;+\; \frac{c_0}{\alpha_{\min}}(1 - e^{-\alpha_{\min}\tau}).\nonumber
+\end{align}
 Setting $\rho = e^{-\alpha_{\min}\tau_{\mathrm{pend}}}$ and
 upper-bounding $\tau$ by $\tau_{\mathrm{pend}}$ (the minimum
 dwell, giving the worst-case exponential decay) yields
@@ -399,19 +390,18 @@ $d \in \mathcal{D}$, the stacked tracking-and-tension-error
 state $\vect\xi = (\vect e_p, \vect e_v, \vect\varepsilon_T)$
 satisfies
 \begin{align}
+\label{eq:iss-envelope-explicit}
   \|\vect\xi(t)\|
-    &\;\le\;
-      \beta\bigl(\|\vect\xi(0)\|,\,t\bigr)
+    \;\le\;
+      \beta\bigl(\|\vect\xi(0)\|,\,&t\bigr)
       + \gamma_w\bigl(\|w\|_\infty\bigr)
       + \gamma_q\bigl(\|q - q^\star\|_\infty\bigr)
       \notag \\
-    &\quad
-      + \gamma_\eta\bigl(\eta\bigr)
+    &+ \gamma_\eta\bigl(\eta\bigr)
       + \sum_{k=1}^{F}
            \Gamma_f\,e^{-\lambda(t - t_k^\star)}\,
-           \mathbf{1}_{t \ge t_k^\star},
-  \label{eq:iss-envelope-explicit}
-  \quad t \in [t_{\mathrm{pickup}},\, T],
+           \mathbf{1}_{t \ge t_k^\star},\nonumber\\
+    &t \in [t_{\mathrm{pickup}},\, T],
 \end{align}
 where $\beta \in \mathcal{KL}$, $\gamma_w, \gamma_q,
 \gamma_\eta \in \mathcal{K}$, $\lambda \triangleq
@@ -426,15 +416,15 @@ Equivalently, $V(\vect\xi(t_{k+1}^{\star,-})) \le
 \rho\,V(\vect\xi(t_k^{\star,-})) + c$ for explicit $c > 0$
 per \cref{lem:dwell-decay}. Each surviving cable's tension
 obeys the practical envelope
-\begin{equation}
+\begin{align}
+\label{eq:tension-envelope-thm}
   |T_i(t) - T_i^{\mathrm{qs}}(t)|
     \;\le\;
-    T_{\mathrm{overshoot}}\,
+    &T_{\mathrm{overshoot}}\,
     e^{-\lambda(t - t^\star_{\mathrm{last}})}
-    + T_{\mathrm{floor}},
-  \qquad i \in \mathcal{S}(t),
-  \label{eq:tension-envelope-thm}
-\end{equation}
+    + T_{\mathrm{floor}},\\ 
+    &i \in \mathcal{S}(t),\nonumber
+\end{align}
 where $T_{\mathrm{overshoot}}$ is bounded by the corresponding
 tension-error radius extracted from \eqref{eq:chi-explicit},
 and $T_{\mathrm{floor}}$ is the steady-state floor induced by
@@ -455,28 +445,28 @@ with bounded residual $r_i(t)$ on $\Omega_\tau^{\mathrm{dwell}}$.
 the composite Lyapunov function
 $V = \lambda_{\min}(P_v)^{-1}V_z + \lambda_{\min}(P_{xy})^{-1}V_{xy}
 + \kappa_V V_{\mathrm{tension}}$:
-\begin{equation}
+\begin{align}
   \dot V
     \;\le\; -\alpha_{\min}\,V
-    \;+\; \gamma_w(\|w\|_\infty)
-    \;+\; \gamma_q(\|q - q^\star\|_\infty)
-    \;+\; \gamma_\eta(\eta),
+    &\;+\; \gamma_w(\|w\|_\infty)\\
+    &\;+\; \gamma_q(\|q - q^\star\|_\infty)
+    \;+\; \gamma_\eta(\eta),\nonumber
   \label{eq:combined-iss}
-\end{equation}
+\end{align}
 with $\gamma_\eta$ absorbing the reduction residual
 $C_1\delta + C_2\eta_{\max}$ of \cref{thm:reduction} and
 $\alpha_{\min} = \alpha_{xy}$ from \cref{lem:horizontal-iss}.
 By the standard comparison lemma,
 integrating \eqref{eq:combined-iss} over any interval
 $[0, t]$ yields
-\begin{equation}
+\begin{align}
   V(t) \;\le\;
-    e^{-\alpha_{\min} t} V(0)
-    + \frac{1}{\alpha_{\min}}\bigl[
+    &e^{-\alpha_{\min} t} V(0)\\
+    &+ \frac{1}{\alpha_{\min}}\bigl[
       \gamma_w(\|w\|_\infty)
       + \gamma_q(\|q - q^\star\|_\infty)
-      + \gamma_\eta(\eta)\bigr],
-\end{equation}
+      + \gamma_\eta(\eta)\bigr],\nonumber
+\end{align}
 from which $\beta \in \mathcal{KL}$ and
 $\gamma_w, \gamma_q, \gamma_\eta \in \mathcal{K}$ follow by
 the standard ISS reformulation. Since $V$ is quadratic in

@@ -43,7 +43,7 @@
         (plant);
 
   % --- Feed-forward identity tap (sumT directly above QP) ---
-  \node[sum, fill=red!10] (sumT) at (0, 1.7) {$+$};
+  \node[sum, fill=red!10] (sumT) at (0, 1.2) {$+$};
   % Identity label: placed ABOVE sumT (out of any tap path);
   % no white fill so it does not look like a small box.
   \node[anchor=south, font=\scriptsize\itshape, red!70!black,
@@ -55,7 +55,7 @@
   % x = 1.7 sits in the clear gap between QP (right edge x=1.1)
   % and att (left edge x=2.3), so sense.north runs vertically up
   % to sumT without crossing any block.
-  \node[sens] (sense) at (1.7, -2.6)
+  \node[sens] (sense) at (1.7, -2.2)
         {Local sensors\\$x_i,\;\; T_i,\;\; v_L$};
 
   % Plant -> sensors: |- (vertical down then horizontal left)
@@ -65,7 +65,7 @@
   % at x = -6.0.  Single draw call -> ONE arrowhead at pd.south.
   \draw[senseflow] (sense.west)
         -- node[sig, pos=0.65, above] {$x_i,\,v_L$}
-        (-6.0, -2.6) -- (pd.south);
+        (-6.0, -2.2) -- (pd.south);
 
   % T_i tap (red) — sense.NORTH straight up, then horizontal
   % left to sumT.east.  Single draw call -> ONE arrowhead at
@@ -92,11 +92,11 @@
         {Baseline cascade --- continuous time, all signals local};
 
   % --- Extension band (y = -4.6) ---
-  \node[extblk] (reshape) at (-6.0, -4.6)
+  \node[extblk] (reshape) at (-6.0, -4.2)
         {Reshape supervisor\\$\lceil\log_2 N\rceil$-bit broadcast};
-  \node[extblk] (l1) at (-3.0, -4.6)
+  \node[extblk] (l1) at (-3.0, -4.2)
         {$L_1$ adaptive\\altitude augmentation};
-  \node[extblk] (mpc) at ( 0.0, -4.6)
+  \node[extblk] (mpc) at ( 0.0, -4.2)
         {Receding-horizon MPC\\(replaces single-step QP)};
 
   % All three extension injection arrows are strictly vertical.
