@@ -13,20 +13,28 @@
 
 \usepackage{aliascnt}
 
-\newtheorem{theorem}{Theorem}
+% \newtheorem{theorem}{Theorem}
 
-\newaliascnt{lemma}{theorem}
-\newtheorem{lemma}[lemma]{Lemma}
-\aliascntresetthe{lemma}
+% \newaliascnt{lemma}{theorem}
+% \newtheorem{lemma}[lemma]{Lemma}
+% \aliascntresetthe{lemma}
 
-\newtheorem{proposition}{Proposition}
+% \newtheorem{proposition}{Proposition}
 
-\newaliascnt{corollary}{theorem}
-\newtheorem{corollary}[corollary]{Corollary}
-\aliascntresetthe{corollary}
+% \newaliascnt{corollary}{theorem}
+% \newtheorem{corollary}[corollary]{Corollary}
+% \aliascntresetthe{corollary}
 
-\newtheorem{definition}{Definition}
-\newtheorem{remark}{Remark}
+% \newtheorem{definition}{Definition}
+% \newtheorem{remark}{Remark}
+
+\newtheorem{theorem}{Theorem}%[section]
+\newtheorem{lemma}{Lemma}%[section]
+\newtheorem{corollary}{Corollary}%[section]
+\newtheorem{proposition}{Proposition}%[section]
+\newtheorem{definition}{Definition}%[section]
+\newtheorem{remark}{Remark}%[section]
+
 
 % ======================== ALGORITHMS ============================
 \usepackage{algorithm}
@@ -106,7 +114,7 @@
 \author{Hadi Hajieghrary$^{1}$
 \thanks{$^{1}$Hadi.Hajieghrary@Torc.ai}, %
 Paul Schmitt$^{2}$
-\thanks{$^{2}$pauls@massrobotics.org}}
+\thanks{$^{2}$Reynolds \& Moore, paul.schmitt@reynolds-moore.com}}
 
 
 % The paper headers
@@ -116,11 +124,16 @@ Paul Schmitt$^{2}$
 \maketitle
 
 \begin{abstract}
-Cooperative aerial manipulation under unannounced cable severance demands a fault response on the payload-pendulum timescale ($\approx \SI{2}{\second}$), well below the latency of any detection--classification--reconfiguration pipeline. For this class of self-announcing structural transitions, we show that a single decentralized feed-forward identity, $T_i^{\mathrm{ff}} = T_i$, equating each drone's altitude thrust feed-forward to its own measured rope tension, supplies the dominant passive fault-response mechanism. The identity supplies the bounded-jump mechanism required by the hybrid practical input-to-state stability (ISS) certificate, enabling recovery across unannounced severance events without any estimator, detector, or peer communication.
+%Cooperative aerial manipulation under unannounced cable severance demands a fault response on the payload-pendulum timescale ($\approx \SI{2}{\second}$), well below the latency of any detection--classification--reconfiguration pipeline. For this class of self-announcing structural transitions, we show that a single decentralized feed-forward identity, $T_i^{\mathrm{ff}} = T_i$, equating each drone's altitude thrust feed-forward to its own measured rope tension, supplies the dominant passive fault-response mechanism. The identity supplies the bounded-jump mechanism required by the hybrid practical input-to-state stability (ISS) certificate, enabling recovery across unannounced severance events without any estimator, detector, or peer communication.
 
-We establish three results. First, a taut-cable reduction theorem with explicit, numerically verified constants certifies an $O(\delta + \eta_{\max})$ admissibility bound on a slack-excursion-bounded domain, replacing the distributed Kelvin--Voigt rope dynamics with a lumped reduced-order plant. Second, a conditional hybrid practical-ISS theorem yields an explicit recovery envelope with closed-form Lyapunov decay rate $\lambda$ and per-fault-cycle contraction $\rho \in (0,1)$; the fault-jump bound $\chi(\Delta_f)$ is explicit in structure and bounded in terms of $\kappa_V$, whose numerical calibration is a stated follow-on. Third, a scalar admissible-window rule for an optional $L_1$ adaptive altitude augmentation derives two necessary conditions --- discretization stability and bandwidth coverage --- that together place the canonical gain inside a certifiable design window, reducing reliance on empirical tuning. Because each drone's closed loop is identical pre- and post-fault and contains no peer-coupled term, the architecture admits a sequence of $F \le N{-}2$ unannounced severances by induction on the fault counter, subject only to the actuator-margin envelope $m_L g/(N{-}F) \le \kappa_{\mathrm{act}} f_{\max}$.
+%We establish three results. First, a taut-cable reduction theorem with explicit, numerically verified constants certifies an $O(\delta + \eta_{\max})$ admissibility bound on a slack-excursion-bounded domain, replacing the distributed Kelvin--Voigt rope dynamics with a lumped reduced-order plant. Second, a conditional hybrid practical-ISS theorem yields an explicit recovery envelope with closed-form Lyapunov decay rate $\lambda$ and per-fault-cycle contraction $\rho \in (0,1)$; the fault-jump bound $\chi(\Delta_f)$ is explicit in structure and bounded in terms of $\kappa_V$, whose numerical calibration is a stated follow-on. Third, a scalar admissible-window rule for an optional $L_1$ adaptive altitude augmentation derives two necessary conditions --- discretization stability and bandwidth coverage --- that together place the canonical gain inside a certifiable design window, reducing reliance on empirical tuning. Because each drone's closed loop is identical pre- and post-fault and contains no peer-coupled term, the architecture admits a sequence of $F \le N{-}2$ unannounced severances by induction on the fault counter, subject only to the actuator-margin envelope $m_L g/(N{-}F) \le \kappa_{\mathrm{act}} f_{\max}$.
 
-In Drake multibody simulation across a pre-declared six-variant capability sequence and four ablation campaigns at $N=5$, $m_L = \SI{10}{\kilo\gram}$, and \SI{4}{\metre\per\second} Dryden wind, the controller absorbs single and dual unannounced severances within one payload-pendulum period. The feed-forward ablation isolates the identity as the causal mechanism: disabling it inflates cruise RMSE by $34$--$39\,\%$ and post-fault altitude sag by $3.6$--$4.0\times$. Two null findings --- that the model-predictive-control tension-ceiling layer and the post-fault reshape supervisor remain structurally inactive on the demonstrated trajectory family --- support the interpretation that the baseline passive mechanism, rather than conventional active fault-tolerance machinery, explains the observed recovery.
+%In Drake multibody simulation across a pre-declared six-variant capability sequence and four ablation campaigns at $N=5$, $m_L = \SI{10}{\kilo\gram}$, and \SI{4}{\metre\per\second} Dryden wind, the controller absorbs single and dual unannounced severances within one payload-pendulum period. The feed-forward ablation isolates the identity as the causal mechanism: disabling it inflates cruise RMSE by $34$--$39\,\%$ and post-fault altitude sag by $3.6$--$4.0\times$. Two null findings --- that the model-predictive-control tension-ceiling layer and the post-fault reshape supervisor remain structurally inactive on the demonstrated trajectory family --- support the interpretation that the baseline passive mechanism, rather than conventional active fault-tolerance machinery, explains the observed recovery.
+Cooperative aerial transport with cable-suspended payloads must tolerate abrupt cable severance on the payload-pendulum timescale, which leaves insufficient time for fault detection, diagnosis, or reconfiguration. This paper shows that, for this class of structural faults, a simple decentralized feed-forward identity sets each drone’s altitude thrust feed-forward equal to its measured cable tension and provides the dominant passive fault-response mechanism. This identity converts the self-announcing change in load distribution into an immediate thrust adjustment using only local measurements and requires no communication or fault logic.
+
+We formalize this mechanism through a hybrid practical input-to-state stability analysis of the decentralized closed loop. We establish a reduced-order taut-cable model with explicit error bounds and construct a hybrid Lyapunov argument that yields an explicit recovery envelope with exponential decay and per-fault-cycle contraction. These results guarantee bounded tracking error and recovery across sequences of unannounced cable severances under actuator and dwell-time conditions.
+
+High-fidelity multibody simulations demonstrate that the controller absorbs single and multiple severance events within one payload-pendulum period. Ablation studies confirm that the feed-forward identity is the causal mechanism that enables recovery, while additional control layers remain inactive. These results show that passive, local control laws can provide certified fault tolerance for structural transitions without detection or reconfiguration.
 \end{abstract}
 
 \begin{IEEEkeywords}

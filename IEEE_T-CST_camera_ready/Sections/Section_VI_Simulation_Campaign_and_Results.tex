@@ -1,8 +1,3 @@
-All numerical claims are deterministic point estimates from a single fixed Dryden seed~42 (\cref{rem:reproducibility}).
-
-\subsection{Simulation Environment and Campaign Structure}
-\label{sec:campaign}
-
 
 All simulations run in Drake~\cite{drake} with an RK3 continuous-time integrator at a max step of \SI{1}{\milli\second}. Drones and payload are rigid multibody systems; ropes are bead-chain Kelvin--Voigt spring-dampers whose lumped stiffness is justified by \cref{thm:reduction}. Wind is body-frame aerodynamic drag per drone and on the payload, using a Dryden low-altitude turbulence model. \Cref{tab:sim-params} lists the simulator and plant parameters.
 
@@ -471,19 +466,19 @@ A reviewer concern with cascade architectures is that the controller may rely on
   \end{tabular}
 \end{table}
 
-% ----------------------------------------------------------------
-\subsection{Reproducibility and Claim-to-Evidence Map}
-\label{sec:VI-G}
-\label{sec:reproducibility}
-% ----------------------------------------------------------------
+% % ----------------------------------------------------------------
+% \subsection{Reproducibility and Claim-to-Evidence Map}
+% \label{sec:VI-G}
+% \label{sec:reproducibility}
+% % ----------------------------------------------------------------
 
-\begin{remark}[Simulation protocol and seed manifest]
-\label{rem:reproducibility}
-  V1--V6 use fixed Dryden seed~42, producing bit-exact output across runs at identical Drake and library versions. Inter-variant RMSE differences are therefore attributable to controller configuration and fault schedule on this common realization. The principal ($+x$) wind component achieves a $2\sigma$ exceedance within $[8,12]$~s, making this a reproducible stress case.
+% \begin{remark}[Simulation protocol and seed manifest]
+% \label{rem:reproducibility}
+%   V1--V6 use fixed Dryden seed~42, producing bit-exact output across runs at identical Drake and library versions. Inter-variant RMSE differences are therefore attributable to controller configuration and fault schedule on this common realization. The principal ($+x$) wind component achieves a $2\sigma$ exceedance within $[8,12]$~s, making this a reproducible stress case.
 
-  Ablations (P2-A through robustness sweep) are deterministic point estimates at seed~42; CRN-paired replication yielding bootstrap CIs is follow-up work. The seed manifest and all simulation artifacts are publicly available in the companion repository~\cite{tether_grace_code}.
+%   Ablations (P2-A through robustness sweep) are deterministic point estimates at seed~42; CRN-paired replication yielding bootstrap CIs is follow-up work. The seed manifest and all simulation artifacts are publicly available in the companion repository~\cite{tether_grace_code}.
 
-  \textbf{Scope of H1--H3 certification.} \Cref{tab:domain-audit} certifies domain membership for the demonstrated mission family only. For a new trajectory, reference profile, wind envelope, or fault schedule, the same gate audit must be repeated before invoking the conditional certificate.
-\end{remark}
+%   \textbf{Scope of H1--H3 certification.} \Cref{tab:domain-audit} certifies domain membership for the demonstrated mission family only. For a new trajectory, reference profile, wind envelope, or fault schedule, the same gate audit must be repeated before invoking the conditional certificate.
+% \end{remark}
 
-The audit trail: C1 is supported by \cref{tab:domain-audit,tab:reduction-residuals}; C2 by \cref{fig:fault-zoom,fig:dwell-sweep}; C3 by \cref{fig:l1-stability-dashboard}; FF causality by \cref{tab:ff-ablation,fig:self-announcement}; actuator margin and recovery time by \cref{tab:thrust-transient,tab:recovery-iae} (with the variant-level maxima reported inline in \cref{sec:VI-actuator-recovery}); operating-boundary characterisation by \cref{sec:VI-failure}.
+% The audit trail: C1 is supported by \cref{tab:domain-audit,tab:reduction-residuals}; C2 by \cref{fig:fault-zoom,fig:dwell-sweep}; C3 by \cref{fig:l1-stability-dashboard}; FF causality by \cref{tab:ff-ablation,fig:self-announcement}; actuator margin and recovery time by \cref{tab:thrust-transient,tab:recovery-iae} (with the variant-level maxima reported inline in \cref{sec:VI-actuator-recovery}); operating-boundary characterisation by \cref{sec:VI-failure}.

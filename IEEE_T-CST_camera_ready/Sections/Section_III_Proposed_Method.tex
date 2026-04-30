@@ -1,7 +1,3 @@
-We present the decentralized fault-tolerant controller for \cref{def:problem}. Each drone runs a three-layer cascade: an outer-loop PD with anti-swing slot shift, a single-step convex QP on the tilt-and-thrust envelope, and an inner-loop attitude PD. The central design element is $T_i^{\mathrm{ff}} = T_i$, encoding passive fault tolerance with no detection, communication, or reconfiguration. The optional reshape supervisor (\cref{sec:reshape-supervisor}) adds a latch detector and a per-fault broadcast; the optional $L_1$ augmentation (\cref{sec:extensions}) injects an adaptive altitude correction between the outer PD and the QP.
-
-\input{Figures/diagrams/fig_controller_cascade.tex}
-
 \begin{table*}[htbp]
   \centering
   \caption{Component-level information pattern. The baseline cascade and the $L_1$ and MPC extensions consume no fault flag and no peer message; only the optional reshape supervisor steps outside this pattern.}
@@ -19,13 +15,11 @@ We present the decentralized fault-tolerant controller for \cref{def:problem}. E
   \end{tabular}
 \end{table*}
 
+We present the decentralized fault-tolerant controller for \cref{def:problem}. Each drone runs a three-layer cascade: an outer-loop PD with anti-swing slot shift, a single-step convex QP on the tilt-and-thrust envelope, and an inner-loop attitude PD. The central design element is $T_i^{\mathrm{ff}} = T_i$, encoding passive fault tolerance with no detection, communication, or reconfiguration. The reshape supervisor (\cref{sec:reshape-supervisor}) adds a latch detector and a per-fault broadcast; the optional $L_1$ augmentation (\cref{sec:extensions}) injects an adaptive altitude correction between the outer PD and the QP.
 
-% ----------------------------------------------------------------
-\subsection{Outer Loop: PD with Anti-Swing Slot Shift}
-\label{sec:outer-loop}
-% ----------------------------------------------------------------
+\input{Figures/diagrams/fig_controller_cascade.tex}
 
-\paragraph{Slot reference and anti-swing shift.} Each drone is pre-assigned a hovering slot displaced vertically above the payload reference point and laterally by a fixed formation offset,
+Each drone is pre-assigned a hovering slot displaced vertically above the payload reference point and laterally by a fixed formation offset,
 \begin{equation}
   \vect p_{\mathrm{slot},i}(t)
     \;=\; \vect p_L^d(t) + \boldsymbol\delta_i
@@ -44,18 +38,15 @@ where $\boldsymbol\delta_i \in \R^3$ is the formation offset (overridable at run
     \end{cases}
   \label{eq:swing-shift}
 \end{equation}
-where $\hat{\vect v}_{L,\perp}$ is the unit vector of $\vect v_{L,\perp}$. The shifted slot position is $\vect p_{\mathrm{slot},i}^{\mathrm{dyn}}(t) = \vect p_{\mathrm{slot},i}(t) + \vect s_i(t)$.
+where $\hat{\vect v}_{L,\perp}$ is the unit vector of $\vect v_{L,\perp}$. The shifted slot position is $\vect p_{\mathrm{slot},i}^{\mathrm{dyn}}(t) = \vect p_{\mathrm{slot},i}(t) + \vect s_i(t)$. therefore, the position and velocity errors are
+\begin{align}
+    \label{eq:slot-error}
+  \vect e_p(t) &= \vect p_{\mathrm{slot},i}^{\mathrm{dyn}}(t)
+                 - \vect p_i(t),\\
+  \vect e_v(t) &= \vect v_{\mathrm{slot},i}(t) - \vect v_i(t).\nonumber
+\end{align}
 
-\paragraph{Tracking errors.} The position and velocity errors are
-\begin{equation}
-  \vect e_p(t) = \vect p_{\mathrm{slot},i}^{\mathrm{dyn}}(t)
-                 - \vect p_i(t),
-  \qquad
-  \vect e_v(t) = \vect v_{\mathrm{slot},i}(t) - \vect v_i(t).
-  \label{eq:slot-error}
-\end{equation}
-
-\paragraph{Target acceleration.} The outer loop computes a target body acceleration,
+The outer loop computes a target body acceleration,
 \begin{align}
 \label{eq:a-target}
   \vect a_{\mathrm{target}}(t)

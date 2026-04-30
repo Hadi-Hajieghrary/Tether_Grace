@@ -97,7 +97,7 @@ F_{w,i,z}$ and absorbing the wind term yields
   \label{eq:alt-dynamics-residual}
 \end{equation}
 Since $|\theta_i| \le \theta_{c,\max}$ uniformly (enforced by
-the QP tilt ceiling, \cref{sec:qp-and-ff}), the residual
+the QP tilt ceiling), the residual
 $T_i(1-\cos\theta_i) \le T_i(1 - \cos\theta_{c,\max})$
 regardless of $N_s$, and is absorbed by $\gamma_q$ of
 \cref{lem:altitude-iss}.
@@ -233,17 +233,16 @@ kinematic state $(\vect p_i, \vect v_i, \vect p_L, \vect v_L)$;
 since no impulsive force is applied at $t_f$, the kinematic
 state is continuous across the fault, so the survivor tensions
 are exactly continuous at the fault instant; concretely,
-\begin{equation}
+\begin{align}
   \vect\varepsilon_T(t_f^+)
-    = \Pi_{\mathcal{S}^+\leftarrow\mathcal{S}^-}
+    &= \Pi_{\mathcal{S}^+\leftarrow\mathcal{S}^-}
       \vect\varepsilon_T(t_f^-)
-      - \vect b_f,
-  \qquad
-  \vect b_f \triangleq
+      - \vect b_f,\\
+  \vect b_f &\triangleq
     \vect T^{\mathrm{qs}}(t_f^+)
     - \Pi_{\mathcal{S}^+\leftarrow\mathcal{S}^-}
-      \vect T^{\mathrm{qs}}(t_f^-),
-\end{equation}
+      \vect T^{\mathrm{qs}}(t_f^-),\nonumber
+\end{align}
 with $\|\vect b_f\| = \Delta_f$. Since restriction cannot
 increase the norm and the admissible domain of H1--H3 is
 compact, $\|\vect\varepsilon_T(t)\|$ is uniformly bounded on
