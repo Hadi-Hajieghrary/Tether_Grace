@@ -42,7 +42,7 @@ The campaign structure (\cref{tab:campaign-matrix}) comprises V1--V6 as the pre-
     \toprule
     Tag & Controller            & Fault Schedule                                                                          & Wind & Purpose \\
     \midrule
-    \multicolumn{5}{l}{\textit{Capability Demonstration (C1--C3 primary evidence)}} \\[\smallskipamount]
+    \multicolumn{5}{l}{\textit{Capability Demonstration and Admissibility Audit}} \\[\smallskipamount]
     V1 & Baseline QP           & None                                                                                    & No   & Nominal tracking floor; C2 bound check \\
     V2 & Baseline QP           & None                                                                                    & Yes  & Wind-rejection baseline \\
     V3 & Baseline QP           & Drone~0 at $t{=}\SI{12}{s}$                                                             & Yes  & Single-fault recovery \\
@@ -51,8 +51,8 @@ The campaign structure (\cref{tab:campaign-matrix}) comprises V1--V6 as the pre-
     V6 & Full stack            & Same as V4                                                                              & Yes  & Full-stack integration; hardest scenario \\
        & (MPC$+L_1+$reshape)  &                                                                                         &      & \\
     \midrule
-    \multicolumn{5}{l}{\textit{Targeted Ablations (causal isolation and domain characterization)}} \\[\smallskipamount]
-    P2-A & Baseline, FF disabled & V3, V4, V5 schedules                                                                 & Yes  & Feed-forward causality (C2) \\
+    \multicolumn{5}{l}{\textit{Targeted Ablations and Operating-Domain Probes}} \\[\smallskipamount]
+    P2-A & Baseline, FF disabled & V3, V4, V5 schedules                                                                 & Yes  & Feed-forward mechanism evidence (C2) \\
     P2-B & Baseline / $+L_1$    & None                                                                                  & No   & Mass-mismatch robustness (C3-$L_1$) \\
     P2-C & MPC, ceiling sweep   & V4 schedule                                                                           & Yes  & Tension-ceiling sensitivity (C3-MPC) \\
     P2-D & Baseline + reshape   & V4 schedule, period $T_{\mathrm{ref}} \in \{8,10,12\}$~s                              & Yes  & Reshape benefit vs.\ trajectory period (C3-Reshape) \\
@@ -93,46 +93,7 @@ The campaign structure (\cref{tab:campaign-matrix}) comprises V1--V6 as the pre-
 \subsection{Reduction-Fidelity Audit}
 \label{sec:VI-reduction}
 
-
-Three quantities must be kept distinct:
-\begin{itemize}[leftmargin=1.5em,noitemsep]
-  \item $T_i^{\mathrm{qs}} \triangleq k_{\mathrm{eff}}(\ell_i - L)^+$ --- the \emph{per-rope quasi-static} tension (same $\ell_i$ as the physical rope); \cref{thm:reduction} bounds $|T_i^{\mathrm{KV}} - T_i^{\mathrm{qs}}|$ at $\le C_1\delta + C_2\eta_{\max} \approx \SI{0.076}{\newton}$;
-  \item $\varepsilon_i \triangleq T_i^{\mathrm{KV}} - T_{\mathrm{eff}}$ --- the \emph{inter-rope asymmetry} around the surviving-rope mean; this is a formation-geometry effect, driven by post-fault load redistribution, and is \emph{not} bounded by \cref{thm:reduction};
-  \item trajectory deviation --- the quantity controlled by \cref{thm:hybrid-stability}, which absorbs both $T_i^{\mathrm{qs}}$ and the feed-forward identity.
-\end{itemize}
-
-The empirical audit measures $\varepsilon_i = T_i^{\mathrm{KV}} - T_{\mathrm{eff}}$, which is formation-geometry driven and structurally larger than the shape-mode deviation; its role is to characterize post-fault load asymmetry, not to verify the theorem bound.
-
-The domain-gate layer (\cref{tab:domain-audit}) certifies that $\eta$, max slack-run, and QP transition fraction satisfy the theorem hypotheses with margin across all variants; this is the primary certificate.
-
-The \emph{inter-rope dispersion} layer provides additional context. On $[8,30]\,\si{\second}$ for each variant we compute $T_{\mathrm{eff}}(t) = |\mathcal{S}(t)|^{-1} \sum_{i\in\mathcal{S}(t)} T_i^{\mathrm{KV}}(t)$ and $\varepsilon_i(t) = T_i^{\mathrm{KV}}(t) - T_{\mathrm{eff}}(t)$. \Cref{tab:reduction-residuals} reports RMS, P95, and peak of $|\varepsilon_i|$; \cref{fig:reduction-overlay-V4} overlays per-rope $T_i^{\mathrm{KV}}$ against $T_{\mathrm{eff}}$ for V4. The inter-rope asymmetry sits at RMS $\sim\SI{12}{\newton}$ on dual-fault variants ($\approx 60\%$ of nominal per-rope tension), with peaks at $\SI{60}{\newton}$ at the most centripetally-loaded instants. This large dispersion is architecturally expected: after a fault, each surviving rope carries more load and formation angles differ, causing $T_i^{\mathrm{qs}}$ to vary across ropes by the same $O(10)$\,N. It does not contradict the theorem, which bounds $|T_i^{\mathrm{KV}} - T_i^{\mathrm{qs}}|$ at $\approx\SI{0.076}{\newton}$ --- the shape-mode deviation of each rope \emph{from its own} quasi-static baseline. The identity $T_i^{\mathrm{ff}} = T_i$ ensures each drone receives the full asymmetric signal, so the stability analysis need not model the asymmetry analytically (\cref{lem:tension-cancel}). A trajectory-level audit against a reduced-rope simulator is follow-up work.
-
-\begin{table}[htbp]
-  \caption{Inter-rope tension asymmetry $|\varepsilon_i| = |T_i^{\mathrm{KV}} - T_{\mathrm{eff}}|$ over $[8,\,30]\,\si{\second}$ cruise, surviving ropes. $T_{\mathrm{eff}}$ is the mean across surviving ropes; this measures formation-geometry load dispersion, \emph{not} the shape-mode deviation bounded by \cref{thm:reduction}. Nominal per-rope tension $m_L g / 5 \approx \SI{19.6}{\newton}$.}
-  \label{tab:reduction-residuals}
-  \centering
-  \small
-  \renewcommand{\arraystretch}{1.05}
-  \begin{tabular}{lrrr}
-    \toprule
-    Variant & RMS (N) & P95 (N) & Peak (N) \\
-    \midrule
-    V1 & 7.4  & 15.5 & 60.5 \\
-    V2 & 7.1  & 14.8 & 52.6 \\
-    V3 & 12.8 & 22.1 & 52.6 \\
-    V4 & 12.4 & 22.5 & 52.6 \\
-    V5 & 12.3 & 21.9 & 52.6 \\
-    V6 & 12.8 & 23.6 & 60.2 \\
-    \bottomrule
-  \end{tabular}
-\end{table}
-
-\begin{figure}[htbp]
-  \centering
-  \includegraphics[width=\columnwidth]{Figures/fig_reduction_overlay_V4.png}
-  \caption{V4 reduction audit. Coloured: per-rope Kelvin--Voigt truth tension $T_i^{\mathrm{KV}}(t)$ (severed ropes drop to zero at fault). Dashed black: surviving-rope mean $T_{\mathrm{eff}}(t)$. The spread around $T_{\mathrm{eff}}$ is the inter-rope tension asymmetry $\varepsilon_i$ (formation-geometry effect); the shape-mode deviation $|T_i^{\mathrm{KV}} - T_i^{\mathrm{qs}}|$ bounded by \cref{thm:reduction} at $\approx\SI{0.076}{\newton}$ is not visible at this scale.}
-  \label{fig:reduction-overlay-V4}
-\end{figure}
+Two distinct quantities must be kept apart: the \emph{per-rope shape-mode deviation} $|T_i^{\mathrm{KV}}-T_i^{\mathrm{qs}}|$ that \cref{thm:reduction} bounds at $\le C_1\delta+C_2\eta_{\max}\approx\SI{0.076}{\newton}$, and the \emph{inter-rope asymmetry} $\varepsilon_i\triangleq T_i^{\mathrm{KV}}-T_{\mathrm{eff}}$ around the surviving-rope mean, which is formation-geometry driven and not bounded by the theorem. Across $[8,30]\,\si{\second}$ on V1--V6, $|\varepsilon_i|$ has RMS $7$--$13$\,N (P95 up to $24$\,N, peaks $\sim\SI{60}{\newton}$ at the most centripetally-loaded instants); after a fault each survivor carries more load and formation angles differ, so $T_i^{\mathrm{qs}}$ varies across ropes by $O(10)$\,N. The identity $T_i^{\mathrm{ff}}=T_i$ ensures each drone receives the full asymmetric signal, so the stability analysis need not model the asymmetry analytically (\cref{lem:tension-cancel}). The domain-gate audit \cref{tab:domain-audit} is the primary certificate.
 
 % ----------------------------------------------------------------
 \subsection{Nominal Tracking Performance}
@@ -230,7 +191,7 @@ We audit \cref{thm:hybrid-stability} against three scenarios of increasing sever
 
 \paragraph{V6 --- full stack.} With MPC~$+L_1$+reshape active, first-fault sag is $\SI{69.9}{\milli\metre}$ ($-12\%$ vs V4), consistent with the stack preserving the envelope while delivering incremental benefit.
 
-\Cref{fig:fault-zoom} shows the fault-centered timeline for V4 with FF-on (solid) vs FF-off (dashed) on the same wind seed: (a)~tracking-error norm, (b)~altitude error exposing the sag differential, (c)~Lyapunov proxy $V(t) = \xi^\top P_v \xi$, allowing direct visual inspection of the bounded jump (\cref{lem:jump-continuity}) and the inter-event contraction (\cref{lem:dwell-decay}) alongside the causal mechanism. V3, V5, FF-held-constant, and per-drone thrust traces are in the supplementary package. Empirical fits on V4 and V5 give peak jump $\hat\chi_{\max} = 1.1\!\times\!10^{-4}$ (V4), $1.3\!\times\!10^{-5}$ (V5)---in units of the dimensionless proxy $V$, not physical units---and dwell-cycle contraction $\hat\rho_{\text{V4}}=0.20$, $\hat\rho_{\text{V5}}=0.045$, both well below the $\rho < 1$ sufficiency bound (\cref{tab:stability-evidence}).
+\Cref{fig:fault-zoom} shows the fault-centered timeline for V4 with FF-on (solid) vs FF-off (dashed) on the same wind seed: (a)~tracking-error norm, (b)~altitude error exposing the sag differential, (c)~Lyapunov proxy $V(t) = \xi^\top P_v \xi$, allowing direct visual inspection of the bounded jump (\cref{lem:jump-continuity}) and the inter-event contraction (\cref{lem:dwell-decay}) together with mechanism evidence from the FF ablation. V3, V5, FF-held-constant, and per-drone thrust traces are in the supplementary package. Empirical fits on V4 and V5 give peak jump $\hat\chi_{\max} = 1.1\!\times\!10^{-4}$ (V4), $1.3\!\times\!10^{-5}$ (V5)---in units of the dimensionless proxy $V$, not physical units---and dwell-cycle contraction $\hat\rho_{\text{V4}}=0.20$, $\hat\rho_{\text{V5}}=0.045$, both well below the $\rho < 1$ sufficiency bound (\cref{tab:stability-evidence}).
 
 \begin{figure}[htbp]
   \centering
@@ -325,14 +286,7 @@ The single-axis sweep of \cref{fig:l1-mass-mismatch} is one projection of the fo
   \label{fig:l1-mass-mismatch}
 \end{figure}
 
-\paragraph{$L_1$ adaptive-gain stability map.} \Cref{prop:gamma-star} gives the scalar-proxy admissible window $\Gamma_{\min} \approx 1{,}190 < \Gamma < \Gamma^\star \approx 4.75\times10^5$. We sweep $\Gamma \in \{0.5, 2, 10, 30, 50, 80\} \times 10^3$ on a fault-free $\SI{20}{\second}$ mass-mismatch run ($m_L=\SI{3.9}{\kilo\gram}$ vs $q^\star=\SI{3.0}{\kilo\gram}$, FF off). Each drone runs its own $L_1$ update with the swept $\Gamma$, with no shared state or orchestrator. Altitude RMSE (\cref{fig:l1-stability-dashboard}) is highest at $\Gamma=500 < \Gamma_{\min}$ ($\SI{101}{\milli\metre}$, bandwidth-coverage insufficient), drops to a minimum of $\SI{88.5}{\milli\metre}$ at $\Gamma \approx 10^4$ (well inside the window), then rises mildly to $\SI{91.4}{\milli\metre}$ at $\Gamma=8\times 10^4$ (unmodelled cross-coupling). Peak sag follows the same shape, $\SI{130}{\milli\metre}$ down to $\sim\SI{113}{\milli\metre}$. The late-vs-early variance ratio stays in $[0.36, 0.37]$; no instability is observed across all six swept values ($\max_\Gamma\Gamma/\Gamma^\star \approx 0.17$). The unimodal shape, with the worst performance at the below-$\Gamma_{\min}$ point and the best within the window, empirically validates both bounds of \cref{prop:gamma-star}. Probing past $\Gamma^\star$ is follow-up work.
-
-\begin{figure}[htbp]
-  \centering
-  \includegraphics[width=0.92\linewidth]{Figures/fig_l1_stability_dashboard.png}
-  \caption{$L_1$ adaptive-gain stability dashboard. Left axis (circles): altitude RMSE vs $\Gamma$. Right axis (squares, dashed): peak altitude sag. Italics: late-vs-early error-standard-deviation ratio. Green band: admissible window $\Gamma_{\min} \approx 1{,}190$ to $\Gamma^\star \approx 4.75\!\times\!10^5$ (\cref{prop:gamma-star}); the $\Gamma=500$ point lies below $\Gamma_{\min}$ and shows the highest RMSE, consistent with insufficient bandwidth coverage. FF-off rescue mode, $m_L=\SI{3.9}{\kilo\gram}$, no faults.}
-  \label{fig:l1-stability-dashboard}
-\end{figure}
+\paragraph{$L_1$ adaptive-gain stability map.} A sweep of $\Gamma\in\{0.5,2,10,30,50,80\}\times 10^3$ in rescue mode ($m_L=\SI{3.9}{\kilo\gram}$, $q^\star=\SI{3.0}{\kilo\gram}$, FF off, no faults) confirms the admissible window of \cref{prop:gamma-star}. Altitude RMSE peaks at $\Gamma=500<\Gamma_{\min}$ ($\SI{101}{\milli\metre}$), reaches a minimum of $\SI{88.5}{\milli\metre}$ at $\Gamma\approx 10^4$ inside the window, and rises mildly to $\SI{91.4}{\milli\metre}$ at $\Gamma=8\times 10^4$. The unimodal shape with worst performance below $\Gamma_{\min}$ empirically supports both window bounds; no instability is observed across the swept range.
 
 % ----------------------------------------------------------------
 \subsection{Extension Characterization and Binding-Regime
@@ -377,73 +331,16 @@ P2-C and P2-D probe the MPC tension-ceiling (C3-MPC) and reshape supervisor (C3-
   \end{tabular}
 \end{table}
 
-% ----------------------------------------------------------------
-\subsection{Trajectory-Phase Sensitivity of Recovery}
-\label{sec:VI-fault-time}
-% ----------------------------------------------------------------
-
-V4 fixes $t_1=12$~s. We ask whether the recovery envelope depends on \emph{where in the lemniscate cycle} the first fault hits, i.e.\ whether $t_1{=}12$~s is fortuitous or representative. We sweep $t_1 \in \{8, 10, 12, 14, 16\}$~s on V4 with $\Delta t = 5$~s and the same fault drones, so the first fault lands at five distinct phases.
-
-\Cref{fig:fault-time-sweep} shows peak post-fault sag and 3-D cruise RMSE. Peak sag varies from $\SI{12.0}{\milli\metre}$ ($t_1=14$~s, low-acceleration phase) to $\SI{55.4}{\milli\metre}$ ($t_1=12$~s, near a centripetal peak), a $4.6\times$ ratio exceeding the $3.6$--$4.0\times$ FF-ablation magnitude. 3-D cruise RMSE varies modestly, $\SI{313}{\milli\metre}$--$\SI{336}{\milli\metre}$ ($\sim 7\%$ range): cruise-window tracking is robust to fault phase even when per-event peaks are not. Canonical $t_1=12$~s sits at the upper end of the sag distribution---a worst-case phase, not a fortuitous one---which strengthens rather than weakens the recovery claims.
-
-\begin{figure}[htbp]
-  \centering
-  \includegraphics[width=\columnwidth]{Figures/fig_fault_time_sweep.png}
-  \caption{Fault-time permutation. V4 dual-fault, $\Delta t=\SI{5}{\second}$, drones 0, 2; $t_1\in\{8,10,12,14,16\}$~s. Left axis: peak post-fault altitude sag. Right axis (dashed): 3-D cruise RMSE. The canonical $t_1=12$~s is a worst-case within the sweep.}
-  \label{fig:fault-time-sweep}
-\end{figure}
-
-% ----------------------------------------------------------------
-\subsection{H2 Sub-Threshold Dwell Probe}
-\label{sec:VI-failure}
-% ----------------------------------------------------------------
-
-\Cref{fig:failure-gallery} shows the H2 violation probe: the sub-threshold dwell $\tau_d = 0.5\,\tau_{\mathrm{pend}} = \SI{1.12}{\second}$ on V4, with the Lyapunov proxy overlaid against the canonical V4 run. The sub-threshold trajectory is bounded and $\hat\rho$ (\cref{sec:VI-dwell,fig:dwell-sweep}) is below unity even here, showing the identity delivers contraction margin beyond H2's sufficiency. The probe illustrates the \emph{absence} of an empirical H2 failure on this family; constructing a regime that empirically violates contraction is follow-up work.
-
-\begin{figure}[htbp]
-  \centering
-  \includegraphics[width=\columnwidth]{Figures/fig_h2_violation.png}
-  \caption{%
-    H2 sub-threshold dwell probe. Lyapunov proxy $V(t)=\xi^\top P_v\xi$ at $\tau_d = 0.5\,\tau_{\mathrm{pend}} = \SI{1.12}{\second}$ overlaid with the canonical V4 trajectory ($\tau_d = 5\,\tau_{\mathrm{pend}}$). Red ticks: fault events. The sub-threshold trajectory remains bounded; $\hat\rho$ on the detrended peak-excursion definition of \cref{sec:VI-dwell} sits below unity (\cref{fig:dwell-sweep}).%
-  }
-  \label{fig:failure-gallery}
-\end{figure}
-
+A trajectory-phase sweep on V4 ($t_1\in\{8,10,12,14,16\}\,\si{\second}$) shows peak post-fault sag varying $\SI{12}{\milli\metre}$--$\SI{55}{\milli\metre}$ and 3-D cruise RMSE within $\sim 7\%$; the canonical $t_1=\SI{12}{\second}$ sits at the worst-case end, strengthening rather than weakening the recovery claim. A sub-threshold dwell probe at $\tau_d=0.5\,\tau_{\mathrm{pend}}$ on the same V4 schedule remains bounded with $\hat\rho<1$ (\cref{fig:dwell-sweep}), showing contraction margin beyond H2 sufficiency on this family.
 
 \subsection{Actuator-Margin and Recovery-Time Audit}
 \label{sec:VI-actuator-recovery}
 
 A reviewer concern with cascade architectures is that the controller may rely on actuator saturation to absorb post-fault loads. We audit this with the per-drone maximum commanded thrust ratio $f_i(t)/f_{\max}$ over $[8,30]\,\si{\second}$ for V3--V6. The variant maxima are $0.73$ on V3, V4, V5 and $0.79$ on V6, all attained on drone~4, with zero cruise-window time above $0.9\,f_{\max}$ on every variant. The V3--V5 maxima coincide because the three variants share the first-fault schedule (drone 0 severs at $t=\SI{12}{\second}$) and the simulations are deterministic on a common wind seed: the variant peak is drone 4's transient at $t=\SI{12.68}{\second}$, $\SI{0.68}{\second}$ into the fault-1 recovery, and the second-fault spike (V4: $t=\SI{17}{\second}$, V5: $t=\SI{22}{\second}$) lands on a different drone with the trajectory at a different phase and stays below the fault-1 peak on drone 4. V6 reaches $0.79$ because the full-stack extensions ($L_1$ + MPC + reshape) shift the altitude command. Recovery is not actuator-limited on any variant.
 
-\paragraph{Spike-then-relax thrust dynamics on V4.} The variant-level maximum hides the intra-fault dynamic that directly evidences H2 on the actuator channel. \Cref{tab:thrust-transient} reports, per V4 survivor ($i\in\{1,3,4\}$), the within-1\,s peak commanded thrust at each fault and the settled mean 2--4\,s after. Survivors show a $1.18$--$1.79\times$ peak-over-settled overshoot, decaying to a new steady state within $\sim \tau_{\mathrm{pend}}\approx\SI{2.24}{\second}$. Steady-state thrust per survivor rises $+25$ to $+34\%$ vs the pre-fault baseline; the survivor sum settles near $\SI{179}{\newton}$ at $t \in [27,30]$\,s, balancing $m_L g + 3 m_{\mathrm{drone}} g \approx \SI{142}{\newton}$ plus centripetal/tilt overhead---an independent check of the post-fault load redistribution. This is the actuator-channel signature of the same recovery the Lyapunov-proxy contraction of \cref{sec:VI-C} reports for the state error.
+\paragraph{Spike-then-relax dynamics.} On V4, the three survivors show a $1.18$--$1.79\times$ peak-over-settled overshoot decaying within $\sim\tau_{\mathrm{pend}}$, with steady-state thrust per survivor rising $+25\%$ to $+34\%$ over the pre-fault baseline. The survivor sum at $t\in[27,30]\,\si{\second}$ settles near $\SI{179}{\newton}$, balancing $m_L g+3m_{\mathrm{drone}}g\approx\SI{142}{\newton}$ plus centripetal/tilt overhead---an independent actuator-channel check of post-fault load redistribution.
 
-\begin{table}[htbp]
-  \caption{V4 spike-then-relax thrust dynamics on the three surviving drones. Peak: max within 1\,s of each fault; Settled: mean 2--4\,s after the fault. $\Delta$: steady-state increase ($t\!\in\![27,30]$\,s) over the pre-fault $[10,12]$\,s baseline.}
-  \label{tab:thrust-transient}
-  \centering
-  \small
-  \begin{tabular}{cccccc}
-    \toprule
-    Drone & Fault & Pre & Peak & Settled &
-      Peak/Sett. \\
-    & & (N) & (N) & (N) & ratio \\
-    \midrule
-    1 & f1 ($t_1{=}12$ s) & 59.3 &  82.2 & 62.1 & $1.32\times$ \\
-    1 & f2 ($t_2{=}17$ s) & 62.1 &  97.2 & 69.1 & $1.41\times$ \\
-    3 & f1                 & 40.7 &  53.4 & 40.1 & $1.33\times$ \\
-    3 & f2                 & 40.1 &  77.8 & 52.2 & $1.49\times$ \\
-    4 & f1                 & 41.7 & 110.0 & 61.4 & $1.79\times$ \\
-    4 & f2                 & 61.4 &  63.3 & 53.7 & $1.18\times$ \\
-    \midrule
-    \multicolumn{6}{l}{\emph{Steady-state ($t\in[27,30]$\,s) vs pre-fault baseline:}} \\
-    1 & --- & 53.3 & --- & 75.1 & $\Delta = +34\,\%$ \\
-    3 & --- & 42.8 & --- & 53.0 & $\Delta = +25\,\%$ \\
-    4 & --- & 42.4 & --- & 50.8 & $\Delta = +26\,\%$ \\
-    \bottomrule
-  \end{tabular}
-\end{table}
-
-\Cref{tab:recovery-iae} reports per-fault metrics beyond cruise RMSE: peak error norm, peak sag, recovery time $t_{\mathrm{rec}}$ to within $\varepsilon = \SI{0.35}{\metre}$ for $\SI{0.3}{\second}$ continuous, and IAE over $\tau_{\mathrm{pend}}$ post-fault. $t_{\mathrm{rec}}$ is bounded by the next fault's arrival in dual-fault variants; IAE captures the integrated per-event cost.
+\Cref{tab:recovery-iae} reports per-fault recovery metrics beyond cruise RMSE: peak error norm, peak sag, recovery time $t_{\mathrm{rec}}$ to within $\varepsilon=\SI{0.35}{\metre}$ for $\SI{0.3}{\second}$ continuous, and IAE over $\tau_{\mathrm{pend}}$ post-fault.
 
 \begin{table}[htbp]
   \caption{Per-fault recovery metrics. $t_{\mathrm{rec}}$ threshold $\SI{0.35}{\metre}$ (3-D, $\SI{0.3}{\second}$ continuous hold); IAE integrated over $\tau_{\mathrm{pend}}$ or the gap to the next fault, whichever is shorter.}

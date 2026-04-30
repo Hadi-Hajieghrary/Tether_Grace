@@ -129,9 +129,10 @@ $\mathbf{a}_{\mathrm{target}}$ onto the tilt-and-thrust envelope, and an
 Euler-angle attitude PD. The non-standard element is the red
 feed-forward tap: drone $i$ routes its own measured tension $T_i$
 directly into the altitude thrust feed-forward,
-$T_i^{\mathrm{ff}} = T_i$. This single identity is the carrier of
-hybrid practical-ISS across cable-severance events
-(\cref{thm:hybrid-stability}); the surrounding cascade is otherwise
+$T_i^{\mathrm{ff}} = T_i$. This identity supplies the bounded-jump
+mechanism used in the hybrid practical-ISS certificate of
+\cref{thm:hybrid-stability}; the surrounding cascade supplies
+inter-fault contraction and is otherwise
 textbook. Three optional layers (orange, framed bottom) hook in at
 three precisely identified injection points: the $L_1$ adaptive
 correction $u_{\mathrm{ad}}$ enters the altitude channel between the

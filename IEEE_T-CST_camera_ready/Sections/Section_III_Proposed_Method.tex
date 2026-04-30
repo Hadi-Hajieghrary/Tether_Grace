@@ -1,21 +1,4 @@
-\begin{table*}[htbp]
-  \centering
-  \caption{Component-level information pattern. The baseline cascade and the $L_1$ and MPC extensions consume no fault flag and no peer message; only the optional reshape supervisor steps outside this pattern.}
-  \label{tab:component-pattern}
-  \small
-  \begin{tabular}{p{4.5cm}cccp{3.0cm}}
-    \toprule
-    Component & Detection? & Communication? & In main theorem? & Purpose \\
-    \midrule
-    Baseline cascade + identity \eqref{eq:Tff} & No & No & Yes & Passive fault absorption \\
-    $L_1$ altitude augmentation & No & No & Preserves theorem & Parameter mismatch \\
-    MPC tension ceiling & No & No & Preserves theorem & Tension constraint \\
-    Reshape supervisor & Yes (latch) & Yes ($\lceil\log_2 N\rceil$ bits) & Optional only & Slot reassignment \\
-    \bottomrule
-  \end{tabular}
-\end{table*}
-
-We present the decentralized fault-tolerant controller for \cref{def:problem}. Each drone runs a three-layer cascade: an outer-loop PD with anti-swing slot shift, a single-step convex QP on the tilt-and-thrust envelope, and an inner-loop attitude PD. The central design element is $T_i^{\mathrm{ff}} = T_i$, encoding passive fault tolerance with no detection, communication, or reconfiguration. The reshape supervisor (\cref{sec:reshape-supervisor}) adds a latch detector and a per-fault broadcast; the optional $L_1$ augmentation (\cref{sec:extensions}) injects an adaptive altitude correction between the outer PD and the QP.
+Each drone runs a three-layer cascade: an outer-loop PD with anti-swing slot shift, a single-step convex QP on the tilt-and-thrust envelope, and an inner-loop attitude PD. The only nonstandard baseline element is the local feed-forward identity $T_i^{\mathrm{ff}}=T_i$, which maps tension redistribution after severance into immediate thrust compensation.
 
 \input{Figures/diagrams/fig_controller_cascade.tex}
 
@@ -85,7 +68,9 @@ The target acceleration $\vect a_{\mathrm{target}}$ may lie outside the tilt-and
 where the vertical bounds incorporate the rope tension feed-forward,
 \begin{align}
 \label{eq:az-bounds}
-  a_{z,\min/\max}(t) &= \frac{f_{\min\max} - T_i^{\mathrm{ff}}(t)}{m_i} - g.
+  a_{z,\min}(t) &= \frac{f_{\min} - T_i^{\mathrm{ff}}(t)}{m_i} - g,
+  &
+  a_{z,\max}(t) &= \frac{f_{\max} - T_i^{\mathrm{ff}}(t)}{m_i} - g.
 \end{align}
 The vertical interval in \eqref{eq:qp-vert} is non-empty whenever $f_{\min} < f_{\max}$; hover feasibility holds in all scenarios, and Doctrine~D1 is satisfied at the $0.10\%$ worst QP-transition fraction (\cref{tab:domain-audit}). For the canonical campaigns, the feed-forward is the identity from $t=0$:
 \begin{equation}
@@ -101,42 +86,7 @@ Given the QP solution $a_{d,z}^\star$, the commanded thrust is
       m_i(g + a_{d,z}^\star) + T_i^{\mathrm{ff}},\;
       f_{\min},\; f_{\max}\bigr).
 \end{equation}
-Under the small-angle approximation, the horizontal acceleration commands map to desired pitch and roll angles,
-\begin{align}
-\label{eq:attitude-des}
-  \theta_{\mathrm{pitch}}^d
-    &= \operatorname{sat}\!\!\left(\frac{a_{d,x}^\star}{g},\;\pm\theta_{\max}\right),\\
-  \theta_{\mathrm{roll}}^d
-    &= \operatorname{sat}\!\!\left(-\frac{a_{d,y}^\star}{g},\;\pm\theta_{\max}\right).\nonumber
-\end{align}
-With body angular velocity $\vect\omega_i^{\mathcal{B}} = \mat R_i^{\top}\, \vect\omega_i^{\mathcal{W}}$, the body torques are
-\begin{align}
-  \tau_{i,x}
-    &= K_p^{\mathrm{att}}\!\left(
-         \theta_{\mathrm{roll}}^d - \phi_{\mathrm{roll}}
-       \right)
-      - K_d^{\mathrm{att}}\,\omega_{i,x}^{\mathcal{B}},
-    \label{eq:att-pd-roll} \\[2pt]
-  \tau_{i,y}
-    &= K_p^{\mathrm{att}}\!\left(
-         \theta_{\mathrm{pitch}}^d - \theta_{\mathrm{pitch}}
-       \right)
-      - K_d^{\mathrm{att}}\,\omega_{i,y}^{\mathcal{B}},
-    \label{eq:att-pd-pitch} \\[2pt]
-  \tau_{i,z}
-    &= -\frac{K_p^{\mathrm{att}}}{2}\,(R_{21} - R_{12})
-          - K_d^{\mathrm{att}}\,\omega_{i,z}^{\mathcal{B}},
-    \label{eq:att-pd-yaw}
-\end{align}
-each saturated to $[-\tau_{\max}, \tau_{\max}]$. The law \eqref{eq:att-pd-roll}--\eqref{eq:att-pd-yaw} uses Euler-angle error directly rather than a geodesic $\SOthree$ map; this is valid in the small-tilt regime enforced by \eqref{eq:qp-tilt}. The output wrench is
-\begin{equation}
-  \vect F_i^{\mathcal{W}} = f_i\,\mat R_i\,\hat{\vect e}_3,
-  \qquad
-  \vect\tau_i^{\mathcal{W}} = \mat R_i\,
-    [\tau_{i,x},\; \tau_{i,y},\; \tau_{i,z}]^{\top},
-  \label{eq:wrench}
-\end{equation}
-applied at the same continuous-time evaluation instant as the upstream computations. \Cref{tab:baseline-params} collects the canonical controller parameters used throughout all simulation campaigns.
+Under the small-tilt regime enforced by \eqref{eq:qp-tilt}, the horizontal acceleration commands map to desired pitch and roll via $\theta^d_{\mathrm{pitch}}=\operatorname{sat}(a_{d,x}^\star/g,\pm\theta_{\max})$, $\theta^d_{\mathrm{roll}}=\operatorname{sat}(-a_{d,y}^\star/g,\pm\theta_{\max})$, tracked by a per-axis Euler-angle PD with gains $(K_p^{\mathrm{att}},K_d^{\mathrm{att}})$ and torques saturated to $[-\tau_{\max},\tau_{\max}]^3$. The yaw channel uses the standard $\SOthree$-projected error $-(R_{21}-R_{12})/2$. \Cref{tab:baseline-params} collects the canonical controller parameters used throughout all simulation campaigns.
 
 \begin{table}[t]
   \centering
@@ -182,21 +132,9 @@ applied at the same continuous-time evaluation instant as the upstream computati
     $\tau_{\max}$
       & \SI{10}{\newton\metre}
       & torque saturation \\
-    $T_{\mathrm{thresh}}$
-      & \SI{0.3}{\newton}
-      & pickup-detection threshold \\
     $\bar{T}$
       & \SI{19.62}{\newton}
-      & nominal per-drone tension ($m_L g / N$) \\
-    $K_{p,T}$
-      & $1.5$
-      & pickup-phase tension correction gain \\
-    $T_{\mathrm{ramp}}$
-      & \SI{1.0}{\second}
-      & pickup smoothstep window \\
-    $\Delta t_{L_1}$
-      & \SI{0.2}{\milli\second}
-      & $L_1$ discrete update period \\
+      & nominal per-drone tension ($m_L g/N$) \\
     \bottomrule
   \end{tabular}
 \end{table}
