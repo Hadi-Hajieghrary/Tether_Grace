@@ -1,24 +1,4 @@
-Three extension layers augment the baseline cascade of \cref{sec:proposed} and address residual concerns that the identity $T_i^{\mathrm{ff}}=T_i$ does not target: (i) parameter mismatch in $(m_L, k_{\mathrm{eff}})$, (ii) horizon-aware tension-ceiling enforcement, and (iii) post-fault hover-equilibrium asymmetry. Each layer enters the closed loop through a disjoint channel, preserves the hypotheses H1--H3 of \cref{thm:hybrid-stability}, and, on the demonstrated trajectory family, remains inactive unless its corresponding regime is encountered. This section states the role of each layer and the architectural invariant that keeps the main certificate \eqref{eq:iss-envelope-explicit} valid when any combination is enabled. Detailed adaptation laws, MPC formulations, reshape geometry, and full preservation arguments are reported in the supplementary material.
-
-\begin{table}[htbp]
-  \caption{Extension layers and their relationship to the main certificate. None of the three uses peer communication for control; only the reshape supervisor uses a local detection latch.}
-  \label{tab:extensions-summary}
-  \centering
-  \small
-  \renewcommand{\arraystretch}{1.1}
-  \begin{tabular}{lcccc}
-    \toprule
-    Layer & Detection? & Comm.? & Theorem & Empirical role \\
-    \midrule
-    $L_1$ adaptive altitude
-      & No & No & Preserved & Mass-mismatch margin \\
-    MPC tension ceiling
-      & No & No & Preserved & Inactive in NF2 \\
-    Reshape supervisor
-      & Latch & $\lceil\log_2 N\rceil$ bits & Separate theorem & Inactive in NF3 \\
-    \bottomrule
-  \end{tabular}
-\end{table}
+Three extension layers augment the baseline cascade of \cref{sec:proposed} and address residual concerns that the identity $T_i^{\mathrm{ff}}=T_i$ does not target: (i) parameter mismatch in $(m_L, k_{\mathrm{eff}})$, (ii) horizon-aware tension-ceiling enforcement, and (iii) post-fault hover-equilibrium asymmetry. Each layer enters the closed loop through a disjoint channel. The $L_1$ altitude augmentation and the MPC tension-ceiling layer preserve the hypotheses H1--H3 of \cref{thm:hybrid-stability} without peer communication for control; on the demonstrated trajectory family they remain inactive unless their corresponding regime is encountered, with the MPC layer specifically inactive in NF2. The reshape supervisor likewise remains inactive in NF3, but it is governed by the separate result of \cref{thm:reshape} and, unlike the other two layers, uses a local detection latch and a $\lceil\log_2 N\rceil$-bit broadcast. This section states the role of each layer and the architectural invariant that keeps the main certificate \eqref{eq:iss-envelope-explicit} valid when any combination is enabled. Detailed adaptation laws, MPC formulations, reshape geometry, and full preservation arguments are reported in the supplementary material.
 
 \subsection{$L_1$-Adaptive Altitude Augmentation}
 \label{sec:l1-augmentation}
