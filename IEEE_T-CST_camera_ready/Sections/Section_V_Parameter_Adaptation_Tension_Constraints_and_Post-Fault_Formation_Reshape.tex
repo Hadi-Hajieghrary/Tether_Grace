@@ -1,7 +1,7 @@
-Three optional layers extend the baseline cascade of \cref{sec:proposed} and address residual concerns that the identity $T_i^{\mathrm{ff}}=T_i$ does not target: (i) parameter mismatch in $(m_L, k_{\mathrm{eff}})$, (ii) horizon-aware tension-ceiling enforcement, and (iii) post-fault hover-equilibrium asymmetry. Each layer enters the closed loop through a disjoint channel, preserves the hypotheses H1--H3 of \cref{thm:hybrid-stability}, and, on the demonstrated trajectory family, is empirically non-binding. This section states the role of each layer and the architectural invariant that keeps the main certificate \eqref{eq:iss-envelope-explicit} valid when any combination is enabled. Detailed adaptation laws, MPC formulations, reshape geometry, and full preservation arguments are reported in the supplementary material.
+Three extension layers augment the baseline cascade of \cref{sec:proposed} and address residual concerns that the identity $T_i^{\mathrm{ff}}=T_i$ does not target: (i) parameter mismatch in $(m_L, k_{\mathrm{eff}})$, (ii) horizon-aware tension-ceiling enforcement, and (iii) post-fault hover-equilibrium asymmetry. Each layer enters the closed loop through a disjoint channel, preserves the hypotheses H1--H3 of \cref{thm:hybrid-stability}, and, on the demonstrated trajectory family, remains inactive unless its corresponding regime is encountered. This section states the role of each layer and the architectural invariant that keeps the main certificate \eqref{eq:iss-envelope-explicit} valid when any combination is enabled. Detailed adaptation laws, MPC formulations, reshape geometry, and full preservation arguments are reported in the supplementary material.
 
 \begin{table}[htbp]
-  \caption{Optional extension layers and their relationship to the main certificate. None of the three uses peer communication for control; only the reshape supervisor uses a local detection latch.}
+  \caption{Extension layers and their relationship to the main certificate. None of the three uses peer communication for control; only the reshape supervisor uses a local detection latch.}
   \label{tab:extensions-summary}
   \centering
   \small
@@ -13,9 +13,9 @@ Three optional layers extend the baseline cascade of \cref{sec:proposed} and add
     $L_1$ adaptive altitude
       & No & No & Preserved & Mass-mismatch margin \\
     MPC tension ceiling
-      & No & No & Preserved & Non-binding (NF2) \\
+      & No & No & Preserved & Inactive in NF2 \\
     Reshape supervisor
-      & Latch & $\lceil\log_2 N\rceil$ bits & Optional & Non-binding (NF3) \\
+      & Latch & $\lceil\log_2 N\rceil$ bits & Separate theorem & Inactive in NF3 \\
     \bottomrule
   \end{tabular}
 \end{table}
@@ -23,7 +23,7 @@ Three optional layers extend the baseline cascade of \cref{sec:proposed} and add
 \subsection{$L_1$-Adaptive Altitude Augmentation}
 \label{sec:l1-augmentation}
 
-The identity $T_i^{\mathrm{ff}}=T_i$ does not cancel matched disturbances entering through parameter deviations $(m_L, k_{\mathrm{eff}})$. The optional $L_1$ layer~\cite{Hovakimyan2010book,CaoHovakimyan2008} estimates the residual online and injects an additive altitude correction $u_{\mathrm{ad}}(t)$ between the outer PD and the QP at the injection point of \cref{fig:controller-cascade}. The standard $L_1$ architecture (Hurwitz reference model with $A_m,P_v$ from \cref{lem:altitude-iss}, state predictor, projected gradient on $\hat\delta_m \in [\delta_{m,\min},\delta_{m,\max}]$, low-pass filter at $\omega_c=\SI{25}{\radian\per\second}$) is adopted verbatim; the discrete update runs at $T_s=\SI{2e-4}{\second}$ with adaptation gain $\Gamma$. Contractivity of the scalar Euler-discretized update yields the design rule below; the full derivation is in the supplementary material.
+The identity $T_i^{\mathrm{ff}}=T_i$ does not cancel matched disturbances entering through parameter deviations $(m_L, k_{\mathrm{eff}})$. The $L_1$ layer~\cite{Hovakimyan2010book,CaoHovakimyan2008} estimates the residual online and injects an additive altitude correction $u_{\mathrm{ad}}(t)$ between the outer PD and the QP at the injection point of \cref{fig:controller-cascade}. The standard $L_1$ architecture (Hurwitz reference model with $A_m,P_v$ from \cref{lem:altitude-iss}, state predictor, projected gradient on $\hat\delta_m \in [\delta_{m,\min},\delta_{m,\max}]$, low-pass filter at $\omega_c=\SI{25}{\radian\per\second}$) is adopted verbatim; the discrete update runs at $T_s=\SI{2e-4}{\second}$ with adaptation gain $\Gamma$. Contractivity of the scalar Euler-discretized update yields the design rule below; the full derivation is in the supplementary material.
 
 \begin{proposition}[Scalar $L_1$ admissible-window bound]
 \label{prop:gamma-star}
